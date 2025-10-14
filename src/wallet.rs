@@ -2,15 +2,16 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
+use std::path::Path;
+use std::sync::Arc;
+use std::collections::HashMap;
 use bitcoin::{Address, Amount};
 use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
     Balances as CoinswapBalances, Destination as CoinswapDestination,
-    RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
+    RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet,
+    WalletError as CoinswapWalletError,
 };
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum WalletError {
@@ -87,7 +88,7 @@ pub enum Destination {
         address: String,
     },
     Multi {
-        outputs: HashMap<String, u64>,
+        outputs: HashMap<String, u64>,  // Vec<(String, u64)> cant work
         op_return_data: Option<Vec<u8>>,
     },
     MultiDynamic {
@@ -171,7 +172,9 @@ impl Wallet {
     }
 
     pub fn get_next_external_address(&self) -> Result<String, WalletError> {
-        let addr = "Address generation requires mutable access - not implemented in immutable context".to_string();
+        let addr = format!(
+            "Address generation requires mutable access - not implemented in immutable context"
+        );
         Err(WalletError::General { msg: addr })
     }
 
@@ -199,11 +202,7 @@ impl Wallet {
             });
         }
 
-        // If spend_from_wallet and send_tx require &mut self, you must refactor CoinswapWallet to allow these as &self,
-        // or use interior mutability (e.g., Mutex/RwLock) inside CoinswapWallet.
-        let tx = self
-            .inner
-            .spend_from_wallet(fee_rate.unwrap(), dest, &utxos)?;
+        let tx = self.inner.spend_from_wallet(fee_rate.unwrap(), dest, &utxos)?;
         let txid = self.inner.send_tx(&tx)?;
 
         Ok(txid.to_string())
