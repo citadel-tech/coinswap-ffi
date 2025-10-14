@@ -462,6 +462,18 @@ def _uniffi_check_contract_api_version(lib):
 def _uniffi_check_api_checksums(lib):
     if lib.uniffi_coinswap_ffi_checksum_func_create_default_rpc_config() != 9423:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_func_create_swap_params() != 14523:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances() != 36988:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name() != 45636:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap() != 5303:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet() != 64892:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 56903:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
 # This is an implementation detail which will be called internally by the public API.
@@ -568,6 +580,47 @@ class _UniffiForeignFutureStructVoid(ctypes.Structure):
     ]
 _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiForeignFutureStructVoid,
 )
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_taker.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_taker.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_taker.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_taker.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_name.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_name.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_wallet.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_wallet.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_clone_wallet.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -582,6 +635,13 @@ _UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_func_create_swap_params.argtypes = (
+    ctypes.c_uint64,
+    ctypes.c_uint32,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_func_create_swap_params.restype = _UniffiRustBuffer
 _UniffiLib.ffi_coinswap_ffi_rustbuffer_alloc.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -853,6 +913,24 @@ _UniffiLib.ffi_coinswap_ffi_rust_future_complete_void.restype = None
 _UniffiLib.uniffi_coinswap_ffi_checksum_func_create_default_rpc_config.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_func_create_default_rpc_config.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_func_create_swap_params.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_func_create_swap_params.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.restype = ctypes.c_uint16
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.restype = ctypes.c_uint32
@@ -862,6 +940,32 @@ _uniffi_check_contract_api_version(_UniffiLib)
 
 # Public interface members begin here.
 
+
+class _UniffiConverterUInt16(_UniffiConverterPrimitiveInt):
+    CLASS_NAME = "u16"
+    VALUE_MIN = 0
+    VALUE_MAX = 2**16
+
+    @staticmethod
+    def read(buf):
+        return buf.read_u16()
+
+    @staticmethod
+    def write(value, buf):
+        buf.write_u16(value)
+
+class _UniffiConverterUInt32(_UniffiConverterPrimitiveInt):
+    CLASS_NAME = "u32"
+    VALUE_MIN = 0
+    VALUE_MAX = 2**32
+
+    @staticmethod
+    def read(buf):
+        return buf.read_u32()
+
+    @staticmethod
+    def write(value, buf):
+        buf.write_u32(value)
 
 class _UniffiConverterUInt64(_UniffiConverterPrimitiveInt):
     CLASS_NAME = "u64"
@@ -927,6 +1031,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -1036,6 +1142,61 @@ class _UniffiConverterTypeRpcConfig(_UniffiConverterRustBuffer):
         _UniffiConverterString.write(value.username, buf)
         _UniffiConverterString.write(value.password, buf)
         _UniffiConverterString.write(value.wallet_name, buf)
+
+
+class SwapParams:
+    send_amount: "int"
+    """
+    Total Amount
+    """
+
+    maker_count: "int"
+    """
+    How many hops (number of makers)
+    """
+
+    manually_selected_outpoints: "typing.Optional[typing.List[str]]"
+    """
+    User selected UTXOs (optional)
+    """
+
+    def __init__(self, *, send_amount: "int", maker_count: "int", manually_selected_outpoints: "typing.Optional[typing.List[str]]"):
+        self.send_amount = send_amount
+        self.maker_count = maker_count
+        self.manually_selected_outpoints = manually_selected_outpoints
+
+    def __str__(self):
+        return "SwapParams(send_amount={}, maker_count={}, manually_selected_outpoints={})".format(self.send_amount, self.maker_count, self.manually_selected_outpoints)
+
+    def __eq__(self, other):
+        if self.send_amount != other.send_amount:
+            return False
+        if self.maker_count != other.maker_count:
+            return False
+        if self.manually_selected_outpoints != other.manually_selected_outpoints:
+            return False
+        return True
+
+class _UniffiConverterTypeSwapParams(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return SwapParams(
+            send_amount=_UniffiConverterUInt64.read(buf),
+            maker_count=_UniffiConverterUInt32.read(buf),
+            manually_selected_outpoints=_UniffiConverterOptionalSequenceString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterUInt64.check_lower(value.send_amount)
+        _UniffiConverterUInt32.check_lower(value.maker_count)
+        _UniffiConverterOptionalSequenceString.check_lower(value.manually_selected_outpoints)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterUInt64.write(value.send_amount, buf)
+        _UniffiConverterUInt32.write(value.maker_count, buf)
+        _UniffiConverterOptionalSequenceString.write(value.manually_selected_outpoints, buf)
 
 
 class WalletBackup:
@@ -1211,6 +1372,182 @@ class _UniffiConverterTypeDestination(_UniffiConverterRustBuffer):
 
 
 
+
+
+
+class TakerBehavior(enum.Enum):
+    NORMAL = 0
+    
+    DROP_CONNECTION_AFTER_FULL_SETUP = 1
+    
+    BROADCAST_CONTRACT_AFTER_FULL_SETUP = 2
+    
+
+
+class _UniffiConverterTypeTakerBehavior(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return TakerBehavior.NORMAL
+        if variant == 2:
+            return TakerBehavior.DROP_CONNECTION_AFTER_FULL_SETUP
+        if variant == 3:
+            return TakerBehavior.BROADCAST_CONTRACT_AFTER_FULL_SETUP
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == TakerBehavior.NORMAL:
+            return
+        if value == TakerBehavior.DROP_CONNECTION_AFTER_FULL_SETUP:
+            return
+        if value == TakerBehavior.BROADCAST_CONTRACT_AFTER_FULL_SETUP:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == TakerBehavior.NORMAL:
+            buf.write_i32(1)
+        if value == TakerBehavior.DROP_CONNECTION_AFTER_FULL_SETUP:
+            buf.write_i32(2)
+        if value == TakerBehavior.BROADCAST_CONTRACT_AFTER_FULL_SETUP:
+            buf.write_i32(3)
+
+
+
+
+# TakerError
+# We want to define each variant as a nested class that's also a subclass,
+# which is tricky in Python.  To accomplish this we're going to create each
+# class separately, then manually add the child classes to the base class's
+# __dict__.  All of this happens in dummy class to avoid polluting the module
+# namespace.
+class TakerError(Exception):
+    pass
+
+_UniffiTempTakerError = TakerError
+
+class TakerError:  # type: ignore
+    class Wallet(_UniffiTempTakerError):
+        def __init__(self, msg):
+            super().__init__(", ".join([
+                "msg={!r}".format(msg),
+            ]))
+            self.msg = msg
+
+        def __repr__(self):
+            return "TakerError.Wallet({})".format(str(self))
+    _UniffiTempTakerError.Wallet = Wallet # type: ignore
+    class Protocol(_UniffiTempTakerError):
+        def __init__(self, msg):
+            super().__init__(", ".join([
+                "msg={!r}".format(msg),
+            ]))
+            self.msg = msg
+
+        def __repr__(self):
+            return "TakerError.Protocol({})".format(str(self))
+    _UniffiTempTakerError.Protocol = Protocol # type: ignore
+    class Network(_UniffiTempTakerError):
+        def __init__(self, msg):
+            super().__init__(", ".join([
+                "msg={!r}".format(msg),
+            ]))
+            self.msg = msg
+
+        def __repr__(self):
+            return "TakerError.Network({})".format(str(self))
+    _UniffiTempTakerError.Network = Network # type: ignore
+    class General(_UniffiTempTakerError):
+        def __init__(self, msg):
+            super().__init__(", ".join([
+                "msg={!r}".format(msg),
+            ]))
+            self.msg = msg
+
+        def __repr__(self):
+            return "TakerError.General({})".format(str(self))
+    _UniffiTempTakerError.General = General # type: ignore
+    class Io(_UniffiTempTakerError):
+        def __init__(self, msg):
+            super().__init__(", ".join([
+                "msg={!r}".format(msg),
+            ]))
+            self.msg = msg
+
+        def __repr__(self):
+            return "TakerError.Io({})".format(str(self))
+    _UniffiTempTakerError.Io = Io # type: ignore
+
+TakerError = _UniffiTempTakerError # type: ignore
+del _UniffiTempTakerError
+
+
+class _UniffiConverterTypeTakerError(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return TakerError.Wallet(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 2:
+            return TakerError.Protocol(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 3:
+            return TakerError.Network(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 4:
+            return TakerError.General(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 5:
+            return TakerError.Io(
+                _UniffiConverterString.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if isinstance(value, TakerError.Wallet):
+            _UniffiConverterString.check_lower(value.msg)
+            return
+        if isinstance(value, TakerError.Protocol):
+            _UniffiConverterString.check_lower(value.msg)
+            return
+        if isinstance(value, TakerError.Network):
+            _UniffiConverterString.check_lower(value.msg)
+            return
+        if isinstance(value, TakerError.General):
+            _UniffiConverterString.check_lower(value.msg)
+            return
+        if isinstance(value, TakerError.Io):
+            _UniffiConverterString.check_lower(value.msg)
+            return
+
+    @staticmethod
+    def write(value, buf):
+        if isinstance(value, TakerError.Wallet):
+            buf.write_i32(1)
+            _UniffiConverterString.write(value.msg, buf)
+        if isinstance(value, TakerError.Protocol):
+            buf.write_i32(2)
+            _UniffiConverterString.write(value.msg, buf)
+        if isinstance(value, TakerError.Network):
+            buf.write_i32(3)
+            _UniffiConverterString.write(value.msg, buf)
+        if isinstance(value, TakerError.General):
+            buf.write_i32(4)
+            _UniffiConverterString.write(value.msg, buf)
+        if isinstance(value, TakerError.Io):
+            buf.write_i32(5)
+            _UniffiConverterString.write(value.msg, buf)
+
+
 # WalletError
 # We want to define each variant as a nested class that's also a subclass,
 # which is tricky in Python.  To accomplish this we're going to create each
@@ -1362,6 +1699,60 @@ class _UniffiConverterTypeWalletError(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterOptionalUInt16(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterUInt16.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterUInt16.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterUInt16.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalString(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterString.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterString.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterString.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -1384,6 +1775,87 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
             return None
         elif flag == 1:
             return _UniffiConverterBytes.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeRpcConfig(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeRpcConfig.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeRpcConfig.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeRpcConfig.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeTakerBehavior(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeTakerBehavior.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeTakerBehavior.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeTakerBehavior.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalSequenceString(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterSequenceString.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterSequenceString.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterSequenceString.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -1446,6 +1918,138 @@ class _UniffiConverterMapStringUInt64(_UniffiConverterRustBuffer):
         return d
 
 # objects.
+class TakerProtocol(typing.Protocol):
+    def get_wallet_balances(self, ):
+        """
+        Get wallet balances
+        """
+
+        raise NotImplementedError
+    def get_wallet_name(self, ):
+        raise NotImplementedError
+    def send_coinswap(self, swap_params: "SwapParams"):
+        raise NotImplementedError
+    def sync_wallet(self, ):
+        raise NotImplementedError
+# Taker is a Rust-only trait - it's a wrapper around a Rust implementation.
+class Taker():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_taker, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_taker, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+    @classmethod
+    def init(cls, data_dir: "typing.Optional[str]",wallet_file_name: "typing.Optional[str]",rpc_config: "typing.Optional[RpcConfig]",behavior: "typing.Optional[TakerBehavior]",control_port: "typing.Optional[int]",tor_auth_password: "typing.Optional[str]"):
+        _UniffiConverterOptionalString.check_lower(data_dir)
+        
+        _UniffiConverterOptionalString.check_lower(wallet_file_name)
+        
+        _UniffiConverterOptionalTypeRpcConfig.check_lower(rpc_config)
+        
+        _UniffiConverterOptionalTypeTakerBehavior.check_lower(behavior)
+        
+        _UniffiConverterOptionalUInt16.check_lower(control_port)
+        
+        _UniffiConverterOptionalString.check_lower(tor_auth_password)
+        
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init,
+        _UniffiConverterOptionalString.lower(data_dir),
+        _UniffiConverterOptionalString.lower(wallet_file_name),
+        _UniffiConverterOptionalTypeRpcConfig.lower(rpc_config),
+        _UniffiConverterOptionalTypeTakerBehavior.lower(behavior),
+        _UniffiConverterOptionalUInt16.lower(control_port),
+        _UniffiConverterOptionalString.lower(tor_auth_password))
+        return cls._make_instance_(pointer)
+
+
+
+    def get_wallet_balances(self, ) -> "Balances":
+        """
+        Get wallet balances
+        """
+
+        return _UniffiConverterTypeBalances.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_wallet_name(self, ) -> "str":
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_name,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def send_coinswap(self, swap_params: "SwapParams") -> None:
+        _UniffiConverterTypeSwapParams.check_lower(swap_params)
+        
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeSwapParams.lower(swap_params))
+
+
+
+
+
+
+    def sync_wallet(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_wallet,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+
+class _UniffiConverterTypeTaker:
+
+    @staticmethod
+    def lift(value: int):
+        return Taker._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: Taker):
+        if not isinstance(value, Taker):
+            raise TypeError("Expected Taker instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: TakerProtocol):
+        if not isinstance(value, Taker):
+            raise TypeError("Expected Taker instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: TakerProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 class WalletProtocol(typing.Protocol):
     pass
 # Wallet is a Rust-only trait - it's a wrapper around a Rust implementation.
@@ -1509,14 +2113,32 @@ def create_default_rpc_config() -> "RpcConfig":
     return _UniffiConverterTypeRpcConfig.lift(_uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config,))
 
 
+def create_swap_params(send_amount_sats: "int",maker_count: "int",outpoints: "typing.List[str]") -> "SwapParams":
+    _UniffiConverterUInt64.check_lower(send_amount_sats)
+    
+    _UniffiConverterUInt32.check_lower(maker_count)
+    
+    _UniffiConverterSequenceString.check_lower(outpoints)
+    
+    return _UniffiConverterTypeSwapParams.lift(_uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_func_create_swap_params,
+        _UniffiConverterUInt64.lower(send_amount_sats),
+        _UniffiConverterUInt32.lower(maker_count),
+        _UniffiConverterSequenceString.lower(outpoints)))
+
+
 __all__ = [
     "InternalError",
     "Destination",
+    "TakerBehavior",
+    "TakerError",
     "WalletError",
     "Balances",
     "RpcConfig",
+    "SwapParams",
     "WalletBackup",
     "create_default_rpc_config",
+    "create_swap_params",
+    "Taker",
     "Wallet",
 ]
 
