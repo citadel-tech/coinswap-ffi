@@ -2,16 +2,15 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
-use std::path::Path;
-use std::sync::Arc;
-use std::collections::HashMap;
 use bitcoin::{Address, Amount};
 use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
     Balances as CoinswapBalances, Destination as CoinswapDestination,
-    RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet,
-    WalletError as CoinswapWalletError,
+    RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum WalletError {
@@ -204,7 +203,9 @@ impl Wallet {
 
         // If spend_from_wallet and send_tx require &mut self, you must refactor CoinswapWallet to allow these as &self,
         // or use interior mutability (e.g., Mutex/RwLock) inside CoinswapWallet.
-        let tx = self.inner.spend_from_wallet(fee_rate.unwrap(), dest, &utxos)?;
+        let tx = self
+            .inner
+            .spend_from_wallet(fee_rate.unwrap(), dest, &utxos)?;
         let txid = self.inner.send_tx(&tx)?;
 
         Ok(txid.to_string())
