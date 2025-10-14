@@ -171,9 +171,7 @@ impl Wallet {
     }
 
     pub fn get_next_external_address(&self) -> Result<String, WalletError> {
-        let addr = format!(
-            "Address generation requires mutable access - not implemented in immutable context"
-        );
+        let addr = "Address generation requires mutable access - not implemented in immutable context".to_string();
         Err(WalletError::General { msg: addr })
     }
 
