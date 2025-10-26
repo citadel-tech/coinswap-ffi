@@ -2,15 +2,17 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
+use bitcoin::ScriptBuf as csScriptBuf;
+use bitcoin::address::NetworkUnchecked;
 use std::path::Path;
 use std::sync::Arc;
 use std::collections::HashMap;
-use bitcoin::{Address, Amount};
-use bitcoind::bitcoincore_rpc::Auth;
+use bitcoin::{hashes::hash160::Hash, Address, Amount as coinswapAmount};
+use bitcoind::bitcoincore_rpc::{json::ListUnspentResultEntry as csListUnspentResultEntry, Auth};
 use coinswap::wallet::{
     Balances as CoinswapBalances, Destination as CoinswapDestination,
     RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet,
-    WalletError as CoinswapWalletError,
+    WalletError as CoinswapWalletError
 };
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -52,6 +54,15 @@ pub struct Balances {
     pub spendable: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+pub struct Amount(pub coinswapAmount);
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+pub struct ScriptBuf(pub csScriptBuf);
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+pub struct ListUnspentResultEntry(pub csListUnspentResultEntry);
+
 impl From<CoinswapBalances> for Balances {
     fn from(balances: CoinswapBalances) -> Self {
         Self {
@@ -65,6 +76,23 @@ impl From<CoinswapBalances> for Balances {
 }
 
 #[derive(uniffi::Record)]
+pub struct UTXO {
+    pub txid: String,
+    pub vout: u32,
+    pub amount: u64,  // satoshis
+    pub confirmations: u32,
+    pub spendable: bool,
+    pub solvable: bool,
+    pub safe: bool,
+}
+
+#[derive(uniffi::Record)]
+pub struct UTXOInfo {
+    pub utxo: UTXO,
+    pub spend_info: UTXOSpendInfo,
+}
+
+#[derive(uniffi::Record)]
 pub struct RPCConfig {
     pub url: String,
     pub username: String,
@@ -72,74 +100,39 @@ pub struct RPCConfig {
     pub wallet_name: String,
 }
 
+#[derive(uniffi::Enum)]
+pub enum UTXOSpendInfo {
+    /// Seed Coin
+    SeedCoin { path: String, input_value: Arc<Amount> },
+    /// Coins that we have received in a swap
+    IncomingSwapCoin { multisig_redeemscript: Arc<ScriptBuf> },
+    /// Coins that we have sent in a swap
+    OutgoingSwapCoin { multisig_redeemscript: Arc<ScriptBuf> },
+    /// Timelock Contract
+    TimelockContract {
+        swapcoin_multisig_redeemscript: Arc<ScriptBuf>,
+        input_value: Arc<Amount>,
+    },
+    /// HashLockContract
+    HashlockContract {
+        swapcoin_multisig_redeemscript: Arc<ScriptBuf>,
+        input_value: Arc<Amount>,
+    },
+    /// Fidelity Bond Coin
+    FidelityBondCoin { index: u32, input_value: Arc<Amount> },
+    ///Swept incoming swap coin
+    SweptCoin {
+        path: String,
+        input_value: Arc<Amount>,
+        original_multisig_redeemscript: Arc<ScriptBuf>,
+    },
+}
 impl From<RPCConfig> for CoinswapRPCConfig {
     fn from(config: RPCConfig) -> Self {
         Self {
             url: config.url,
             auth: Auth::UserPass(config.username, config.password),
             wallet_name: config.wallet_name,
-        }
-    }
-}
-
-#[derive(uniffi::Enum)]
-pub enum Destination {
-    Sweep {
-        address: String,
-    },
-    Multi {
-        outputs: HashMap<String, u64>,  // Vec<(String, u64)> cant work
-        op_return_data: Option<Vec<u8>>,
-    },
-    MultiDynamic {
-        amount: u64,
-        addresses: Vec<String>,
-    },
-}
-
-impl TryFrom<Destination> for CoinswapDestination {
-    type Error = WalletError;
-
-    fn try_from(dest: Destination) -> Result<Self, Self::Error> {
-        match dest {
-            Destination::Sweep { address } => {
-                let addr = address
-                    .parse::<Address<bitcoin::address::NetworkUnchecked>>()
-                    .map_err(|e| WalletError::AddressParse { msg: e.to_string() })?
-                    .assume_checked();
-                Ok(CoinswapDestination::Sweep(addr))
-            }
-            Destination::Multi {
-                outputs,
-                op_return_data,
-            } => {
-                let mut parsed_outputs = Vec::new();
-                for (addr_str, amount_sats) in outputs {
-                    let addr = addr_str
-                        .parse::<Address<bitcoin::address::NetworkUnchecked>>()
-                        .map_err(|e| WalletError::AddressParse { msg: e.to_string() })?
-                        .assume_checked();
-                    let amount = Amount::from_sat(amount_sats);
-                    parsed_outputs.push((addr, amount));
-                }
-                let op_return = op_return_data.map(|data| data.into_boxed_slice());
-                Ok(CoinswapDestination::Multi {
-                    outputs: parsed_outputs,
-                    op_return_data: op_return,
-                })
-            }
-            Destination::MultiDynamic { amount, addresses } => {
-                let amount = Amount::from_sat(amount);
-                let mut parsed_addresses = Vec::new();
-                for addr_str in addresses {
-                    let addr = addr_str
-                        .parse::<Address<bitcoin::address::NetworkUnchecked>>()
-                        .map_err(|e| WalletError::AddressParse { msg: e.to_string() })?
-                        .assume_checked();
-                    parsed_addresses.push(addr);
-                }
-                Ok(CoinswapDestination::MultiDynamic(amount, parsed_addresses))
-            }
         }
     }
 }
@@ -155,6 +148,7 @@ pub struct Wallet {
     inner: CoinswapWallet,
 }
 
+#[uniffi::export]
 impl Wallet {
     #[uniffi::constructor]
     pub fn init(path: String, rpc_config: RPCConfig) -> Result<Arc<Self>, WalletError> {
@@ -172,10 +166,9 @@ impl Wallet {
     }
 
     pub fn get_next_external_address(&self) -> Result<String, WalletError> {
-        let addr = format!(
-            "Address generation requires mutable access - not implemented in immutable context"
-        );
-        Err(WalletError::General { msg: addr })
+        Err(WalletError::General { 
+            msg: "Address generation requires mutable access - not implemented in immutable context".to_string()
+        })
     }
 
     /// Get the wallet name
@@ -187,25 +180,8 @@ impl Wallet {
         *self.inner.get_external_index()
     }
 
-    pub fn send_transaction(
-        &mut self,
-        destination: Destination,
-        fee_rate: Option<f64>,
-    ) -> Result<String, WalletError> {
-        let dest = CoinswapDestination::try_from(destination)?;
-
-        let utxos = self.inner.list_descriptor_utxo_spend_info();
-
-        if utxos.is_empty() {
-            return Err(WalletError::General {
-                msg: "No UTXOs available for spending".to_string(),
-            });
-        }
-
-        let tx = self.inner.spend_from_wallet(fee_rate.unwrap(), dest, &utxos)?;
-        let txid = self.inner.send_tx(&tx)?;
-
-        Ok(txid.to_string())
+    pub fn list_all_utxos(&self) -> Vec<ListUnspentResultEntry, UTXOSpendInfo> {
+        self.inner.list_all_utxo_spend_info();
     }
 
     pub fn sync(&self) -> Result<(), WalletError> {
@@ -237,3 +213,36 @@ pub fn create_default_rpc_config() -> RPCConfig {
         wallet_name: "coinswap-wallet".to_string(),
     }
 }
+
+// // Note: Since coinswap::wallet::UTXOSpendInfo is private, we need to implement 
+// // conversion logic manually based on the wallet's list_all_utxo_spend_info method
+// impl UTXOSpendInfo {
+//     /// Convert from the internal representation that would come from the wallet
+//     /// This is a placeholder - the actual conversion would need to be implemented
+//     /// based on how the wallet exposes this information
+//     pub fn from_raw_data(
+//         utxo: &ListUnspentResultEntry,
+//         // Additional parameters would be needed based on the wallet's internal logic
+//     ) -> Self {
+//         // This is a simplified conversion - in practice, you'd need access to
+//         // the wallet's internal state to determine the correct UTXOSpendInfo type
+//         UTXOSpendInfo::SeedCoin {
+//             path: "unknown".to_string(),
+//             input_value: utxo.amount.to_sat(),
+//         }
+//     }
+// }
+
+// impl From<&ListUnspentResultEntry> for UTXO {
+//     fn from(entry: &ListUnspentResultEntry) -> Self {
+//         Self {
+//             txid: entry.txid.to_string(),
+//             vout: entry.vout,
+//             amount: entry.amount.to_sat(),
+//             confirmations: entry.confirmations,
+//             spendable: entry.spendable,
+//             solvable: entry.solvable,
+//             safe: entry.safe,
+//         }
+//     }
+// }
