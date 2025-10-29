@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
     error::TakerError as CoinswapTakerError,
+    offers::{OfferAndAddress, OfferBook}
 };
 use coinswap::wallet::RPCConfig as CoinswapRPCConfig;
 use bitcoin::{Amount, OutPoint};
@@ -178,6 +179,25 @@ impl Taker {
         Ok(())
     }
 
+    /// Get basic information about all good makers (limited due to private fields)
+    pub fn get_all_good_makers(&self) -> Result<Vec<String>, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+            msg: "Failed to acquire taker lock".to_string() 
+        })?;
+        
+        // Fetch fresh offers
+        let offerbook = taker.fetch_offers()?;
+        let good_makers = offerbook.all_good_makers();
+        
+        // Since fields are private, we can only return addresses
+        let addresses = good_makers
+            .into_iter()
+            .map(|maker| maker.address.to_string())
+            .collect();
+        
+        Ok(addresses)
+    }
+
     // /// Get detailed information about all good makers
     // pub fn get_all_good_makers(&self) -> Result<Vec<MakerOffer>, TakerError> {
     //     let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
@@ -230,19 +250,24 @@ impl Taker {
         taker.recover_from_swap()?;
         Ok(())
     }
-}
 
-// #[uniffi::export]
-// pub fn create_swap_params(
-//     send_amount_sats: u64,
-//     maker_count: u32,
-// ) -> SwapParams {
-//     SwapParams {
-//         send_amount: send_amount_sats,
-//         maker_count,
-//         manually_selected_outpoints: None,
-//     }
-// }
+    /// Fetches only the offer data from Tracker and returns the updated Offerbook.
+    pub fn fetch_good_makers(&self) -> Result<Vec<String>, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+            msg: "Failed to acquire taker lock".to_string() 
+        })?;
+        
+        let offerbook = taker.fetch_offers()?;
+        let all_good_makers = offerbook.all_good_makers();
+        
+        let addresses = all_good_makers
+            .into_iter()
+            .map(|maker| maker.address.to_string())
+            .collect();
+        
+        Ok(addresses)
+    }
+}
 
 #[uniffi::export]
 pub fn create_swap_params(

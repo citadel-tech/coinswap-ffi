@@ -9,7 +9,7 @@ FFI layer for the coinswap client
 - [ ] list_transactions -> rpc
 
 ### Market
-- [ ] Makers Info (Avg fee?, Total Liquidity?, Online Makers, Avg Response time?) -> taker api/display_offer, taker/offers.rs -> all_good_makers
+- [x] Makers Info (Avg fee?, Total Liquidity?, Online Makers, Avg Response time?) -> taker api/display_offer, taker/offers.rs -> all_good_makers
 - [ ] Min and Max Size -> all_good_makers
 - [ ] Bond Amount -> all_good_makers
 - [ ] Fee (Timelock PCT, absolute PCT, maker fee) -> all_good_makers

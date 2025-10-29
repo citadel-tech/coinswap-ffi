@@ -2,7 +2,7 @@
 
 ## Wallet
 - [x] get_balances
-- [ ] list_all_utxos (spendinfo, listutxo)
+- [x] list_all_utxos (spendinfo, listutxo)
 - [ ] list_transactions
 
 ## Market
