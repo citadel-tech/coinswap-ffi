@@ -7,7 +7,6 @@ use bitcoin::{Amount, OutPoint};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
     error::TakerError as CoinswapTakerError,
-    offers::{OfferAndAddress, OfferBook},
 };
 use coinswap::wallet::RPCConfig as CoinswapRPCConfig;
 use std::path::PathBuf;
