@@ -6,10 +6,10 @@
 - [ ] list_transactions
 
 ## Market
-- [ ] Makers Info (Avg fee?, Total Liquidity?, Online Makers, Avg Response time?)
-- [ ] Min and Max Size
-- [ ] Bond Amount
-- [ ] Fee (Timelock PCT, absolute PCT, maker fee)
+- [x] Makers Info (Avg fee?, Total Liquidity?, Online Makers, Avg Response time?)
+- [x] Min and Max Size
+- [x] Bond Amount
+- [x] Fee (Timelock PCT, absolute PCT, maker fee)
 
 ## Send
 - [ ] Network Fee (Dynamic, realtime)
@@ -19,5 +19,5 @@
 - [ ] Recent_Addresses?
 
 ## Swap
-- [ ] Number of Maker (Online Makers)
+- [x] Number of Maker (Online Makers)
 -

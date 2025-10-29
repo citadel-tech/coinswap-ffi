@@ -251,7 +251,6 @@ impl Taker {
         Ok(())
     }
 
-    /// Fetches only the offer data from Tracker and returns the updated Offerbook.
     pub fn fetch_good_makers(&self) -> Result<Vec<String>, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
             msg: "Failed to acquire taker lock".to_string() 
@@ -261,6 +260,22 @@ impl Taker {
         let all_good_makers = offerbook.all_good_makers();
         
         let addresses = all_good_makers
+            .into_iter()
+            .map(|maker| maker.address.to_string())
+            .collect();
+        
+        Ok(addresses)
+    }
+
+        pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+            msg: "Failed to acquire taker lock".to_string() 
+        })?;
+        
+        let offerbook = taker.fetch_offers()?;
+        let all_makers = offerbook.all_makers();
+        
+        let addresses = all_makers
             .into_iter()
             .map(|maker| maker.address.to_string())
             .collect();
