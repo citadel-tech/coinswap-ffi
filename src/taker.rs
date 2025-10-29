@@ -2,16 +2,16 @@
 //!
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use crate::RPCConfig;
+use bitcoin::{Amount, OutPoint};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
     error::TakerError as CoinswapTakerError,
-    offers::{OfferAndAddress, OfferBook}
+    offers::{OfferAndAddress, OfferBook},
 };
 use coinswap::wallet::RPCConfig as CoinswapRPCConfig;
-use bitcoin::{Amount, OutPoint};
-use crate::RPCConfig;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum TakerError {
@@ -30,15 +30,13 @@ pub enum TakerError {
 impl From<CoinswapTakerError> for TakerError {
     fn from(error: CoinswapTakerError) -> Self {
         match error {
-            CoinswapTakerError::Wallet(e) => TakerError::Wallet { 
-                msg: format!("{:?}", e) 
+            CoinswapTakerError::Wallet(e) => TakerError::Wallet {
+                msg: format!("{:?}", e),
             },
             CoinswapTakerError::General(msg) => TakerError::General { msg },
-            CoinswapTakerError::IO(e) => TakerError::IO { 
-                msg: e.to_string() 
-            },
-            _ => TakerError::General { 
-                msg: format!("Taker error: {:?}", error) 
+            CoinswapTakerError::IO(e) => TakerError::IO { msg: e.to_string() },
+            _ => TakerError::General {
+                msg: format!("Taker error: {:?}", error),
             },
         }
     }
@@ -56,24 +54,27 @@ pub struct SwapParams {
 
 impl TryFrom<SwapParams> for CoinswapSwapParams {
     type Error = TakerError;
-    
+
     fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
         let send_amount = Amount::from_sat(params.send_amount);
-        
-        let manually_selected_outpoints = if let Some(outpoints) = params.manually_selected_outpoints {
-            let mut parsed_outpoints = Vec::new();
-            for outpoint_str in outpoints {
-                let outpoint = outpoint_str.parse::<OutPoint>()
-                    .map_err(|e| TakerError::General { 
-                        msg: format!("Invalid outpoint format: {}", e) 
-                    })?;
-                parsed_outpoints.push(outpoint);
-            }
-            Some(parsed_outpoints)
-        } else {
-            None
-        };
-        
+
+        let manually_selected_outpoints =
+            if let Some(outpoints) = params.manually_selected_outpoints {
+                let mut parsed_outpoints = Vec::new();
+                for outpoint_str in outpoints {
+                    let outpoint =
+                        outpoint_str
+                            .parse::<OutPoint>()
+                            .map_err(|e| TakerError::General {
+                                msg: format!("Invalid outpoint format: {}", e),
+                            })?;
+                    parsed_outpoints.push(outpoint);
+                }
+                Some(parsed_outpoints)
+            } else {
+                None
+            };
+
         Ok(CoinswapSwapParams {
             send_amount,
             maker_count: params.maker_count as usize,
@@ -95,10 +96,10 @@ impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
             TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
             TakerBehavior::DropConnectionAfterFullSetup => {
                 coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
-            },
+            }
             TakerBehavior::BroadcastContractAfterFullSetup => {
                 coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
-            },
+            }
         }
     }
 }
@@ -121,7 +122,7 @@ impl Taker {
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
-        
+
         let taker = CoinswapTaker::init(
             data_dir,
             wallet_file_name,
@@ -131,49 +132,59 @@ impl Taker {
             control_port,
             tor_auth_password,
         )?;
-        
-        Ok(Arc::new(Self { taker: Mutex::new(taker) }))
+
+        Ok(Arc::new(Self {
+            taker: Mutex::new(taker),
+        }))
     }
-    
+
     pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<(), TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker.do_coinswap(params)?;
         Ok(())
     }
-    
+
     pub fn get_wallet_name(&self) -> Result<String, TakerError> {
-        let taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
         Ok(taker.get_wallet().get_name().to_string())
     }
-    
+
     /// Get wallet balances
     pub fn get_wallet_balances(&self) -> Result<crate::Balances, TakerError> {
-        let taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
-        let balances = taker.get_wallet().get_balances()
-            .map_err(|e| TakerError::Wallet { msg: format!("{:?}", e) })?;
+        let balances = taker
+            .get_wallet()
+            .get_balances()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("{:?}", e),
+            })?;
         Ok(crate::Balances::from(balances))
     }
-    
+
     pub fn sync_wallet(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
-        taker.get_wallet_mut().sync_and_save()
-            .map_err(|e| TakerError::Wallet { msg: format!("{:?}", e) })?;
+        taker
+            .get_wallet_mut()
+            .sync_and_save()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("{:?}", e),
+            })?;
         Ok(())
     }
 
     /// Sync the offerbook with available makers
     pub fn sync_offerbook(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker.sync_offerbook()?;
         Ok(())
@@ -181,33 +192,33 @@ impl Taker {
 
     /// Get basic information about all good makers (limited due to private fields)
     pub fn get_all_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
-        
+
         // Fetch fresh offers
         let offerbook = taker.fetch_offers()?;
         let good_makers = offerbook.all_good_makers();
-        
+
         // Since fields are private, we can only return addresses
         let addresses = good_makers
             .into_iter()
             .map(|maker| maker.address.to_string())
             .collect();
-        
+
         Ok(addresses)
     }
 
     // /// Get detailed information about all good makers
     // pub fn get_all_good_makers(&self) -> Result<Vec<MakerOffer>, TakerError> {
-    //     let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-    //         msg: "Failed to acquire taker lock".to_string() 
+    //     let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+    //         msg: "Failed to acquire taker lock".to_string()
     //     })?;
-        
+
     //     // Fetch fresh offers
     //     let offerbook = taker.fetch_offers()?;
     //     let good_makers = offerbook.all_good_makers();
-        
+
     //     let offers = good_makers
     //         .into_iter()
     //         .map(|maker| MakerOffer {
@@ -221,7 +232,7 @@ impl Taker {
     //             address: maker.address.to_string(),
     //         })
     //         .collect();
-        
+
     //     Ok(offers)
     // }
 
@@ -237,49 +248,49 @@ impl Taker {
             "min_size": maker_offer.min_size,
             "address": maker_offer.address
         });
-        
+
         serde_json::to_string_pretty(&offer_json)
             .map_err(|e| TakerError::General { msg: e.to_string() })
     }
 
     /// Recover from a failed swap
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker.recover_from_swap()?;
         Ok(())
     }
 
     pub fn fetch_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
-        
+
         let offerbook = taker.fetch_offers()?;
         let all_good_makers = offerbook.all_good_makers();
-        
+
         let addresses = all_good_makers
             .into_iter()
             .map(|maker| maker.address.to_string())
             .collect();
-        
+
         Ok(addresses)
     }
 
-        pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
-            msg: "Failed to acquire taker lock".to_string() 
+    pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
         })?;
-        
+
         let offerbook = taker.fetch_offers()?;
         let all_makers = offerbook.all_makers();
-        
+
         let addresses = all_makers
             .into_iter()
             .map(|maker| maker.address.to_string())
             .collect();
-        
+
         Ok(addresses)
     }
 }
