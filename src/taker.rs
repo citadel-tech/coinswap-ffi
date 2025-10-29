@@ -168,6 +168,68 @@ impl Taker {
             .map_err(|e| TakerError::Wallet { msg: format!("{:?}", e) })?;
         Ok(())
     }
+
+    /// Sync the offerbook with available makers
+    pub fn sync_offerbook(&self) -> Result<(), TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+            msg: "Failed to acquire taker lock".to_string() 
+        })?;
+        taker.sync_offerbook()?;
+        Ok(())
+    }
+
+    // /// Get detailed information about all good makers
+    // pub fn get_all_good_makers(&self) -> Result<Vec<MakerOffer>, TakerError> {
+    //     let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+    //         msg: "Failed to acquire taker lock".to_string() 
+    //     })?;
+        
+    //     // Fetch fresh offers
+    //     let offerbook = taker.fetch_offers()?;
+    //     let good_makers = offerbook.all_good_makers();
+        
+    //     let offers = good_makers
+    //         .into_iter()
+    //         .map(|maker| MakerOffer {
+    //             base_fee: maker.offer.base_fee,
+    //             amount_relative_fee_pct: maker.offer.amount_relative_fee_pct,
+    //             time_relative_fee_pct: maker.offer.time_relative_fee_pct,
+    //             required_confirms: maker.offer.required_confirms,
+    //             minimum_locktime: maker.offer.minimum_locktime,
+    //             max_size: maker.offer.max_size,
+    //             min_size: maker.offer.min_size,
+    //             address: maker.address.to_string(),
+    //         })
+    //         .collect();
+        
+    //     Ok(offers)
+    // }
+
+    /// Display detailed information about a specific maker offer
+    pub fn display_offer(&self, maker_offer: &MakerOffer) -> Result<String, TakerError> {
+        let offer_json = serde_json::json!({
+            "base_fee": maker_offer.base_fee,
+            "amount_relative_fee_pct": maker_offer.amount_relative_fee_pct,
+            "time_relative_fee_pct": maker_offer.time_relative_fee_pct,
+            "required_confirms": maker_offer.required_confirms,
+            "minimum_locktime": maker_offer.minimum_locktime,
+            "max_size": maker_offer.max_size,
+            "min_size": maker_offer.min_size,
+            "address": maker_offer.address
+        });
+        
+        serde_json::to_string_pretty(&offer_json)
+            .map_err(|e| TakerError::General { msg: e.to_string() })
+    }
+
+    /// Recover from a failed swap
+    pub fn recover_from_swap(&self) -> Result<(), TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General { 
+            msg: "Failed to acquire taker lock".to_string() 
+        })?;
+        taker.recover_from_swap()?;
+        Ok(())
+    }
 }
 
 // #[uniffi::export]
@@ -193,4 +255,28 @@ pub fn create_swap_params(
         maker_count,
         manually_selected_outpoints: Some(outpoints),
     }
+}
+
+#[derive(uniffi::Record)]
+pub struct MakerOffer {
+    pub base_fee: u64,
+    pub amount_relative_fee_pct: f64,
+    pub time_relative_fee_pct: f64,
+    pub required_confirms: u32,
+    pub minimum_locktime: u16,
+    pub max_size: u64,
+    pub min_size: u64,
+    pub address: String,
+}
+
+#[derive(uniffi::Record)]
+pub struct MakerStats {
+    pub total_makers: u32,
+    pub online_makers: u32,
+    pub avg_base_fee: u64,
+    pub avg_amount_relative_fee_pct: f64,
+    pub avg_time_relative_fee_pct: f64,
+    pub total_liquidity: u64,
+    pub avg_min_size: u64,
+    pub avg_max_size: u64,
 }
