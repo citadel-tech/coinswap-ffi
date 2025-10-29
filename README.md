@@ -5,7 +5,7 @@ FFI layer for the coinswap client
 
 ### Wallet
 - [x] get_balances
-- [ ] list_all_utxos (spendinfo, listutxo) -> wallet api
+- [x] list_all_utxos (spendinfo, listutxo) -> wallet api
 - [ ] list_transactions -> rpc
 
 ### Market

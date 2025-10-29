@@ -2,17 +2,15 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
-use bitcoin::ScriptBuf as csScriptBuf;
-use bitcoin::address::NetworkUnchecked;
+use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
 use std::path::Path;
 use std::sync::Arc;
-use std::collections::HashMap;
-use bitcoin::{hashes::hash160::Hash, Address, Amount as coinswapAmount};
-use bitcoind::bitcoincore_rpc::{json::ListUnspentResultEntry as csListUnspentResultEntry, Auth};
+use bitcoin::Amount as coinswapAmount;
+use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
-    Balances as CoinswapBalances, Destination as CoinswapDestination,
+    Balances as CoinswapBalances, 
     RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet,
-    WalletError as CoinswapWalletError
+    WalletError as CoinswapWalletError, UTXOSpendInfo as csUTXOSpendInfo
 };
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -58,10 +56,30 @@ pub struct Balances {
 pub struct Amount(pub coinswapAmount);
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
-pub struct ScriptBuf(pub csScriptBuf);
+pub struct Txid(pub csTxid);
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
-pub struct ListUnspentResultEntry(pub csListUnspentResultEntry);
+pub struct ScriptBuf(pub csScriptBuf);
+
+// #[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+// pub struct ListUnspentResultEntry(pub csListUnspentResultEntry);
+
+#[derive(uniffi::Record)]
+pub struct ListUnspentResultEntry {
+    pub txid: Arc<Txid>,
+    pub vout: u32,
+    pub address: Option<String>,
+    pub label: Option<String>,
+    pub script_pub_key: Arc<ScriptBuf>,
+    pub amount: Arc<Amount>,
+    pub confirmations: u32,
+    pub redeem_script: Option<Arc<ScriptBuf>>,
+    pub witness_script: Option<Arc<ScriptBuf>>,
+    pub spendable: bool,
+    pub solvable: bool,
+    pub desc: Option<String>,
+    pub safe: bool,
+}
 
 impl From<CoinswapBalances> for Balances {
     fn from(balances: CoinswapBalances) -> Self {
@@ -76,19 +94,8 @@ impl From<CoinswapBalances> for Balances {
 }
 
 #[derive(uniffi::Record)]
-pub struct UTXO {
-    pub txid: String,
-    pub vout: u32,
-    pub amount: u64,  // satoshis
-    pub confirmations: u32,
-    pub spendable: bool,
-    pub solvable: bool,
-    pub safe: bool,
-}
-
-#[derive(uniffi::Record)]
-pub struct UTXOInfo {
-    pub utxo: UTXO,
+pub struct UTXOWithSpendInfo {
+    pub utxo: ListUnspentResultEntry,
     pub spend_info: UTXOSpendInfo,
 }
 
@@ -142,7 +149,6 @@ pub struct WalletBackup {
     pub file_name: String,
 }
 
-// Main wallet wrapper
 #[derive(uniffi::Object)]
 pub struct Wallet {
     inner: CoinswapWallet,
@@ -176,13 +182,63 @@ impl Wallet {
         self.inner.get_name().to_string()
     }
 
-    pub fn get_external_index(&self) -> u32 {
-        *self.inner.get_external_index()
-    }
-
-    pub fn list_all_utxos(&self) -> Vec<ListUnspentResultEntry, UTXOSpendInfo> {
-        self.inner.list_all_utxo_spend_info();
-    }
+    pub fn list_all_utxos(&self) -> Vec<UTXOWithSpendInfo> {
+        let entries = self.inner.list_all_utxo_spend_info();
+        entries
+            .into_iter()
+            .map(|(cs_utxo, cs_info)| {
+                let utxo = ListUnspentResultEntry {
+                    txid: Arc::new(Txid(cs_utxo.txid)),
+                    vout: cs_utxo.vout,
+                    address: cs_utxo.address.map(|a| a.assume_checked().to_string()),
+                    label: cs_utxo.label,
+                    script_pub_key: Arc::new(ScriptBuf(cs_utxo.script_pub_key)),
+                    amount: Arc::new(Amount(cs_utxo.amount)),
+                    confirmations: cs_utxo.confirmations,
+                    redeem_script: cs_utxo.redeem_script.map(|s| Arc::new(ScriptBuf(s))),
+                    witness_script: cs_utxo.witness_script.map(|s| Arc::new(ScriptBuf(s))),
+                    spendable: cs_utxo.spendable,
+                    solvable: cs_utxo.solvable,
+                    desc: cs_utxo.descriptor,
+                    safe: cs_utxo.safe,
+                };
+                let spend_info = match cs_info {
+                    csUTXOSpendInfo::SeedCoin { path, input_value } => {
+                        UTXOSpendInfo::SeedCoin { path, input_value: Arc::new(Amount(input_value)) }
+                    }
+                    csUTXOSpendInfo::IncomingSwapCoin { multisig_redeemscript } => {
+                        UTXOSpendInfo::IncomingSwapCoin { multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)) }
+                    }
+                    csUTXOSpendInfo::OutgoingSwapCoin { multisig_redeemscript } => {
+                        UTXOSpendInfo::OutgoingSwapCoin { multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)) }
+                    }
+                    csUTXOSpendInfo::TimelockContract { swapcoin_multisig_redeemscript, input_value } => {
+                        UTXOSpendInfo::TimelockContract {
+                            swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(swapcoin_multisig_redeemscript)),
+                            input_value: Arc::new(Amount(input_value)),
+                        }
+                    }
+                    csUTXOSpendInfo::HashlockContract { swapcoin_multisig_redeemscript, input_value } => {
+                        UTXOSpendInfo::HashlockContract {
+                            swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(swapcoin_multisig_redeemscript)),
+                            input_value: Arc::new(Amount(input_value)),
+                        }
+                    }
+                    csUTXOSpendInfo::FidelityBondCoin { index, input_value } => {
+                        UTXOSpendInfo::FidelityBondCoin { index, input_value: Arc::new(Amount(input_value)) }
+                    }
+                    csUTXOSpendInfo::SweptCoin { path, input_value, original_multisig_redeemscript } => {
+                        UTXOSpendInfo::SweptCoin {
+                            path,
+                            input_value: Arc::new(Amount(input_value)),
+                            original_multisig_redeemscript: Arc::new(ScriptBuf(original_multisig_redeemscript)),
+                        }
+                    }
+                };
+                UTXOWithSpendInfo { utxo, spend_info }
+            })
+            .collect()
+    } 
 
     pub fn sync(&self) -> Result<(), WalletError> {
         // This method requires mutable access in the original
@@ -213,36 +269,3 @@ pub fn create_default_rpc_config() -> RPCConfig {
         wallet_name: "coinswap-wallet".to_string(),
     }
 }
-
-// // Note: Since coinswap::wallet::UTXOSpendInfo is private, we need to implement 
-// // conversion logic manually based on the wallet's list_all_utxo_spend_info method
-// impl UTXOSpendInfo {
-//     /// Convert from the internal representation that would come from the wallet
-//     /// This is a placeholder - the actual conversion would need to be implemented
-//     /// based on how the wallet exposes this information
-//     pub fn from_raw_data(
-//         utxo: &ListUnspentResultEntry,
-//         // Additional parameters would be needed based on the wallet's internal logic
-//     ) -> Self {
-//         // This is a simplified conversion - in practice, you'd need access to
-//         // the wallet's internal state to determine the correct UTXOSpendInfo type
-//         UTXOSpendInfo::SeedCoin {
-//             path: "unknown".to_string(),
-//             input_value: utxo.amount.to_sat(),
-//         }
-//     }
-// }
-
-// impl From<&ListUnspentResultEntry> for UTXO {
-//     fn from(entry: &ListUnspentResultEntry) -> Self {
-//         Self {
-//             txid: entry.txid.to_string(),
-//             vout: entry.vout,
-//             amount: entry.amount.to_sat(),
-//             confirmations: entry.confirmations,
-//             spendable: entry.spendable,
-//             solvable: entry.solvable,
-//             safe: entry.safe,
-//         }
-//     }
-// }
