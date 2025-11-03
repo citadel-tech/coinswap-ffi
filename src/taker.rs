@@ -3,7 +3,7 @@
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
 use crate::RPCConfig;
-use bitcoin::{Amount, OutPoint};
+use bitcoin::{Amount, OutPoint as coinswapOutPoint};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
     error::TakerError as CoinswapTakerError,
@@ -25,6 +25,9 @@ pub enum TakerError {
     #[error("IO error: {msg}")]
     IO { msg: String },
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+pub struct OutPoint(pub coinswapOutPoint);
 
 impl From<CoinswapTakerError> for TakerError {
     fn from(error: CoinswapTakerError) -> Self {
@@ -48,7 +51,7 @@ pub struct SwapParams {
     /// How many hops (number of makers)
     pub maker_count: u32,
     /// User selected UTXOs (optional)
-    pub manually_selected_outpoints: Option<Vec<String>>,
+    pub manually_selected_outpoints: Option<Vec<Arc<OutPoint>>>,
 }
 
 impl TryFrom<SwapParams> for CoinswapSwapParams {
@@ -57,22 +60,12 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
     fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
         let send_amount = Amount::from_sat(params.send_amount);
 
-        let manually_selected_outpoints =
-            if let Some(outpoints) = params.manually_selected_outpoints {
-                let mut parsed_outpoints = Vec::new();
-                for outpoint_str in outpoints {
-                    let outpoint =
-                        outpoint_str
-                            .parse::<OutPoint>()
-                            .map_err(|e| TakerError::General {
-                                msg: format!("Invalid outpoint format: {}", e),
-                            })?;
-                    parsed_outpoints.push(outpoint);
-                }
-                Some(parsed_outpoints)
-            } else {
-                None
-            };
+        let manually_selected_outpoints = params.manually_selected_outpoints.map(|outpoints| {
+            outpoints
+                .into_iter()
+                .map(|arc_outpoint| arc_outpoint.0)
+                .collect()
+        });
 
         Ok(CoinswapSwapParams {
             send_amount,
@@ -298,7 +291,7 @@ impl Taker {
 pub fn create_swap_params(
     send_amount_sats: u64,
     maker_count: u32,
-    outpoints: Vec<String>,
+    outpoints: Vec<Arc<OutPoint>>,
 ) -> SwapParams {
     SwapParams {
         send_amount: send_amount_sats,
