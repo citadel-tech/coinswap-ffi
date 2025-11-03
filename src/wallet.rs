@@ -2,16 +2,15 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
-use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
-use std::path::Path;
-use std::sync::Arc;
 use bitcoin::Amount as coinswapAmount;
+use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
 use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
-    Balances as CoinswapBalances, 
-    RPCConfig as CoinswapRPCConfig, Wallet as CoinswapWallet,
-    WalletError as CoinswapWalletError, UTXOSpendInfo as csUTXOSpendInfo
+    Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUTXOSpendInfo,
+    Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
+use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum WalletError {
@@ -110,11 +109,18 @@ pub struct RPCConfig {
 #[derive(uniffi::Enum)]
 pub enum UTXOSpendInfo {
     /// Seed Coin
-    SeedCoin { path: String, input_value: Arc<Amount> },
+    SeedCoin {
+        path: String,
+        input_value: Arc<Amount>,
+    },
     /// Coins that we have received in a swap
-    IncomingSwapCoin { multisig_redeemscript: Arc<ScriptBuf> },
+    IncomingSwapCoin {
+        multisig_redeemscript: Arc<ScriptBuf>,
+    },
     /// Coins that we have sent in a swap
-    OutgoingSwapCoin { multisig_redeemscript: Arc<ScriptBuf> },
+    OutgoingSwapCoin {
+        multisig_redeemscript: Arc<ScriptBuf>,
+    },
     /// Timelock Contract
     TimelockContract {
         swapcoin_multisig_redeemscript: Arc<ScriptBuf>,
@@ -126,7 +132,10 @@ pub enum UTXOSpendInfo {
         input_value: Arc<Amount>,
     },
     /// Fidelity Bond Coin
-    FidelityBondCoin { index: u32, input_value: Arc<Amount> },
+    FidelityBondCoin {
+        index: u32,
+        input_value: Arc<Amount>,
+    },
     ///Swept incoming swap coin
     SweptCoin {
         path: String,
@@ -172,8 +181,10 @@ impl Wallet {
     }
 
     pub fn get_next_external_address(&self) -> Result<String, WalletError> {
-        Err(WalletError::General { 
-            msg: "Address generation requires mutable access - not implemented in immutable context".to_string()
+        Err(WalletError::General {
+            msg:
+                "Address generation requires mutable access - not implemented in immutable context"
+                    .to_string(),
         })
     }
 
@@ -203,42 +214,60 @@ impl Wallet {
                     safe: cs_utxo.safe,
                 };
                 let spend_info = match cs_info {
-                    csUTXOSpendInfo::SeedCoin { path, input_value } => {
-                        UTXOSpendInfo::SeedCoin { path, input_value: Arc::new(Amount(input_value)) }
-                    }
-                    csUTXOSpendInfo::IncomingSwapCoin { multisig_redeemscript } => {
-                        UTXOSpendInfo::IncomingSwapCoin { multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)) }
-                    }
-                    csUTXOSpendInfo::OutgoingSwapCoin { multisig_redeemscript } => {
-                        UTXOSpendInfo::OutgoingSwapCoin { multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)) }
-                    }
-                    csUTXOSpendInfo::TimelockContract { swapcoin_multisig_redeemscript, input_value } => {
-                        UTXOSpendInfo::TimelockContract {
-                            swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(swapcoin_multisig_redeemscript)),
-                            input_value: Arc::new(Amount(input_value)),
-                        }
-                    }
-                    csUTXOSpendInfo::HashlockContract { swapcoin_multisig_redeemscript, input_value } => {
-                        UTXOSpendInfo::HashlockContract {
-                            swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(swapcoin_multisig_redeemscript)),
-                            input_value: Arc::new(Amount(input_value)),
-                        }
-                    }
+                    csUTXOSpendInfo::SeedCoin { path, input_value } => UTXOSpendInfo::SeedCoin {
+                        path,
+                        input_value: Arc::new(Amount(input_value)),
+                    },
+                    csUTXOSpendInfo::IncomingSwapCoin {
+                        multisig_redeemscript,
+                    } => UTXOSpendInfo::IncomingSwapCoin {
+                        multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)),
+                    },
+                    csUTXOSpendInfo::OutgoingSwapCoin {
+                        multisig_redeemscript,
+                    } => UTXOSpendInfo::OutgoingSwapCoin {
+                        multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)),
+                    },
+                    csUTXOSpendInfo::TimelockContract {
+                        swapcoin_multisig_redeemscript,
+                        input_value,
+                    } => UTXOSpendInfo::TimelockContract {
+                        swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(
+                            swapcoin_multisig_redeemscript,
+                        )),
+                        input_value: Arc::new(Amount(input_value)),
+                    },
+                    csUTXOSpendInfo::HashlockContract {
+                        swapcoin_multisig_redeemscript,
+                        input_value,
+                    } => UTXOSpendInfo::HashlockContract {
+                        swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(
+                            swapcoin_multisig_redeemscript,
+                        )),
+                        input_value: Arc::new(Amount(input_value)),
+                    },
                     csUTXOSpendInfo::FidelityBondCoin { index, input_value } => {
-                        UTXOSpendInfo::FidelityBondCoin { index, input_value: Arc::new(Amount(input_value)) }
-                    }
-                    csUTXOSpendInfo::SweptCoin { path, input_value, original_multisig_redeemscript } => {
-                        UTXOSpendInfo::SweptCoin {
-                            path,
+                        UTXOSpendInfo::FidelityBondCoin {
+                            index,
                             input_value: Arc::new(Amount(input_value)),
-                            original_multisig_redeemscript: Arc::new(ScriptBuf(original_multisig_redeemscript)),
                         }
                     }
+                    csUTXOSpendInfo::SweptCoin {
+                        path,
+                        input_value,
+                        original_multisig_redeemscript,
+                    } => UTXOSpendInfo::SweptCoin {
+                        path,
+                        input_value: Arc::new(Amount(input_value)),
+                        original_multisig_redeemscript: Arc::new(ScriptBuf(
+                            original_multisig_redeemscript,
+                        )),
+                    },
                 };
                 UTXOWithSpendInfo { utxo, spend_info }
             })
             .collect()
-    } 
+    }
 
     pub fn sync(&self) -> Result<(), WalletError> {
         // This method requires mutable access in the original
