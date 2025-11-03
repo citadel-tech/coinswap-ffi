@@ -281,10 +281,11 @@ impl Wallet {
     }
 
     #[napi]
-    pub fn sync(&self) -> Result<()> {
-        Err(napi::Error::from_reason(
-            "Sync requires mutable access - use sync_and_save from external interface",
-        ))
+    pub fn sync_and_save(&mut self) -> Result<()> {
+        self.inner
+            .sync_and_save()
+            .map_err(|e| napi::Error::from_reason(format!("Sync and save error: {:?}", e)))?;
+        Ok(())
     }
 
     #[napi]
