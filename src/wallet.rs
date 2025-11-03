@@ -10,7 +10,7 @@ use coinswap::wallet::{
     Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum WalletError {
@@ -160,7 +160,7 @@ pub struct WalletBackup {
 
 #[derive(uniffi::Object)]
 pub struct Wallet {
-    inner: CoinswapWallet,
+    inner: Mutex<CoinswapWallet>,
 }
 
 #[uniffi::export]
@@ -172,11 +172,13 @@ impl Wallet {
 
         let wallet = CoinswapWallet::init(path, &config, None)?;
 
-        Ok(Arc::new(Self { inner: wallet }))
+        Ok(Arc::new(Self {
+            inner: Mutex::new(wallet),
+        }))
     }
 
     pub fn get_balances(&self) -> Result<Balances, WalletError> {
-        let balances = self.inner.get_balances()?;
+        let balances = self.inner.lock().unwrap().get_balances()?;
         Ok(Balances::from(balances))
     }
 
@@ -190,11 +192,11 @@ impl Wallet {
 
     /// Get the wallet name
     pub fn get_name(&self) -> String {
-        self.inner.get_name().to_string()
+        self.inner.lock().unwrap().get_name().to_string()
     }
 
     pub fn list_all_utxos(&self) -> Vec<UTXOWithSpendInfo> {
-        let entries = self.inner.list_all_utxo_spend_info();
+        let entries = self.inner.lock().unwrap().list_all_utxo_spend_info();
         entries
             .into_iter()
             .map(|(cs_utxo, cs_info)| {
@@ -269,8 +271,8 @@ impl Wallet {
             .collect()
     }
 
-    pub fn sync(&self) -> Result<(), WalletError> {
-        // This method requires mutable access in the original
+    pub fn sync_and_save(&self) -> Result<(), WalletError> {
+        let _ = self.inner.lock().unwrap().sync_and_save();
         Err(WalletError::General {
             msg: "Sync requires mutable access - use sync_and_save from external interface"
                 .to_string(),
@@ -279,12 +281,12 @@ impl Wallet {
 
     pub fn backup(&self, path: String) -> Result<(), WalletError> {
         let backup_path = Path::new(&path);
-        self.inner.backup(backup_path, None)?;
+        self.inner.lock().unwrap().backup(backup_path, None)?;
         Ok(())
     }
 
     pub fn lock_unspendable_utxos(&self) -> Result<(), WalletError> {
-        self.inner.lock_unspendable_utxos()?;
+        self.inner.lock().unwrap().lock_unspendable_utxos()?;
         Ok(())
     }
 }
