@@ -2,7 +2,7 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use bitcoin::Amount;
+use bitcoin::{Amount, OutPoint as BitcoinOutPoint};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
     error::TakerError as CoinswapTakerError,
@@ -12,6 +12,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::fmt;
 
 #[napi]
 #[derive(Debug)]
@@ -29,16 +30,31 @@ pub struct OutPoint {
     pub vout: u32,
 }
 
-impl From<CoinswapTakerError> for TakerError {
-    fn from(error: CoinswapTakerError) -> Self {
-        match error {
-            CoinswapTakerError::Wallet(_) => TakerError::Wallet,
-            CoinswapTakerError::General(_) => TakerError::General,
-            CoinswapTakerError::IO(_) => TakerError::IO,
-            _ => TakerError::General,
+impl fmt::Display for TakerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TakerError::Wallet => write!(f, "Wallet error"),
+            TakerError::Protocol => write!(f, "Protocol error"),
+            TakerError::Network => write!(f, "Network error"),
+            TakerError::General => write!(f, "General error"),
+            TakerError::IO => write!(f, "IO error"),
         }
     }
 }
+
+impl AsRef<str> for TakerError {
+    fn as_ref(&self) -> &str {
+        match self {
+            TakerError::Wallet => "Wallet error",
+            TakerError::Protocol => "Protocol error",
+            TakerError::Network => "Network error",
+            TakerError::General => "General error",
+            TakerError::IO => "IO error",
+        }
+    }
+}
+
+impl std::error::Error for TakerError {}
 
 #[napi(object)]
 pub struct Balances {
