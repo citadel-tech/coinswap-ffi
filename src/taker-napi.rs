@@ -2,15 +2,14 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use bitcoin::{Amount, OutPoint as BitcoinOutPoint};
+use bitcoin::{Amount, OutPoint as BitcoinOutPoint, Txid};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-    error::TakerError as CoinswapTakerError,
 };
 use coinswap::wallet::{Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 use std::sync::Mutex;
 use std::fmt;
 
@@ -88,20 +87,19 @@ pub struct SwapParams {
 }
 
 impl TryFrom<SwapParams> for CoinswapSwapParams {
-    type Error = TakerError;
+    type Error = napi::Error;
 
-    fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
+    fn try_from(params: SwapParams) -> Result<Self> {
         let send_amount = Amount::from_sat(params.send_amount as u64);
-
 
         let manually_selected_outpoints = params.manually_selected_outpoints.map(|outpoints| {
             outpoints
                 .into_iter()
                 .map(|outpoint| {
-                    let txid = outpoint.txid.parse().map_err(|_| TakerError::General)?;
-                    BitcoinOutPoint::new(txid, outpoint.vout)
+                    let txid = Txid::from_str(&outpoint.txid).map_err(|e| napi::Error::from_reason(format!("Invalid txid: {:?}", e)))?;
+                    Ok(BitcoinOutPoint::new(txid, outpoint.vout))
                 })
-                .collect::<Result<Vec<_>, _>>()?
+                .collect::<Result<Vec<_>, _>>()
         }).transpose()?;
 
         Ok(CoinswapSwapParams {
@@ -157,6 +155,7 @@ pub struct Taker {
 }
 
 #[napi]
+#[allow(unused)]
 impl Taker {
     #[napi(constructor)]
     pub fn init(
@@ -188,7 +187,7 @@ impl Taker {
 
     #[napi]
     pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<()> {
-        let params = CoinswapSwapParams::try_from(swap_params).map_err(|e| napi::Error::from_reason(format!("Swap params error: {:?}", e)))?;
+        let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
         taker.do_coinswap(params).map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
         Ok(())
