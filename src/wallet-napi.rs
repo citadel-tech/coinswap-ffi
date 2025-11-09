@@ -2,6 +2,7 @@
 //!
 //! This module provides N-API bindings for the coinswap wallet functionality.
 
+use bitcoin::Address as coinswapAddress;
 use bitcoin::Amount as coinswapAmount;
 use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
 use bitcoind::bitcoincore_rpc::Auth;
@@ -66,6 +67,19 @@ impl From<csTxid> for Txid {
     fn from(txid: csTxid) -> Self {
         Self {
             hex: txid.to_string(),
+        }
+    }
+}
+
+#[napi(object)]
+pub struct Address {
+    pub address: String,
+}
+
+impl From<coinswapAddress> for Address {
+    fn from(addr: coinswapAddress) -> Self {
+        Self {
+            address: addr.to_string(),
         }
     }
 }
@@ -164,10 +178,20 @@ impl Wallet {
     }
 
     #[napi]
-    pub fn get_next_external_address(&self) -> Result<String> {
-        Err(napi::Error::from_reason(
-            "Address generation requires mutable access - not implemented in immutable context",
-        ))
+    pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>> {
+        let internal_addresses = self.inner.get_next_internal_addresses(count).map_err(|e| {
+            napi::Error::from_reason(format!("Get internal Addresses error: {:?}", e))
+        })?;
+        Ok(internal_addresses.into_iter().map(|addr| Address::from(addr)).collect::<Vec<_>>())
+    }
+
+    #[napi]
+    pub fn get_next_external_address(&mut self) -> Result<Address> {
+        let external_address = self
+            .inner
+            .get_next_external_address()
+            .map_err(|e| napi::Error::from_reason(format!("Gte next external address error: {:?}", e)))?;
+        Ok(Address::from(external_address))
     }
 
     /// Get the wallet name

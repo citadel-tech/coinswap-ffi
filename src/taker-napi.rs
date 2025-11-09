@@ -12,6 +12,7 @@ use napi_derive::napi;
 use std::{path::PathBuf, str::FromStr};
 use std::sync::Mutex;
 use std::fmt;
+use std::error::Error;
 
 #[napi]
 #[derive(Debug)]
@@ -53,7 +54,7 @@ impl AsRef<str> for TakerError {
     }
 }
 
-impl std::error::Error for TakerError {}
+impl Error for TakerError {}
 
 #[napi(object)]
 pub struct Balances {

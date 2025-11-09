@@ -2,6 +2,7 @@
 //!
 //! This module provides UniFFI bindings for the coinswap wallet functionality.
 
+use bitcoin::Address as coinswapAddress;
 use bitcoin::Amount as coinswapAmount;
 use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
 use bitcoind::bitcoincore_rpc::Auth;
@@ -59,6 +60,9 @@ pub struct Txid(pub csTxid);
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
 pub struct ScriptBuf(pub csScriptBuf);
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
+pub struct Address(pub coinswapAddress);
 
 // #[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
 // pub struct ListUnspentResultEntry(pub csListUnspentResultEntry);
@@ -182,12 +186,26 @@ impl Wallet {
         Ok(Balances::from(balances))
     }
 
-    pub fn get_next_external_address(&self) -> Result<String, WalletError> {
-        Err(WalletError::General {
-            msg:
-                "Address generation requires mutable access - not implemented in immutable context"
-                    .to_string(),
-        })
+    pub fn get_next_internal_addresses(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<Address>>, WalletError> {
+        let addresses = self
+            .inner
+            .lock()
+            .unwrap()
+            .get_next_internal_addresses(count)?.into_iter()
+            .map(|addr| Arc::new(Address(addr)))
+            .collect::<Vec<_>>();
+        Ok(addresses)
+            
+    }
+
+    pub fn get_next_external_address(
+        &self
+    ) -> Result<Arc<Address>, WalletError> {
+        let address = self.inner.lock().unwrap().get_next_external_address()?;
+        Ok(Arc::new(Address(address)))
     }
 
     /// Get the wallet name
