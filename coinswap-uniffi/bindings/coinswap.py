@@ -462,17 +462,47 @@ def _uniffi_check_contract_api_version(lib):
 def _uniffi_check_api_checksums(lib):
     if lib.uniffi_coinswap_ffi_checksum_func_create_default_rpc_config() != 9423:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_coinswap_ffi_checksum_func_create_swap_params() != 14523:
+    if lib.uniffi_coinswap_ffi_checksum_func_create_swap_params() != 64040:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_display_offer() != 29310:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_fetch_all_makers() != 10547:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_fetch_good_makers() != 31706:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_get_all_good_makers() != 35374:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances() != 36988:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name() != 45636:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap() != 52494:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap() != 5303:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook() != 43682:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet() != 64892:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_backup() != 31141:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_get_balances() != 8214:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_get_name() != 46731:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_external_address() != 44927:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_internal_addresses() != 37843:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_list_all_utxos() != 25489:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_lock_unspendable_utxos() != 58679:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_wallet_sync_and_save() != 32529:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 56903:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_constructor_wallet_init() != 14020:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -580,6 +610,46 @@ class _UniffiForeignFutureStructVoid(ctypes.Structure):
     ]
 _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiForeignFutureStructVoid,
 )
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_address.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_address.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_address.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_address.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_amount.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_amount.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_amount.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_amount.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_outpoint.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_outpoint.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_outpoint.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_outpoint.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_scriptbuf.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_scriptbuf.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_scriptbuf.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_scriptbuf.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_clone_taker.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -600,6 +670,27 @@ _UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_display_offer.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_display_offer.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_good_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_good_makers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_all_good_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_all_good_makers.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -610,17 +701,37 @@ _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_name.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_wallet_name.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_recover_from_swap.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_recover_from_swap.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_offerbook.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_offerbook.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_wallet.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_wallet.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_txid.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_txid.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_txid.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_txid.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_clone_wallet.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -631,6 +742,54 @@ _UniffiLib.uniffi_coinswap_ffi_fn_free_wallet.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_free_wallet.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_wallet_init.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_wallet_init.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_backup.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_backup.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_balances.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_balances.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_name.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_name.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_external_address.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_external_address.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_internal_addresses.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_uint32,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_internal_addresses.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_list_all_utxos.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_list_all_utxos.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_lock_unspendable_utxos.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_lock_unspendable_utxos.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_sync_and_save.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_sync_and_save.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
@@ -916,21 +1075,66 @@ _UniffiLib.uniffi_coinswap_ffi_checksum_func_create_default_rpc_config.restype =
 _UniffiLib.uniffi_coinswap_ffi_checksum_func_create_swap_params.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_func_create_swap_params.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_display_offer.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_display_offer.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_fetch_all_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_fetch_all_makers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_fetch_good_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_fetch_good_makers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_all_good_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_all_good_makers.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_send_coinswap.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_wallet.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_backup.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_backup.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_balances.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_balances.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_name.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_name.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_external_address.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_external_address.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_internal_addresses.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_get_next_internal_addresses.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_list_all_utxos.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_list_all_utxos.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_lock_unspendable_utxos.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_lock_unspendable_utxos.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_sync_and_save.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_wallet_sync_and_save.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_wallet_init.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_wallet_init.restype = ctypes.c_uint16
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.restype = ctypes.c_uint32
@@ -980,6 +1184,36 @@ class _UniffiConverterUInt64(_UniffiConverterPrimitiveInt):
     def write(value, buf):
         buf.write_u64(value)
 
+class _UniffiConverterDouble(_UniffiConverterPrimitiveFloat):
+    @staticmethod
+    def read(buf):
+        return buf.read_double()
+
+    @staticmethod
+    def write(value, buf):
+        buf.write_double(value)
+
+class _UniffiConverterBool:
+    @classmethod
+    def check_lower(cls, value):
+        return not not value
+
+    @classmethod
+    def lower(cls, value):
+        return 1 if value else 0
+
+    @staticmethod
+    def lift(value):
+        return value != 0
+
+    @classmethod
+    def read(cls, buf):
+        return cls.lift(buf.read_u8())
+
+    @classmethod
+    def write(cls, value, buf):
+        buf.write_u8(value)
+
 class _UniffiConverterString:
     @staticmethod
     def check_lower(value):
@@ -1012,25 +1246,15 @@ class _UniffiConverterString:
             builder.write(value.encode("utf-8"))
             return builder.finalize()
 
-class _UniffiConverterBytes(_UniffiConverterRustBuffer):
-    @staticmethod
-    def read(buf):
-        size = buf.read_i32()
-        if size < 0:
-            raise InternalError("Unexpected negative byte string length")
-        return buf.read(size)
 
-    @staticmethod
-    def check_lower(value):
-        try:
-            memoryview(value)
-        except TypeError:
-            raise TypeError("a bytes-like object is required, not {!r}".format(type(value).__name__))
 
-    @staticmethod
-    def write(value, buf):
-        buf.write_i32(len(value))
-        buf.write(value)
+
+
+
+
+
+
+
 
 
 
@@ -1094,6 +1318,275 @@ class _UniffiConverterTypeBalances(_UniffiConverterRustBuffer):
         _UniffiConverterUInt64.write(value.spendable, buf)
 
 
+class ListUnspentResultEntry:
+    txid: "Txid"
+    vout: "int"
+    address: "typing.Optional[str]"
+    label: "typing.Optional[str]"
+    script_pub_key: "ScriptBuf"
+    amount: "Amount"
+    confirmations: "int"
+    redeem_script: "typing.Optional[ScriptBuf]"
+    witness_script: "typing.Optional[ScriptBuf]"
+    spendable: "bool"
+    solvable: "bool"
+    desc: "typing.Optional[str]"
+    safe: "bool"
+    def __init__(self, *, txid: "Txid", vout: "int", address: "typing.Optional[str]", label: "typing.Optional[str]", script_pub_key: "ScriptBuf", amount: "Amount", confirmations: "int", redeem_script: "typing.Optional[ScriptBuf]", witness_script: "typing.Optional[ScriptBuf]", spendable: "bool", solvable: "bool", desc: "typing.Optional[str]", safe: "bool"):
+        self.txid = txid
+        self.vout = vout
+        self.address = address
+        self.label = label
+        self.script_pub_key = script_pub_key
+        self.amount = amount
+        self.confirmations = confirmations
+        self.redeem_script = redeem_script
+        self.witness_script = witness_script
+        self.spendable = spendable
+        self.solvable = solvable
+        self.desc = desc
+        self.safe = safe
+
+    def __str__(self):
+        return "ListUnspentResultEntry(txid={}, vout={}, address={}, label={}, script_pub_key={}, amount={}, confirmations={}, redeem_script={}, witness_script={}, spendable={}, solvable={}, desc={}, safe={})".format(self.txid, self.vout, self.address, self.label, self.script_pub_key, self.amount, self.confirmations, self.redeem_script, self.witness_script, self.spendable, self.solvable, self.desc, self.safe)
+
+    def __eq__(self, other):
+        if self.txid != other.txid:
+            return False
+        if self.vout != other.vout:
+            return False
+        if self.address != other.address:
+            return False
+        if self.label != other.label:
+            return False
+        if self.script_pub_key != other.script_pub_key:
+            return False
+        if self.amount != other.amount:
+            return False
+        if self.confirmations != other.confirmations:
+            return False
+        if self.redeem_script != other.redeem_script:
+            return False
+        if self.witness_script != other.witness_script:
+            return False
+        if self.spendable != other.spendable:
+            return False
+        if self.solvable != other.solvable:
+            return False
+        if self.desc != other.desc:
+            return False
+        if self.safe != other.safe:
+            return False
+        return True
+
+class _UniffiConverterTypeListUnspentResultEntry(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListUnspentResultEntry(
+            txid=_UniffiConverterTypeTxid.read(buf),
+            vout=_UniffiConverterUInt32.read(buf),
+            address=_UniffiConverterOptionalString.read(buf),
+            label=_UniffiConverterOptionalString.read(buf),
+            script_pub_key=_UniffiConverterTypeScriptBuf.read(buf),
+            amount=_UniffiConverterTypeAmount.read(buf),
+            confirmations=_UniffiConverterUInt32.read(buf),
+            redeem_script=_UniffiConverterOptionalTypeScriptBuf.read(buf),
+            witness_script=_UniffiConverterOptionalTypeScriptBuf.read(buf),
+            spendable=_UniffiConverterBool.read(buf),
+            solvable=_UniffiConverterBool.read(buf),
+            desc=_UniffiConverterOptionalString.read(buf),
+            safe=_UniffiConverterBool.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeTxid.check_lower(value.txid)
+        _UniffiConverterUInt32.check_lower(value.vout)
+        _UniffiConverterOptionalString.check_lower(value.address)
+        _UniffiConverterOptionalString.check_lower(value.label)
+        _UniffiConverterTypeScriptBuf.check_lower(value.script_pub_key)
+        _UniffiConverterTypeAmount.check_lower(value.amount)
+        _UniffiConverterUInt32.check_lower(value.confirmations)
+        _UniffiConverterOptionalTypeScriptBuf.check_lower(value.redeem_script)
+        _UniffiConverterOptionalTypeScriptBuf.check_lower(value.witness_script)
+        _UniffiConverterBool.check_lower(value.spendable)
+        _UniffiConverterBool.check_lower(value.solvable)
+        _UniffiConverterOptionalString.check_lower(value.desc)
+        _UniffiConverterBool.check_lower(value.safe)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeTxid.write(value.txid, buf)
+        _UniffiConverterUInt32.write(value.vout, buf)
+        _UniffiConverterOptionalString.write(value.address, buf)
+        _UniffiConverterOptionalString.write(value.label, buf)
+        _UniffiConverterTypeScriptBuf.write(value.script_pub_key, buf)
+        _UniffiConverterTypeAmount.write(value.amount, buf)
+        _UniffiConverterUInt32.write(value.confirmations, buf)
+        _UniffiConverterOptionalTypeScriptBuf.write(value.redeem_script, buf)
+        _UniffiConverterOptionalTypeScriptBuf.write(value.witness_script, buf)
+        _UniffiConverterBool.write(value.spendable, buf)
+        _UniffiConverterBool.write(value.solvable, buf)
+        _UniffiConverterOptionalString.write(value.desc, buf)
+        _UniffiConverterBool.write(value.safe, buf)
+
+
+class MakerOffer:
+    base_fee: "int"
+    amount_relative_fee_pct: "float"
+    time_relative_fee_pct: "float"
+    required_confirms: "int"
+    minimum_locktime: "int"
+    max_size: "int"
+    min_size: "int"
+    address: "str"
+    def __init__(self, *, base_fee: "int", amount_relative_fee_pct: "float", time_relative_fee_pct: "float", required_confirms: "int", minimum_locktime: "int", max_size: "int", min_size: "int", address: "str"):
+        self.base_fee = base_fee
+        self.amount_relative_fee_pct = amount_relative_fee_pct
+        self.time_relative_fee_pct = time_relative_fee_pct
+        self.required_confirms = required_confirms
+        self.minimum_locktime = minimum_locktime
+        self.max_size = max_size
+        self.min_size = min_size
+        self.address = address
+
+    def __str__(self):
+        return "MakerOffer(base_fee={}, amount_relative_fee_pct={}, time_relative_fee_pct={}, required_confirms={}, minimum_locktime={}, max_size={}, min_size={}, address={})".format(self.base_fee, self.amount_relative_fee_pct, self.time_relative_fee_pct, self.required_confirms, self.minimum_locktime, self.max_size, self.min_size, self.address)
+
+    def __eq__(self, other):
+        if self.base_fee != other.base_fee:
+            return False
+        if self.amount_relative_fee_pct != other.amount_relative_fee_pct:
+            return False
+        if self.time_relative_fee_pct != other.time_relative_fee_pct:
+            return False
+        if self.required_confirms != other.required_confirms:
+            return False
+        if self.minimum_locktime != other.minimum_locktime:
+            return False
+        if self.max_size != other.max_size:
+            return False
+        if self.min_size != other.min_size:
+            return False
+        if self.address != other.address:
+            return False
+        return True
+
+class _UniffiConverterTypeMakerOffer(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return MakerOffer(
+            base_fee=_UniffiConverterUInt64.read(buf),
+            amount_relative_fee_pct=_UniffiConverterDouble.read(buf),
+            time_relative_fee_pct=_UniffiConverterDouble.read(buf),
+            required_confirms=_UniffiConverterUInt32.read(buf),
+            minimum_locktime=_UniffiConverterUInt16.read(buf),
+            max_size=_UniffiConverterUInt64.read(buf),
+            min_size=_UniffiConverterUInt64.read(buf),
+            address=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterUInt64.check_lower(value.base_fee)
+        _UniffiConverterDouble.check_lower(value.amount_relative_fee_pct)
+        _UniffiConverterDouble.check_lower(value.time_relative_fee_pct)
+        _UniffiConverterUInt32.check_lower(value.required_confirms)
+        _UniffiConverterUInt16.check_lower(value.minimum_locktime)
+        _UniffiConverterUInt64.check_lower(value.max_size)
+        _UniffiConverterUInt64.check_lower(value.min_size)
+        _UniffiConverterString.check_lower(value.address)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterUInt64.write(value.base_fee, buf)
+        _UniffiConverterDouble.write(value.amount_relative_fee_pct, buf)
+        _UniffiConverterDouble.write(value.time_relative_fee_pct, buf)
+        _UniffiConverterUInt32.write(value.required_confirms, buf)
+        _UniffiConverterUInt16.write(value.minimum_locktime, buf)
+        _UniffiConverterUInt64.write(value.max_size, buf)
+        _UniffiConverterUInt64.write(value.min_size, buf)
+        _UniffiConverterString.write(value.address, buf)
+
+
+class MakerStats:
+    total_makers: "int"
+    online_makers: "int"
+    avg_base_fee: "int"
+    avg_amount_relative_fee_pct: "float"
+    avg_time_relative_fee_pct: "float"
+    total_liquidity: "int"
+    avg_min_size: "int"
+    avg_max_size: "int"
+    def __init__(self, *, total_makers: "int", online_makers: "int", avg_base_fee: "int", avg_amount_relative_fee_pct: "float", avg_time_relative_fee_pct: "float", total_liquidity: "int", avg_min_size: "int", avg_max_size: "int"):
+        self.total_makers = total_makers
+        self.online_makers = online_makers
+        self.avg_base_fee = avg_base_fee
+        self.avg_amount_relative_fee_pct = avg_amount_relative_fee_pct
+        self.avg_time_relative_fee_pct = avg_time_relative_fee_pct
+        self.total_liquidity = total_liquidity
+        self.avg_min_size = avg_min_size
+        self.avg_max_size = avg_max_size
+
+    def __str__(self):
+        return "MakerStats(total_makers={}, online_makers={}, avg_base_fee={}, avg_amount_relative_fee_pct={}, avg_time_relative_fee_pct={}, total_liquidity={}, avg_min_size={}, avg_max_size={})".format(self.total_makers, self.online_makers, self.avg_base_fee, self.avg_amount_relative_fee_pct, self.avg_time_relative_fee_pct, self.total_liquidity, self.avg_min_size, self.avg_max_size)
+
+    def __eq__(self, other):
+        if self.total_makers != other.total_makers:
+            return False
+        if self.online_makers != other.online_makers:
+            return False
+        if self.avg_base_fee != other.avg_base_fee:
+            return False
+        if self.avg_amount_relative_fee_pct != other.avg_amount_relative_fee_pct:
+            return False
+        if self.avg_time_relative_fee_pct != other.avg_time_relative_fee_pct:
+            return False
+        if self.total_liquidity != other.total_liquidity:
+            return False
+        if self.avg_min_size != other.avg_min_size:
+            return False
+        if self.avg_max_size != other.avg_max_size:
+            return False
+        return True
+
+class _UniffiConverterTypeMakerStats(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return MakerStats(
+            total_makers=_UniffiConverterUInt32.read(buf),
+            online_makers=_UniffiConverterUInt32.read(buf),
+            avg_base_fee=_UniffiConverterUInt64.read(buf),
+            avg_amount_relative_fee_pct=_UniffiConverterDouble.read(buf),
+            avg_time_relative_fee_pct=_UniffiConverterDouble.read(buf),
+            total_liquidity=_UniffiConverterUInt64.read(buf),
+            avg_min_size=_UniffiConverterUInt64.read(buf),
+            avg_max_size=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterUInt32.check_lower(value.total_makers)
+        _UniffiConverterUInt32.check_lower(value.online_makers)
+        _UniffiConverterUInt64.check_lower(value.avg_base_fee)
+        _UniffiConverterDouble.check_lower(value.avg_amount_relative_fee_pct)
+        _UniffiConverterDouble.check_lower(value.avg_time_relative_fee_pct)
+        _UniffiConverterUInt64.check_lower(value.total_liquidity)
+        _UniffiConverterUInt64.check_lower(value.avg_min_size)
+        _UniffiConverterUInt64.check_lower(value.avg_max_size)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterUInt32.write(value.total_makers, buf)
+        _UniffiConverterUInt32.write(value.online_makers, buf)
+        _UniffiConverterUInt64.write(value.avg_base_fee, buf)
+        _UniffiConverterDouble.write(value.avg_amount_relative_fee_pct, buf)
+        _UniffiConverterDouble.write(value.avg_time_relative_fee_pct, buf)
+        _UniffiConverterUInt64.write(value.total_liquidity, buf)
+        _UniffiConverterUInt64.write(value.avg_min_size, buf)
+        _UniffiConverterUInt64.write(value.avg_max_size, buf)
+
+
 class RpcConfig:
     url: "str"
     username: "str"
@@ -1155,12 +1648,12 @@ class SwapParams:
     How many hops (number of makers)
     """
 
-    manually_selected_outpoints: "typing.Optional[typing.List[str]]"
+    manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]"
     """
     User selected UTXOs (optional)
     """
 
-    def __init__(self, *, send_amount: "int", maker_count: "int", manually_selected_outpoints: "typing.Optional[typing.List[str]]"):
+    def __init__(self, *, send_amount: "int", maker_count: "int", manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]"):
         self.send_amount = send_amount
         self.maker_count = maker_count
         self.manually_selected_outpoints = manually_selected_outpoints
@@ -1183,20 +1676,56 @@ class _UniffiConverterTypeSwapParams(_UniffiConverterRustBuffer):
         return SwapParams(
             send_amount=_UniffiConverterUInt64.read(buf),
             maker_count=_UniffiConverterUInt32.read(buf),
-            manually_selected_outpoints=_UniffiConverterOptionalSequenceString.read(buf),
+            manually_selected_outpoints=_UniffiConverterOptionalSequenceTypeOutPoint.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterUInt64.check_lower(value.send_amount)
         _UniffiConverterUInt32.check_lower(value.maker_count)
-        _UniffiConverterOptionalSequenceString.check_lower(value.manually_selected_outpoints)
+        _UniffiConverterOptionalSequenceTypeOutPoint.check_lower(value.manually_selected_outpoints)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterUInt64.write(value.send_amount, buf)
         _UniffiConverterUInt32.write(value.maker_count, buf)
-        _UniffiConverterOptionalSequenceString.write(value.manually_selected_outpoints, buf)
+        _UniffiConverterOptionalSequenceTypeOutPoint.write(value.manually_selected_outpoints, buf)
+
+
+class UtxoWithSpendInfo:
+    utxo: "ListUnspentResultEntry"
+    spend_info: "UtxoSpendInfo"
+    def __init__(self, *, utxo: "ListUnspentResultEntry", spend_info: "UtxoSpendInfo"):
+        self.utxo = utxo
+        self.spend_info = spend_info
+
+    def __str__(self):
+        return "UtxoWithSpendInfo(utxo={}, spend_info={})".format(self.utxo, self.spend_info)
+
+    def __eq__(self, other):
+        if self.utxo != other.utxo:
+            return False
+        if self.spend_info != other.spend_info:
+            return False
+        return True
+
+class _UniffiConverterTypeUtxoWithSpendInfo(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return UtxoWithSpendInfo(
+            utxo=_UniffiConverterTypeListUnspentResultEntry.read(buf),
+            spend_info=_UniffiConverterTypeUtxoSpendInfo.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeListUnspentResultEntry.check_lower(value.utxo)
+        _UniffiConverterTypeUtxoSpendInfo.check_lower(value.spend_info)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeListUnspentResultEntry.write(value.utxo, buf)
+        _UniffiConverterTypeUtxoSpendInfo.write(value.spend_info, buf)
 
 
 class WalletBackup:
@@ -1226,150 +1755,6 @@ class _UniffiConverterTypeWalletBackup(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.file_name, buf)
-
-
-
-
-
-class Destination:
-    def __init__(self):
-        raise RuntimeError("Destination cannot be instantiated directly")
-
-    # Each enum variant is a nested class of the enum itself.
-    class SWEEP:
-        address: "str"
-
-        def __init__(self,address: "str"):
-            self.address = address
-
-        def __str__(self):
-            return "Destination.SWEEP(address={})".format(self.address)
-
-        def __eq__(self, other):
-            if not other.is_SWEEP():
-                return False
-            if self.address != other.address:
-                return False
-            return True
-    
-    class MULTI:
-        outputs: "dict[str, int]"
-        op_return_data: "typing.Optional[bytes]"
-
-        def __init__(self,outputs: "dict[str, int]", op_return_data: "typing.Optional[bytes]"):
-            self.outputs = outputs
-            self.op_return_data = op_return_data
-
-        def __str__(self):
-            return "Destination.MULTI(outputs={}, op_return_data={})".format(self.outputs, self.op_return_data)
-
-        def __eq__(self, other):
-            if not other.is_MULTI():
-                return False
-            if self.outputs != other.outputs:
-                return False
-            if self.op_return_data != other.op_return_data:
-                return False
-            return True
-    
-    class MULTI_DYNAMIC:
-        amount: "int"
-        addresses: "typing.List[str]"
-
-        def __init__(self,amount: "int", addresses: "typing.List[str]"):
-            self.amount = amount
-            self.addresses = addresses
-
-        def __str__(self):
-            return "Destination.MULTI_DYNAMIC(amount={}, addresses={})".format(self.amount, self.addresses)
-
-        def __eq__(self, other):
-            if not other.is_MULTI_DYNAMIC():
-                return False
-            if self.amount != other.amount:
-                return False
-            if self.addresses != other.addresses:
-                return False
-            return True
-    
-    
-
-    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
-    # whether an instance is that variant.
-    def is_SWEEP(self) -> bool:
-        return isinstance(self, Destination.SWEEP)
-    def is_sweep(self) -> bool:
-        return isinstance(self, Destination.SWEEP)
-    def is_MULTI(self) -> bool:
-        return isinstance(self, Destination.MULTI)
-    def is_multi(self) -> bool:
-        return isinstance(self, Destination.MULTI)
-    def is_MULTI_DYNAMIC(self) -> bool:
-        return isinstance(self, Destination.MULTI_DYNAMIC)
-    def is_multi_dynamic(self) -> bool:
-        return isinstance(self, Destination.MULTI_DYNAMIC)
-    
-
-# Now, a little trick - we make each nested variant class be a subclass of the main
-# enum class, so that method calls and instance checks etc will work intuitively.
-# We might be able to do this a little more neatly with a metaclass, but this'll do.
-Destination.SWEEP = type("Destination.SWEEP", (Destination.SWEEP, Destination,), {})  # type: ignore
-Destination.MULTI = type("Destination.MULTI", (Destination.MULTI, Destination,), {})  # type: ignore
-Destination.MULTI_DYNAMIC = type("Destination.MULTI_DYNAMIC", (Destination.MULTI_DYNAMIC, Destination,), {})  # type: ignore
-
-
-
-
-class _UniffiConverterTypeDestination(_UniffiConverterRustBuffer):
-    @staticmethod
-    def read(buf):
-        variant = buf.read_i32()
-        if variant == 1:
-            return Destination.SWEEP(
-                _UniffiConverterString.read(buf),
-            )
-        if variant == 2:
-            return Destination.MULTI(
-                _UniffiConverterMapStringUInt64.read(buf),
-                _UniffiConverterOptionalBytes.read(buf),
-            )
-        if variant == 3:
-            return Destination.MULTI_DYNAMIC(
-                _UniffiConverterUInt64.read(buf),
-                _UniffiConverterSequenceString.read(buf),
-            )
-        raise InternalError("Raw enum value doesn't match any cases")
-
-    @staticmethod
-    def check_lower(value):
-        if value.is_SWEEP():
-            _UniffiConverterString.check_lower(value.address)
-            return
-        if value.is_MULTI():
-            _UniffiConverterMapStringUInt64.check_lower(value.outputs)
-            _UniffiConverterOptionalBytes.check_lower(value.op_return_data)
-            return
-        if value.is_MULTI_DYNAMIC():
-            _UniffiConverterUInt64.check_lower(value.amount)
-            _UniffiConverterSequenceString.check_lower(value.addresses)
-            return
-        raise ValueError(value)
-
-    @staticmethod
-    def write(value, buf):
-        if value.is_SWEEP():
-            buf.write_i32(1)
-            _UniffiConverterString.write(value.address, buf)
-        if value.is_MULTI():
-            buf.write_i32(2)
-            _UniffiConverterMapStringUInt64.write(value.outputs, buf)
-            _UniffiConverterOptionalBytes.write(value.op_return_data, buf)
-        if value.is_MULTI_DYNAMIC():
-            buf.write_i32(3)
-            _UniffiConverterUInt64.write(value.amount, buf)
-            _UniffiConverterSequenceString.write(value.addresses, buf)
-
-
 
 
 
@@ -1546,6 +1931,330 @@ class _UniffiConverterTypeTakerError(_UniffiConverterRustBuffer):
         if isinstance(value, TakerError.Io):
             buf.write_i32(5)
             _UniffiConverterString.write(value.msg, buf)
+
+
+
+
+
+class UtxoSpendInfo:
+    def __init__(self):
+        raise RuntimeError("UtxoSpendInfo cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class SEED_COIN:
+        """
+        Seed Coin
+        """
+
+        path: "str"
+        input_value: "Amount"
+
+        def __init__(self,path: "str", input_value: "Amount"):
+            self.path = path
+            self.input_value = input_value
+
+        def __str__(self):
+            return "UtxoSpendInfo.SEED_COIN(path={}, input_value={})".format(self.path, self.input_value)
+
+        def __eq__(self, other):
+            if not other.is_SEED_COIN():
+                return False
+            if self.path != other.path:
+                return False
+            if self.input_value != other.input_value:
+                return False
+            return True
+    
+    class INCOMING_SWAP_COIN:
+        """
+        Coins that we have received in a swap
+        """
+
+        multisig_redeemscript: "ScriptBuf"
+
+        def __init__(self,multisig_redeemscript: "ScriptBuf"):
+            self.multisig_redeemscript = multisig_redeemscript
+
+        def __str__(self):
+            return "UtxoSpendInfo.INCOMING_SWAP_COIN(multisig_redeemscript={})".format(self.multisig_redeemscript)
+
+        def __eq__(self, other):
+            if not other.is_INCOMING_SWAP_COIN():
+                return False
+            if self.multisig_redeemscript != other.multisig_redeemscript:
+                return False
+            return True
+    
+    class OUTGOING_SWAP_COIN:
+        """
+        Coins that we have sent in a swap
+        """
+
+        multisig_redeemscript: "ScriptBuf"
+
+        def __init__(self,multisig_redeemscript: "ScriptBuf"):
+            self.multisig_redeemscript = multisig_redeemscript
+
+        def __str__(self):
+            return "UtxoSpendInfo.OUTGOING_SWAP_COIN(multisig_redeemscript={})".format(self.multisig_redeemscript)
+
+        def __eq__(self, other):
+            if not other.is_OUTGOING_SWAP_COIN():
+                return False
+            if self.multisig_redeemscript != other.multisig_redeemscript:
+                return False
+            return True
+    
+    class TIMELOCK_CONTRACT:
+        """
+        Timelock Contract
+        """
+
+        swapcoin_multisig_redeemscript: "ScriptBuf"
+        input_value: "Amount"
+
+        def __init__(self,swapcoin_multisig_redeemscript: "ScriptBuf", input_value: "Amount"):
+            self.swapcoin_multisig_redeemscript = swapcoin_multisig_redeemscript
+            self.input_value = input_value
+
+        def __str__(self):
+            return "UtxoSpendInfo.TIMELOCK_CONTRACT(swapcoin_multisig_redeemscript={}, input_value={})".format(self.swapcoin_multisig_redeemscript, self.input_value)
+
+        def __eq__(self, other):
+            if not other.is_TIMELOCK_CONTRACT():
+                return False
+            if self.swapcoin_multisig_redeemscript != other.swapcoin_multisig_redeemscript:
+                return False
+            if self.input_value != other.input_value:
+                return False
+            return True
+    
+    class HASHLOCK_CONTRACT:
+        """
+        HashLockContract
+        """
+
+        swapcoin_multisig_redeemscript: "ScriptBuf"
+        input_value: "Amount"
+
+        def __init__(self,swapcoin_multisig_redeemscript: "ScriptBuf", input_value: "Amount"):
+            self.swapcoin_multisig_redeemscript = swapcoin_multisig_redeemscript
+            self.input_value = input_value
+
+        def __str__(self):
+            return "UtxoSpendInfo.HASHLOCK_CONTRACT(swapcoin_multisig_redeemscript={}, input_value={})".format(self.swapcoin_multisig_redeemscript, self.input_value)
+
+        def __eq__(self, other):
+            if not other.is_HASHLOCK_CONTRACT():
+                return False
+            if self.swapcoin_multisig_redeemscript != other.swapcoin_multisig_redeemscript:
+                return False
+            if self.input_value != other.input_value:
+                return False
+            return True
+    
+    class FIDELITY_BOND_COIN:
+        """
+        Fidelity Bond Coin
+        """
+
+        index: "int"
+        input_value: "Amount"
+
+        def __init__(self,index: "int", input_value: "Amount"):
+            self.index = index
+            self.input_value = input_value
+
+        def __str__(self):
+            return "UtxoSpendInfo.FIDELITY_BOND_COIN(index={}, input_value={})".format(self.index, self.input_value)
+
+        def __eq__(self, other):
+            if not other.is_FIDELITY_BOND_COIN():
+                return False
+            if self.index != other.index:
+                return False
+            if self.input_value != other.input_value:
+                return False
+            return True
+    
+    class SWEPT_COIN:
+        """
+        Swept incoming swap coin
+        """
+
+        path: "str"
+        input_value: "Amount"
+        original_multisig_redeemscript: "ScriptBuf"
+
+        def __init__(self,path: "str", input_value: "Amount", original_multisig_redeemscript: "ScriptBuf"):
+            self.path = path
+            self.input_value = input_value
+            self.original_multisig_redeemscript = original_multisig_redeemscript
+
+        def __str__(self):
+            return "UtxoSpendInfo.SWEPT_COIN(path={}, input_value={}, original_multisig_redeemscript={})".format(self.path, self.input_value, self.original_multisig_redeemscript)
+
+        def __eq__(self, other):
+            if not other.is_SWEPT_COIN():
+                return False
+            if self.path != other.path:
+                return False
+            if self.input_value != other.input_value:
+                return False
+            if self.original_multisig_redeemscript != other.original_multisig_redeemscript:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_SEED_COIN(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.SEED_COIN)
+    def is_seed_coin(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.SEED_COIN)
+    def is_INCOMING_SWAP_COIN(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.INCOMING_SWAP_COIN)
+    def is_incoming_swap_coin(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.INCOMING_SWAP_COIN)
+    def is_OUTGOING_SWAP_COIN(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.OUTGOING_SWAP_COIN)
+    def is_outgoing_swap_coin(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.OUTGOING_SWAP_COIN)
+    def is_TIMELOCK_CONTRACT(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.TIMELOCK_CONTRACT)
+    def is_timelock_contract(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.TIMELOCK_CONTRACT)
+    def is_HASHLOCK_CONTRACT(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.HASHLOCK_CONTRACT)
+    def is_hashlock_contract(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.HASHLOCK_CONTRACT)
+    def is_FIDELITY_BOND_COIN(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.FIDELITY_BOND_COIN)
+    def is_fidelity_bond_coin(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.FIDELITY_BOND_COIN)
+    def is_SWEPT_COIN(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.SWEPT_COIN)
+    def is_swept_coin(self) -> bool:
+        return isinstance(self, UtxoSpendInfo.SWEPT_COIN)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+UtxoSpendInfo.SEED_COIN = type("UtxoSpendInfo.SEED_COIN", (UtxoSpendInfo.SEED_COIN, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.INCOMING_SWAP_COIN = type("UtxoSpendInfo.INCOMING_SWAP_COIN", (UtxoSpendInfo.INCOMING_SWAP_COIN, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.OUTGOING_SWAP_COIN = type("UtxoSpendInfo.OUTGOING_SWAP_COIN", (UtxoSpendInfo.OUTGOING_SWAP_COIN, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.TIMELOCK_CONTRACT = type("UtxoSpendInfo.TIMELOCK_CONTRACT", (UtxoSpendInfo.TIMELOCK_CONTRACT, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.HASHLOCK_CONTRACT = type("UtxoSpendInfo.HASHLOCK_CONTRACT", (UtxoSpendInfo.HASHLOCK_CONTRACT, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.FIDELITY_BOND_COIN = type("UtxoSpendInfo.FIDELITY_BOND_COIN", (UtxoSpendInfo.FIDELITY_BOND_COIN, UtxoSpendInfo,), {})  # type: ignore
+UtxoSpendInfo.SWEPT_COIN = type("UtxoSpendInfo.SWEPT_COIN", (UtxoSpendInfo.SWEPT_COIN, UtxoSpendInfo,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeUtxoSpendInfo(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return UtxoSpendInfo.SEED_COIN(
+                _UniffiConverterString.read(buf),
+                _UniffiConverterTypeAmount.read(buf),
+            )
+        if variant == 2:
+            return UtxoSpendInfo.INCOMING_SWAP_COIN(
+                _UniffiConverterTypeScriptBuf.read(buf),
+            )
+        if variant == 3:
+            return UtxoSpendInfo.OUTGOING_SWAP_COIN(
+                _UniffiConverterTypeScriptBuf.read(buf),
+            )
+        if variant == 4:
+            return UtxoSpendInfo.TIMELOCK_CONTRACT(
+                _UniffiConverterTypeScriptBuf.read(buf),
+                _UniffiConverterTypeAmount.read(buf),
+            )
+        if variant == 5:
+            return UtxoSpendInfo.HASHLOCK_CONTRACT(
+                _UniffiConverterTypeScriptBuf.read(buf),
+                _UniffiConverterTypeAmount.read(buf),
+            )
+        if variant == 6:
+            return UtxoSpendInfo.FIDELITY_BOND_COIN(
+                _UniffiConverterUInt32.read(buf),
+                _UniffiConverterTypeAmount.read(buf),
+            )
+        if variant == 7:
+            return UtxoSpendInfo.SWEPT_COIN(
+                _UniffiConverterString.read(buf),
+                _UniffiConverterTypeAmount.read(buf),
+                _UniffiConverterTypeScriptBuf.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_SEED_COIN():
+            _UniffiConverterString.check_lower(value.path)
+            _UniffiConverterTypeAmount.check_lower(value.input_value)
+            return
+        if value.is_INCOMING_SWAP_COIN():
+            _UniffiConverterTypeScriptBuf.check_lower(value.multisig_redeemscript)
+            return
+        if value.is_OUTGOING_SWAP_COIN():
+            _UniffiConverterTypeScriptBuf.check_lower(value.multisig_redeemscript)
+            return
+        if value.is_TIMELOCK_CONTRACT():
+            _UniffiConverterTypeScriptBuf.check_lower(value.swapcoin_multisig_redeemscript)
+            _UniffiConverterTypeAmount.check_lower(value.input_value)
+            return
+        if value.is_HASHLOCK_CONTRACT():
+            _UniffiConverterTypeScriptBuf.check_lower(value.swapcoin_multisig_redeemscript)
+            _UniffiConverterTypeAmount.check_lower(value.input_value)
+            return
+        if value.is_FIDELITY_BOND_COIN():
+            _UniffiConverterUInt32.check_lower(value.index)
+            _UniffiConverterTypeAmount.check_lower(value.input_value)
+            return
+        if value.is_SWEPT_COIN():
+            _UniffiConverterString.check_lower(value.path)
+            _UniffiConverterTypeAmount.check_lower(value.input_value)
+            _UniffiConverterTypeScriptBuf.check_lower(value.original_multisig_redeemscript)
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_SEED_COIN():
+            buf.write_i32(1)
+            _UniffiConverterString.write(value.path, buf)
+            _UniffiConverterTypeAmount.write(value.input_value, buf)
+        if value.is_INCOMING_SWAP_COIN():
+            buf.write_i32(2)
+            _UniffiConverterTypeScriptBuf.write(value.multisig_redeemscript, buf)
+        if value.is_OUTGOING_SWAP_COIN():
+            buf.write_i32(3)
+            _UniffiConverterTypeScriptBuf.write(value.multisig_redeemscript, buf)
+        if value.is_TIMELOCK_CONTRACT():
+            buf.write_i32(4)
+            _UniffiConverterTypeScriptBuf.write(value.swapcoin_multisig_redeemscript, buf)
+            _UniffiConverterTypeAmount.write(value.input_value, buf)
+        if value.is_HASHLOCK_CONTRACT():
+            buf.write_i32(5)
+            _UniffiConverterTypeScriptBuf.write(value.swapcoin_multisig_redeemscript, buf)
+            _UniffiConverterTypeAmount.write(value.input_value, buf)
+        if value.is_FIDELITY_BOND_COIN():
+            buf.write_i32(6)
+            _UniffiConverterUInt32.write(value.index, buf)
+            _UniffiConverterTypeAmount.write(value.input_value, buf)
+        if value.is_SWEPT_COIN():
+            buf.write_i32(7)
+            _UniffiConverterString.write(value.path, buf)
+            _UniffiConverterTypeAmount.write(value.input_value, buf)
+            _UniffiConverterTypeScriptBuf.write(value.original_multisig_redeemscript, buf)
+
+
 
 
 # WalletError
@@ -1753,11 +2462,11 @@ class _UniffiConverterOptionalString(_UniffiConverterRustBuffer):
 
 
 
-class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
+class _UniffiConverterOptionalTypeScriptBuf(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
         if value is not None:
-            _UniffiConverterBytes.check_lower(value)
+            _UniffiConverterTypeScriptBuf.check_lower(value)
 
     @classmethod
     def write(cls, value, buf):
@@ -1766,7 +2475,7 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
             return
 
         buf.write_u8(1)
-        _UniffiConverterBytes.write(value, buf)
+        _UniffiConverterTypeScriptBuf.write(value, buf)
 
     @classmethod
     def read(cls, buf):
@@ -1774,7 +2483,7 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
         if flag == 0:
             return None
         elif flag == 1:
-            return _UniffiConverterBytes.read(buf)
+            return _UniffiConverterTypeScriptBuf.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -1834,11 +2543,11 @@ class _UniffiConverterOptionalTypeTakerBehavior(_UniffiConverterRustBuffer):
 
 
 
-class _UniffiConverterOptionalSequenceString(_UniffiConverterRustBuffer):
+class _UniffiConverterOptionalSequenceTypeOutPoint(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
         if value is not None:
-            _UniffiConverterSequenceString.check_lower(value)
+            _UniffiConverterSequenceTypeOutPoint.check_lower(value)
 
     @classmethod
     def write(cls, value, buf):
@@ -1847,7 +2556,7 @@ class _UniffiConverterOptionalSequenceString(_UniffiConverterRustBuffer):
             return
 
         buf.write_u8(1)
-        _UniffiConverterSequenceString.write(value, buf)
+        _UniffiConverterSequenceTypeOutPoint.write(value, buf)
 
     @classmethod
     def read(cls, buf):
@@ -1855,7 +2564,7 @@ class _UniffiConverterOptionalSequenceString(_UniffiConverterRustBuffer):
         if flag == 0:
             return None
         elif flag == 1:
-            return _UniffiConverterSequenceString.read(buf)
+            return _UniffiConverterSequenceTypeOutPoint.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -1886,39 +2595,321 @@ class _UniffiConverterSequenceString(_UniffiConverterRustBuffer):
 
 
 
-class _UniffiConverterMapStringUInt64(_UniffiConverterRustBuffer):
+class _UniffiConverterSequenceTypeAddress(_UniffiConverterRustBuffer):
     @classmethod
-    def check_lower(cls, items):
-        for (key, value) in items.items():
-            _UniffiConverterString.check_lower(key)
-            _UniffiConverterUInt64.check_lower(value)
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeAddress.check_lower(item)
 
     @classmethod
-    def write(cls, items, buf):
-        buf.write_i32(len(items))
-        for (key, value) in items.items():
-            _UniffiConverterString.write(key, buf)
-            _UniffiConverterUInt64.write(value, buf)
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeAddress.write(item, buf)
 
     @classmethod
     def read(cls, buf):
         count = buf.read_i32()
         if count < 0:
-            raise InternalError("Unexpected negative map size")
+            raise InternalError("Unexpected negative sequence length")
 
-        # It would be nice to use a dict comprehension,
-        # but in Python 3.7 and before the evaluation order is not according to spec,
-        # so we we're reading the value before the key.
-        # This loop makes the order explicit: first reading the key, then the value.
-        d = {}
-        for i in range(count):
-            key = _UniffiConverterString.read(buf)
-            val = _UniffiConverterUInt64.read(buf)
-            d[key] = val
-        return d
+        return [
+            _UniffiConverterTypeAddress.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypeOutPoint(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeOutPoint.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeOutPoint.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeOutPoint.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypeUtxoWithSpendInfo(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeUtxoWithSpendInfo.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeUtxoWithSpendInfo.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeUtxoWithSpendInfo.read(buf) for i in range(count)
+        ]
 
 # objects.
+class AddressProtocol(typing.Protocol):
+    pass
+# Address is a Rust-only trait - it's a wrapper around a Rust implementation.
+class Address():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_address, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_address, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeAddress:
+
+    @staticmethod
+    def lift(value: int):
+        return Address._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: Address):
+        if not isinstance(value, Address):
+            raise TypeError("Expected Address instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: AddressProtocol):
+        if not isinstance(value, Address):
+            raise TypeError("Expected Address instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: AddressProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class AmountProtocol(typing.Protocol):
+    pass
+# Amount is a Rust-only trait - it's a wrapper around a Rust implementation.
+class Amount():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_amount, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_amount, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeAmount:
+
+    @staticmethod
+    def lift(value: int):
+        return Amount._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: Amount):
+        if not isinstance(value, Amount):
+            raise TypeError("Expected Amount instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: AmountProtocol):
+        if not isinstance(value, Amount):
+            raise TypeError("Expected Amount instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: AmountProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class OutPointProtocol(typing.Protocol):
+    pass
+# OutPoint is a Rust-only trait - it's a wrapper around a Rust implementation.
+class OutPoint():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_outpoint, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_outpoint, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeOutPoint:
+
+    @staticmethod
+    def lift(value: int):
+        return OutPoint._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: OutPoint):
+        if not isinstance(value, OutPoint):
+            raise TypeError("Expected OutPoint instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: OutPointProtocol):
+        if not isinstance(value, OutPoint):
+            raise TypeError("Expected OutPoint instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: OutPointProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class ScriptBufProtocol(typing.Protocol):
+    pass
+# ScriptBuf is a Rust-only trait - it's a wrapper around a Rust implementation.
+class ScriptBuf():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_scriptbuf, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_scriptbuf, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeScriptBuf:
+
+    @staticmethod
+    def lift(value: int):
+        return ScriptBuf._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: ScriptBuf):
+        if not isinstance(value, ScriptBuf):
+            raise TypeError("Expected ScriptBuf instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: ScriptBufProtocol):
+        if not isinstance(value, ScriptBuf):
+            raise TypeError("Expected ScriptBuf instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: ScriptBufProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 class TakerProtocol(typing.Protocol):
+    def display_offer(self, maker_offer: "MakerOffer"):
+        """
+        Display detailed information about a specific maker offer
+        """
+
+        raise NotImplementedError
+    def fetch_all_makers(self, ):
+        raise NotImplementedError
+    def fetch_good_makers(self, ):
+        raise NotImplementedError
+    def get_all_good_makers(self, ):
+        """
+        Get basic information about all good makers (limited due to private fields)
+        """
+
+        raise NotImplementedError
     def get_wallet_balances(self, ):
         """
         Get wallet balances
@@ -1927,7 +2918,19 @@ class TakerProtocol(typing.Protocol):
         raise NotImplementedError
     def get_wallet_name(self, ):
         raise NotImplementedError
+    def recover_from_swap(self, ):
+        """
+        Recover from a failed swap
+        """
+
+        raise NotImplementedError
     def send_coinswap(self, swap_params: "SwapParams"):
+        raise NotImplementedError
+    def sync_offerbook(self, ):
+        """
+        Sync the offerbook with available makers
+        """
+
         raise NotImplementedError
     def sync_wallet(self, ):
         raise NotImplementedError
@@ -1981,6 +2984,53 @@ class Taker():
 
 
 
+    def display_offer(self, maker_offer: "MakerOffer") -> "str":
+        """
+        Display detailed information about a specific maker offer
+        """
+
+        _UniffiConverterTypeMakerOffer.check_lower(maker_offer)
+        
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_display_offer,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeMakerOffer.lower(maker_offer))
+        )
+
+
+
+
+
+    def fetch_all_makers(self, ) -> "typing.List[str]":
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def fetch_good_makers(self, ) -> "typing.List[str]":
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_fetch_good_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_all_good_makers(self, ) -> "typing.List[str]":
+        """
+        Get basic information about all good makers (limited due to private fields)
+        """
+
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_get_all_good_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
     def get_wallet_balances(self, ) -> "Balances":
         """
         Get wallet balances
@@ -2003,11 +3053,35 @@ class Taker():
 
 
 
+    def recover_from_swap(self, ) -> None:
+        """
+        Recover from a failed swap
+        """
+
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_recover_from_swap,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
     def send_coinswap(self, swap_params: "SwapParams") -> None:
         _UniffiConverterTypeSwapParams.check_lower(swap_params)
         
         _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_coinswap,self._uniffi_clone_pointer(),
         _UniffiConverterTypeSwapParams.lower(swap_params))
+
+
+
+
+
+
+    def sync_offerbook(self, ) -> None:
+        """
+        Sync the offerbook with available makers
+        """
+
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_offerbook,self._uniffi_clone_pointer(),)
 
 
 
@@ -2050,8 +3124,83 @@ class _UniffiConverterTypeTaker:
     @classmethod
     def write(cls, value: TakerProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
-class WalletProtocol(typing.Protocol):
+class TxidProtocol(typing.Protocol):
     pass
+# Txid is a Rust-only trait - it's a wrapper around a Rust implementation.
+class Txid():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_txid, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_txid, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeTxid:
+
+    @staticmethod
+    def lift(value: int):
+        return Txid._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: Txid):
+        if not isinstance(value, Txid):
+            raise TypeError("Expected Txid instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: TxidProtocol):
+        if not isinstance(value, Txid):
+            raise TypeError("Expected Txid instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: TxidProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class WalletProtocol(typing.Protocol):
+    def backup(self, path: "str"):
+        raise NotImplementedError
+    def get_balances(self, ):
+        raise NotImplementedError
+    def get_name(self, ):
+        """
+        Get the wallet name
+        """
+
+        raise NotImplementedError
+    def get_next_external_address(self, ):
+        raise NotImplementedError
+    def get_next_internal_addresses(self, count: "int"):
+        raise NotImplementedError
+    def list_all_utxos(self, ):
+        raise NotImplementedError
+    def lock_unspendable_utxos(self, ):
+        raise NotImplementedError
+    def sync_and_save(self, ):
+        raise NotImplementedError
 # Wallet is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Wallet():
     _pointer: ctypes.c_void_p
@@ -2076,6 +3225,97 @@ class Wallet():
         inst = cls.__new__(cls)
         inst._pointer = pointer
         return inst
+    @classmethod
+    def init(cls, path: "str",rpc_config: "RpcConfig"):
+        _UniffiConverterString.check_lower(path)
+        
+        _UniffiConverterTypeRpcConfig.check_lower(rpc_config)
+        
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_constructor_wallet_init,
+        _UniffiConverterString.lower(path),
+        _UniffiConverterTypeRpcConfig.lower(rpc_config))
+        return cls._make_instance_(pointer)
+
+
+
+    def backup(self, path: "str") -> None:
+        _UniffiConverterString.check_lower(path)
+        
+        _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_backup,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(path))
+
+
+
+
+
+
+    def get_balances(self, ) -> "Balances":
+        return _UniffiConverterTypeBalances.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_balances,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_name(self, ) -> "str":
+        """
+        Get the wallet name
+        """
+
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_name,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_next_external_address(self, ) -> "Address":
+        return _UniffiConverterTypeAddress.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_external_address,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_next_internal_addresses(self, count: "int") -> "typing.List[Address]":
+        _UniffiConverterUInt32.check_lower(count)
+        
+        return _UniffiConverterSequenceTypeAddress.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_get_next_internal_addresses,self._uniffi_clone_pointer(),
+        _UniffiConverterUInt32.lower(count))
+        )
+
+
+
+
+
+    def list_all_utxos(self, ) -> "typing.List[UtxoWithSpendInfo]":
+        return _UniffiConverterSequenceTypeUtxoWithSpendInfo.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_list_all_utxos,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def lock_unspendable_utxos(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_lock_unspendable_utxos,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+    def sync_and_save(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeWalletError,_UniffiLib.uniffi_coinswap_ffi_fn_method_wallet_sync_and_save,self._uniffi_clone_pointer(),)
+
+
+
+
 
 
 
@@ -2113,32 +3353,41 @@ def create_default_rpc_config() -> "RpcConfig":
     return _UniffiConverterTypeRpcConfig.lift(_uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config,))
 
 
-def create_swap_params(send_amount_sats: "int",maker_count: "int",outpoints: "typing.List[str]") -> "SwapParams":
+def create_swap_params(send_amount_sats: "int",maker_count: "int",outpoints: "typing.List[OutPoint]") -> "SwapParams":
     _UniffiConverterUInt64.check_lower(send_amount_sats)
     
     _UniffiConverterUInt32.check_lower(maker_count)
     
-    _UniffiConverterSequenceString.check_lower(outpoints)
+    _UniffiConverterSequenceTypeOutPoint.check_lower(outpoints)
     
     return _UniffiConverterTypeSwapParams.lift(_uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_func_create_swap_params,
         _UniffiConverterUInt64.lower(send_amount_sats),
         _UniffiConverterUInt32.lower(maker_count),
-        _UniffiConverterSequenceString.lower(outpoints)))
+        _UniffiConverterSequenceTypeOutPoint.lower(outpoints)))
 
 
 __all__ = [
     "InternalError",
-    "Destination",
     "TakerBehavior",
     "TakerError",
+    "UtxoSpendInfo",
     "WalletError",
     "Balances",
+    "ListUnspentResultEntry",
+    "MakerOffer",
+    "MakerStats",
     "RpcConfig",
     "SwapParams",
+    "UtxoWithSpendInfo",
     "WalletBackup",
     "create_default_rpc_config",
     "create_swap_params",
+    "Address",
+    "Amount",
+    "OutPoint",
+    "ScriptBuf",
     "Taker",
+    "Txid",
     "Wallet",
 ]
 

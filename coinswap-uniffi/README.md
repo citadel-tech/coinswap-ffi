@@ -7,6 +7,9 @@ FFI layer for the coinswap client
 - [x] get_balances
 - [x] list_all_utxos (spendinfo, listutxo) -> wallet api
 - [ ] list_transactions -> rpc
+- [ ] Send_to_address
+- [x] Get new internal address (imp for above)
+- [x] Get new external address
 
 ### Market
 - [x] Makers Info (Avg fee?, Total Liquidity?, Online Makers, Avg Response time?) -> taker api/display_offer, taker/offers.rs -> all_good_makers

@@ -251,6 +251,46 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureStr
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_ADDRESS
+void*_Nonnull uniffi_coinswap_ffi_fn_clone_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_ADDRESS
+void uniffi_coinswap_ffi_fn_free_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_AMOUNT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_AMOUNT
+void*_Nonnull uniffi_coinswap_ffi_fn_clone_amount(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_AMOUNT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_AMOUNT
+void uniffi_coinswap_ffi_fn_free_amount(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_OUTPOINT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_OUTPOINT
+void*_Nonnull uniffi_coinswap_ffi_fn_clone_outpoint(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_OUTPOINT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_OUTPOINT
+void uniffi_coinswap_ffi_fn_free_outpoint(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_SCRIPTBUF
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_SCRIPTBUF
+void*_Nonnull uniffi_coinswap_ffi_fn_clone_scriptbuf(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_SCRIPTBUF
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_SCRIPTBUF
+void uniffi_coinswap_ffi_fn_free_scriptbuf(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_TAKER
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_TAKER
 void*_Nonnull uniffi_coinswap_ffi_fn_clone_taker(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -266,6 +306,26 @@ void uniffi_coinswap_ffi_fn_free_taker(void*_Nonnull ptr, RustCallStatus *_Nonnu
 void*_Nonnull uniffi_coinswap_ffi_fn_constructor_taker_init(RustBuffer data_dir, RustBuffer wallet_file_name, RustBuffer rpc_config, RustBuffer _behavior, RustBuffer control_port, RustBuffer tor_auth_password, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_DISPLAY_OFFER
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_DISPLAY_OFFER
+RustBuffer uniffi_coinswap_ffi_fn_method_taker_display_offer(void*_Nonnull ptr, RustBuffer maker_offer, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_FETCH_ALL_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_FETCH_ALL_MAKERS
+RustBuffer uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_FETCH_GOOD_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_FETCH_GOOD_MAKERS
+RustBuffer uniffi_coinswap_ffi_fn_method_taker_fetch_good_makers(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_GET_ALL_GOOD_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_GET_ALL_GOOD_MAKERS
+RustBuffer uniffi_coinswap_ffi_fn_method_taker_get_all_good_makers(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_GET_WALLET_BALANCES
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_GET_WALLET_BALANCES
 RustBuffer uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -276,14 +336,34 @@ RustBuffer uniffi_coinswap_ffi_fn_method_taker_get_wallet_balances(void*_Nonnull
 RustBuffer uniffi_coinswap_ffi_fn_method_taker_get_wallet_name(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_RECOVER_FROM_SWAP
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_RECOVER_FROM_SWAP
+void uniffi_coinswap_ffi_fn_method_taker_recover_from_swap(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SEND_COINSWAP
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SEND_COINSWAP
 void uniffi_coinswap_ffi_fn_method_taker_send_coinswap(void*_Nonnull ptr, RustBuffer swap_params, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SYNC_OFFERBOOK
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SYNC_OFFERBOOK
+void uniffi_coinswap_ffi_fn_method_taker_sync_offerbook(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SYNC_WALLET
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SYNC_WALLET
 void uniffi_coinswap_ffi_fn_method_taker_sync_wallet(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_TXID
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_TXID
+void*_Nonnull uniffi_coinswap_ffi_fn_clone_txid(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_TXID
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_TXID
+void uniffi_coinswap_ffi_fn_free_txid(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CLONE_WALLET
@@ -294,6 +374,51 @@ void*_Nonnull uniffi_coinswap_ffi_fn_clone_wallet(void*_Nonnull ptr, RustCallSta
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_WALLET
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FREE_WALLET
 void uniffi_coinswap_ffi_fn_free_wallet(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CONSTRUCTOR_WALLET_INIT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_CONSTRUCTOR_WALLET_INIT
+void*_Nonnull uniffi_coinswap_ffi_fn_constructor_wallet_init(RustBuffer path, RustBuffer rpc_config, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_BACKUP
+void uniffi_coinswap_ffi_fn_method_wallet_backup(void*_Nonnull ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_BALANCES
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_BALANCES
+RustBuffer uniffi_coinswap_ffi_fn_method_wallet_get_balances(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NAME
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NAME
+RustBuffer uniffi_coinswap_ffi_fn_method_wallet_get_name(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NEXT_EXTERNAL_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NEXT_EXTERNAL_ADDRESS
+void*_Nonnull uniffi_coinswap_ffi_fn_method_wallet_get_next_external_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NEXT_INTERNAL_ADDRESSES
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_GET_NEXT_INTERNAL_ADDRESSES
+RustBuffer uniffi_coinswap_ffi_fn_method_wallet_get_next_internal_addresses(void*_Nonnull ptr, uint32_t count, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_LIST_ALL_UTXOS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_LIST_ALL_UTXOS
+RustBuffer uniffi_coinswap_ffi_fn_method_wallet_list_all_utxos(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_LOCK_UNSPENDABLE_UTXOS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_LOCK_UNSPENDABLE_UTXOS
+void uniffi_coinswap_ffi_fn_method_wallet_lock_unspendable_utxos(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_SYNC_AND_SAVE
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_WALLET_SYNC_AND_SAVE
+void uniffi_coinswap_ffi_fn_method_wallet_sync_and_save(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_FUNC_CREATE_DEFAULT_RPC_CONFIG
@@ -599,6 +724,30 @@ uint16_t uniffi_coinswap_ffi_checksum_func_create_swap_params(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_DISPLAY_OFFER
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_DISPLAY_OFFER
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_display_offer(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_FETCH_ALL_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_FETCH_ALL_MAKERS
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_fetch_all_makers(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_FETCH_GOOD_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_FETCH_GOOD_MAKERS
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_fetch_good_makers(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_GET_ALL_GOOD_MAKERS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_GET_ALL_GOOD_MAKERS
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_get_all_good_makers(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_GET_WALLET_BALANCES
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_GET_WALLET_BALANCES
 uint16_t uniffi_coinswap_ffi_checksum_method_taker_get_wallet_balances(void
@@ -611,9 +760,21 @@ uint16_t uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_RECOVER_FROM_SWAP
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_RECOVER_FROM_SWAP
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SEND_COINSWAP
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SEND_COINSWAP
 uint16_t uniffi_coinswap_ffi_checksum_method_taker_send_coinswap(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SYNC_OFFERBOOK
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SYNC_OFFERBOOK
+uint16_t uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook(void
     
 );
 #endif
@@ -623,9 +784,63 @@ uint16_t uniffi_coinswap_ffi_checksum_method_taker_sync_wallet(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_BACKUP
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_backup(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_BALANCES
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_BALANCES
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_get_balances(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NAME
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NAME
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_get_name(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NEXT_EXTERNAL_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NEXT_EXTERNAL_ADDRESS
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_get_next_external_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NEXT_INTERNAL_ADDRESSES
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_GET_NEXT_INTERNAL_ADDRESSES
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_get_next_internal_addresses(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_LIST_ALL_UTXOS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_LIST_ALL_UTXOS
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_list_all_utxos(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_LOCK_UNSPENDABLE_UTXOS
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_LOCK_UNSPENDABLE_UTXOS
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_lock_unspendable_utxos(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_SYNC_AND_SAVE
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_WALLET_SYNC_AND_SAVE
+uint16_t uniffi_coinswap_ffi_checksum_method_wallet_sync_and_save(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_CONSTRUCTOR_TAKER_INIT
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_CONSTRUCTOR_TAKER_INIT
 uint16_t uniffi_coinswap_ffi_checksum_constructor_taker_init(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_CONSTRUCTOR_WALLET_INIT
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_CONSTRUCTOR_WALLET_INIT
+uint16_t uniffi_coinswap_ffi_checksum_constructor_wallet_init(void
     
 );
 #endif

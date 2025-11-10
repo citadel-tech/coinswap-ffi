@@ -7,7 +7,7 @@ use bitcoin::Amount as coinswapAmount;
 use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
 use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
-    Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUTXOSpendInfo,
+    Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo,
     Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
 use std::path::Path;
@@ -99,7 +99,7 @@ impl From<CoinswapBalances> for Balances {
 #[derive(uniffi::Record)]
 pub struct UTXOWithSpendInfo {
     pub utxo: ListUnspentResultEntry,
-    pub spend_info: UTXOSpendInfo,
+    pub spend_info: UtxoSpendInfo,
 }
 
 #[derive(uniffi::Record)]
@@ -111,7 +111,7 @@ pub struct RPCConfig {
 }
 
 #[derive(uniffi::Enum)]
-pub enum UTXOSpendInfo {
+pub enum UtxoSpendInfo {
     /// Seed Coin
     SeedCoin {
         path: String,
@@ -234,49 +234,49 @@ impl Wallet {
                     safe: cs_utxo.safe,
                 };
                 let spend_info = match cs_info {
-                    csUTXOSpendInfo::SeedCoin { path, input_value } => UTXOSpendInfo::SeedCoin {
+                    csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo::SeedCoin {
                         path,
                         input_value: Arc::new(Amount(input_value)),
                     },
-                    csUTXOSpendInfo::IncomingSwapCoin {
+                    csUtxoSpendInfo::IncomingSwapCoin {
                         multisig_redeemscript,
-                    } => UTXOSpendInfo::IncomingSwapCoin {
+                    } => UtxoSpendInfo::IncomingSwapCoin {
                         multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)),
                     },
-                    csUTXOSpendInfo::OutgoingSwapCoin {
+                    csUtxoSpendInfo::OutgoingSwapCoin {
                         multisig_redeemscript,
-                    } => UTXOSpendInfo::OutgoingSwapCoin {
+                    } => UtxoSpendInfo::OutgoingSwapCoin {
                         multisig_redeemscript: Arc::new(ScriptBuf(multisig_redeemscript)),
                     },
-                    csUTXOSpendInfo::TimelockContract {
+                    csUtxoSpendInfo::TimelockContract {
                         swapcoin_multisig_redeemscript,
                         input_value,
-                    } => UTXOSpendInfo::TimelockContract {
+                    } => UtxoSpendInfo::TimelockContract {
                         swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(
                             swapcoin_multisig_redeemscript,
                         )),
                         input_value: Arc::new(Amount(input_value)),
                     },
-                    csUTXOSpendInfo::HashlockContract {
+                    csUtxoSpendInfo::HashlockContract {
                         swapcoin_multisig_redeemscript,
                         input_value,
-                    } => UTXOSpendInfo::HashlockContract {
+                    } => UtxoSpendInfo::HashlockContract {
                         swapcoin_multisig_redeemscript: Arc::new(ScriptBuf(
                             swapcoin_multisig_redeemscript,
                         )),
                         input_value: Arc::new(Amount(input_value)),
                     },
-                    csUTXOSpendInfo::FidelityBondCoin { index, input_value } => {
-                        UTXOSpendInfo::FidelityBondCoin {
+                    csUtxoSpendInfo::FidelityBondCoin { index, input_value } => {
+                        UtxoSpendInfo::FidelityBondCoin {
                             index,
                             input_value: Arc::new(Amount(input_value)),
                         }
                     }
-                    csUTXOSpendInfo::SweptCoin {
+                    csUtxoSpendInfo::SweptCoin {
                         path,
                         input_value,
                         original_multisig_redeemscript,
-                    } => UTXOSpendInfo::SweptCoin {
+                    } => UtxoSpendInfo::SweptCoin {
                         path,
                         input_value: Arc::new(Amount(input_value)),
                         original_multisig_redeemscript: Arc::new(ScriptBuf(
