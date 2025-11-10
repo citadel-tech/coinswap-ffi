@@ -1,0 +1,26 @@
+
+[package]
+authors = ["Neoz666 <neoz.blockchain@gmail.com>"]
+edition = "2021"
+name = "coinswap_napi"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = "3.0.0"
+napi-derive = "3.0.0"
+coinswap = { path = "/home/neo/Programming/work/coinswap" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bitcoin = "0.32.7" 
+bitcoind = "0.36.1"
+hex = "0.4"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+strip = "symbols"
