@@ -2,17 +2,17 @@
 //!
 //! This module provides N-API bindings for the coinswap wallet functionality.
 
-use bitcoin::Address as coinswapAddress;
-use bitcoin::Amount as coinswapAmount;
-use bitcoin::{ScriptBuf as csScriptBuf, Txid as csTxid};
-use bitcoind::bitcoincore_rpc::Auth;
 use coinswap::wallet::{
-    Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo,
-    Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
+    UTXOSpendInfo as csUtxoSpendInfo,
+    Wallet as CoinswapWallet, 
+    WalletError as CoinswapWalletError,
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::path::Path;
+
+// Import shared types
+use crate::types::{Amount, Balances, RPCConfig, ScriptBuf, Txid};
 
 #[napi]
 pub enum WalletError {
@@ -37,62 +37,14 @@ impl From<CoinswapWalletError> for WalletError {
 }
 
 #[napi(object)]
-pub struct Balances {
-    pub regular: u32,
-    pub swap: u32,
-    pub contract: u32,
-    pub fidelity: u32,
-    pub spendable: u32,
-}
-
-#[napi(object)]
-pub struct Amount {
-    pub sats: u32,
-}
-
-impl From<coinswapAmount> for Amount {
-    fn from(amount: coinswapAmount) -> Self {
-        Self {
-            sats: amount.to_sat() as u32,
-        }
-    }
-}
-
-#[napi(object)]
-pub struct Txid {
-    pub hex: String,
-}
-
-impl From<csTxid> for Txid {
-    fn from(txid: csTxid) -> Self {
-        Self {
-            hex: txid.to_string(),
-        }
-    }
-}
-
-#[napi(object)]
 pub struct Address {
     pub address: String,
 }
 
-impl From<coinswapAddress> for Address {
-    fn from(addr: coinswapAddress) -> Self {
+impl From<bitcoin::Address> for Address {
+    fn from(addr: bitcoin::Address) -> Self {
         Self {
             address: addr.to_string(),
-        }
-    }
-}
-
-#[napi(object)]
-pub struct ScriptBuf {
-    pub hex: String,
-}
-
-impl From<csScriptBuf> for ScriptBuf {
-    fn from(script: csScriptBuf) -> Self {
-        Self {
-            hex: hex::encode(script.as_bytes()),
         }
     }
 }
@@ -114,40 +66,10 @@ pub struct ListUnspentResultEntry {
     pub safe: bool,
 }
 
-impl From<CoinswapBalances> for Balances {
-    fn from(balances: CoinswapBalances) -> Self {
-        Self {
-            regular: balances.regular.to_sat() as u32,
-            swap: balances.swap.to_sat() as u32,
-            contract: balances.contract.to_sat() as u32,
-            fidelity: balances.fidelity.to_sat() as u32,
-            spendable: balances.spendable.to_sat() as u32,
-        }
-    }
-}
-
 #[napi(object)]
-pub struct UTXOWithSpendInfo {
+pub struct UtxoWithSpendInfo {
     pub utxo: ListUnspentResultEntry,
     pub spend_info: UtxoSpendInfo,
-}
-
-#[napi(object)]
-pub struct RPCConfig {
-    pub url: String,
-    pub username: String,
-    pub password: String,
-    pub wallet_name: String,
-}
-
-impl From<RPCConfig> for CoinswapRPCConfig {
-    fn from(config: RPCConfig) -> Self {
-        Self {
-            url: config.url,
-            auth: Auth::UserPass(config.username, config.password),
-            wallet_name: config.wallet_name,
-        }
-    }
 }
 
 #[napi]
@@ -160,7 +82,7 @@ impl Wallet {
     #[napi(constructor)]
     pub fn init(path: String, rpc_config: RPCConfig) -> Result<Self> {
         let path = Path::new(&path);
-        let config = CoinswapRPCConfig::from(rpc_config);
+        let config = rpc_config.into();
 
         let wallet = CoinswapWallet::init(path, &config, None)
             .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
@@ -179,10 +101,12 @@ impl Wallet {
 
     #[napi]
     pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>> {
-        let internal_addresses = self.inner.get_next_internal_addresses(count).map_err(|e| {
-            napi::Error::from_reason(format!("Get internal Addresses error: {:?}", e))
-        })?;
-        Ok(internal_addresses.into_iter().map(|addr| Address::from(addr)).collect::<Vec<_>>())
+        let internal_addresses = self.inner.get_next_internal_addresses(count)
+            .map_err(|e| napi::Error::from_reason(format!("Get internal addresses error: {:?}", e)))?;
+        Ok(internal_addresses
+            .into_iter()
+            .map(Address::from)
+            .collect())
     }
 
     #[napi]
@@ -190,7 +114,7 @@ impl Wallet {
         let external_address = self
             .inner
             .get_next_external_address()
-            .map_err(|e| napi::Error::from_reason(format!("Gte next external address error: {:?}", e)))?;
+            .map_err(|e| napi::Error::from_reason(format!("Get next external address error: {:?}", e)))?;
         Ok(Address::from(external_address))
     }
 
@@ -201,7 +125,7 @@ impl Wallet {
     }
 
     #[napi]
-    pub fn list_all_utxos(&self) -> Vec<UTXOWithSpendInfo> {
+    pub fn list_all_utxos(&self) -> Vec<UtxoWithSpendInfo> {
         let entries = self.inner.list_all_utxo_spend_info();
         entries
             .into_iter()
@@ -299,7 +223,7 @@ impl Wallet {
                         )),
                     },
                 };
-                UTXOWithSpendInfo { utxo, spend_info }
+                UtxoWithSpendInfo { utxo, spend_info }
             })
             .collect()
     }
@@ -343,14 +267,4 @@ pub struct UtxoSpendInfo {
     pub input_value: Option<Amount>,
     pub index: Option<u32>,
     pub original_multisig_redeemscript: Option<ScriptBuf>,
-}
-
-#[napi]
-pub fn create_default_rpc_config() -> RPCConfig {
-    RPCConfig {
-        url: "localhost:18443".to_string(),
-        username: "regtestrpcuser".to_string(),
-        password: "regtestrpcpass".to_string(),
-        wallet_name: "coinswap-wallet".to_string(),
-    }
 }

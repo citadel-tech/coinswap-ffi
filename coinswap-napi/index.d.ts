@@ -48,14 +48,6 @@ export interface Balances {
   spendable: number
 }
 
-export interface Balances {
-  regular: number
-  swap: number
-  contract: number
-  fidelity: number
-  spendable: number
-}
-
 export declare function createDefaultRpcConfig(): RpcConfig
 
 export declare function createSwapParams(sendAmount: number, makerCount: number, outpoints: Array<OutPoint>): SwapParams
@@ -101,13 +93,6 @@ export interface MakerStats {
 export interface OutPoint {
   txid: string
   vout: number
-}
-
-export interface RpcConfig {
-  url: string
-  username: string
-  password: string
-  walletName: string
 }
 
 export interface RpcConfig {

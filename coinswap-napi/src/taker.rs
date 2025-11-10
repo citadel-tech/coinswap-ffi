@@ -6,13 +6,16 @@ use bitcoin::{Amount, OutPoint as BitcoinOutPoint, Txid};
 use coinswap::taker::{
     api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
 };
-use coinswap::wallet::{Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::{path::PathBuf, str::FromStr};
 use std::sync::Mutex;
 use std::fmt;
 use std::error::Error;
+
+// Import shared types
+use crate::types::{Balances, RPCConfig, OutPoint};
+
 
 #[napi]
 #[derive(Debug)]
@@ -22,12 +25,6 @@ pub enum TakerError {
     Network,
     General,
     IO,
-}
-
-#[napi(object)]
-pub struct OutPoint {
-    pub txid: String,
-    pub vout: u32,
 }
 
 impl fmt::Display for TakerError {
@@ -57,30 +54,9 @@ impl AsRef<str> for TakerError {
 impl Error for TakerError {}
 
 #[napi(object)]
-pub struct Balances {
-    pub regular: u32,
-    pub swap: u32,
-    pub contract: u32,
-    pub fidelity: u32,
-    pub spendable: u32,
-}
-
-impl From<CoinswapBalances> for Balances {
-    fn from(balances: CoinswapBalances) -> Self {
-        Self {
-            regular: balances.regular.to_sat() as u32,
-            swap: balances.swap.to_sat() as u32,
-            contract: balances.contract.to_sat() as u32,
-            fidelity: balances.fidelity.to_sat() as u32,
-            spendable: balances.spendable.to_sat() as u32,
-        }
-    }
-}
-
-#[napi(object)]
 pub struct SwapParams {
     /// Total Amount
-    pub send_amount: u32,
+    pub send_amount: i64,
     /// How many hops (number of makers)
     pub maker_count: u32,
     /// User selected UTXOs (optional)
@@ -132,31 +108,12 @@ impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
     }
 }
 
-#[napi(object)]
-pub struct RPCConfig {
-    pub url: String,
-    pub username: String,
-    pub password: String,
-    pub wallet_name: String,
-}
-
-impl From<RPCConfig> for CoinswapRPCConfig {
-    fn from(config: RPCConfig) -> Self {
-        Self {
-            url: config.url,
-            auth: bitcoind::bitcoincore_rpc::Auth::UserPass(config.username, config.password),
-            wallet_name: config.wallet_name,
-        }
-    }
-}
-
 #[napi]
 pub struct Taker {
     inner: Mutex<CoinswapTaker>,
 }
 
 #[napi]
-#[allow(unused)]
 impl Taker {
     #[napi(constructor)]
     pub fn init(
@@ -168,7 +125,7 @@ impl Taker {
         tor_auth_password: Option<String>,
     ) -> Result<Self> {
         let data_dir = data_dir.map(PathBuf::from);
-        let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
+        let rpc_config = rpc_config.map(|cfg| cfg.into());
 
         let taker = CoinswapTaker::init(
             data_dir,
@@ -189,47 +146,58 @@ impl Taker {
     #[napi]
     pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<()> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
-        taker.do_coinswap(params).map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+        taker.do_coinswap(params)
+            .map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
         Ok(())
     }
 
     #[napi]
     pub fn get_wallet_name(&self) -> Result<String> {
-        let taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
+        let taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
         Ok(taker.get_wallet().get_name().to_string())
     }
 
     /// Get wallet balances
     #[napi]
     pub fn get_wallet_balances(&self) -> Result<Balances> {
-        let taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
-        let balances = taker.get_wallet().get_balances().map_err(|e| napi::Error::from_reason(format!("Get balances error: {:?}", e)))?;
+        let taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+        let balances = taker.get_wallet().get_balances()
+            .map_err(|e| napi::Error::from_reason(format!("Get balances error: {:?}", e)))?;
         Ok(Balances::from(balances))
     }
 
     #[napi]
     pub fn sync_wallet(&mut self) -> Result<()> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
-        taker.get_wallet_mut().sync_and_save().map_err(|e| napi::Error::from_reason(format!("Sync wallet error: {:?}", e)))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+        taker.get_wallet_mut().sync_and_save()
+            .map_err(|e| napi::Error::from_reason(format!("Sync wallet error: {:?}", e)))?;
         Ok(())
     }
 
     /// Sync the offerbook with available makers
     #[napi]
     pub fn sync_offerbook(&mut self) -> Result<()> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
-        taker.sync_offerbook().map_err(|e| napi::Error::from_reason(format!("Sync offerbook error: {:?}", e)))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+        taker.sync_offerbook()
+            .map_err(|e| napi::Error::from_reason(format!("Sync offerbook error: {:?}", e)))?;
         Ok(())
     }
 
     /// Get basic information about all good makers (limited due to private fields)
     #[napi]
     pub fn get_all_good_makers(&self) -> Result<Vec<String>> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
 
         // Fetch fresh offers
-        let offerbook = taker.fetch_offers().map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
+        let offerbook = taker.fetch_offers()
+            .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
         let good_makers = offerbook.all_good_makers();
 
         // Since fields are private, we can only return addresses
@@ -262,16 +230,20 @@ impl Taker {
     /// Recover from a failed swap
     #[napi]
     pub fn recover_from_swap(&mut self) -> Result<()> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
-        taker.recover_from_swap().map_err(|e| napi::Error::from_reason(format!("Recover error: {:?}", e)))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+        taker.recover_from_swap()
+            .map_err(|e| napi::Error::from_reason(format!("Recover error: {:?}", e)))?;
         Ok(())
     }
 
     #[napi]
     pub fn fetch_good_makers(&self) -> Result<Vec<String>> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
 
-        let offerbook = taker.fetch_offers().map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
+        let offerbook = taker.fetch_offers()
+            .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
         let all_good_makers = offerbook.all_good_makers();
 
         let addresses = all_good_makers
@@ -284,9 +256,11 @@ impl Taker {
 
     #[napi]
     pub fn fetch_all_makers(&self) -> Result<Vec<String>> {
-        let mut taker = self.inner.lock().map_err(|_| napi::Error::from_reason("Failed to acquire taker lock"))?;
+        let mut taker = self.inner.lock()
+            .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
 
-        let offerbook = taker.fetch_offers().map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
+        let offerbook = taker.fetch_offers()
+            .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
         let all_makers = offerbook.all_makers();
 
         let addresses = all_makers
@@ -300,12 +274,12 @@ impl Taker {
 
 #[napi]
 pub fn create_swap_params(
-    send_amount: u32,
+    send_amount: i64,
     maker_count: u32,
     outpoints: Vec<OutPoint>,
 ) -> SwapParams {
     SwapParams {
-        send_amount: send_amount as u32,
+        send_amount,
         maker_count,
         manually_selected_outpoints: Some(outpoints),
     }
@@ -313,13 +287,13 @@ pub fn create_swap_params(
 
 #[napi(object)]
 pub struct MakerOffer {
-    pub base_fee: u32,
+    pub base_fee: i64,
     pub amount_relative_fee_pct: f64,
     pub time_relative_fee_pct: f64,
     pub required_confirms: u32,
     pub minimum_locktime: u16,
-    pub max_size: u32,
-    pub min_size: u32,
+    pub max_size: i64,
+    pub min_size: i64,
     pub address: String,
 }
 
@@ -327,10 +301,10 @@ pub struct MakerOffer {
 pub struct MakerStats {
     pub total_makers: u32,
     pub online_makers: u32,
-    pub avg_base_fee: u32,
+    pub avg_base_fee: i64,
     pub avg_amount_relative_fee_pct: f64,
     pub avg_time_relative_fee_pct: f64,
-    pub total_liquidity: u32,
-    pub avg_min_size: u32,
-    pub avg_max_size: u32,
+    pub total_liquidity: i64,
+    pub avg_min_size: i64,
+    pub avg_max_size: i64,
 }
