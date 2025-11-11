@@ -12,7 +12,7 @@ use napi_derive::napi;
 use std::path::Path;
 
 // Import shared types
-use crate::types::{Amount, Balances, RPCConfig, ScriptBuf, Txid};
+use crate::types::{Address, Amount, Balances, ListTransactionResult, RPCConfig, ScriptBuf, Txid};
 
 #[napi]
 pub enum WalletError {
@@ -32,19 +32,6 @@ impl From<CoinswapWalletError> for WalletError {
             CoinswapWalletError::Json(_) => WalletError::JSON,
             CoinswapWalletError::General(_) => WalletError::General,
             _ => WalletError::General,
-        }
-    }
-}
-
-#[napi(object)]
-pub struct Address {
-    pub address: String,
-}
-
-impl From<bitcoin::Address> for Address {
-    fn from(addr: bitcoin::Address) -> Self {
-        Self {
-            address: addr.to_string(),
         }
     }
 }
@@ -98,6 +85,18 @@ impl Wallet {
             .map_err(|e| napi::Error::from_reason(format!("Get balances error: {:?}", e)))?;
         Ok(Balances::from(balances))
     }
+
+    #[napi]
+    pub fn get_transactions(&self, count: Option<u32>, skip: Option<u32>) -> Result<Vec<ListTransactionResult>> {
+        let txns = self.inner.get_transactions(
+            count.map(|c| c as usize), 
+            skip.map(|s| s as usize)
+        ).map_err(|e| napi::Error::from_reason(format!("Get Transactions Error: {:?}", e)))?;
+        Ok(txns
+            .into_iter()
+            .map(ListTransactionResult::from)
+            .collect())
+    } 
 
     #[napi]
     pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>> {
