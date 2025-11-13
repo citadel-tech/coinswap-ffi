@@ -496,18 +496,24 @@ impl From<&OfferBook> for OfferBookNapi {
   }
 }
 
-#[napi(string_enum)]
+#[napi(object)]
 #[derive(Debug)]
-pub enum LockTime {
-  Blocks,
-  Seconds,
+pub struct LockTime {
+  pub lock_type: String,
+  pub value: u32,
 }
 
 impl From<csLocktime> for LockTime {
   fn from(locktime: csLocktime) -> Self {
     match locktime {
-      csLocktime::Blocks(_) => LockTime::Blocks,
-      csLocktime::Seconds(_) => LockTime::Seconds,
+      csLocktime::Blocks(height) => LockTime {
+        lock_type: "Blocks".to_string(),
+        value: height.to_consensus_u32(),
+      },
+      csLocktime::Seconds(time) => LockTime {
+        lock_type: "Seconds".to_string(),
+        value: time.to_consensus_u32(),
+      },
     }
   }
 }
@@ -515,24 +521,19 @@ impl From<csLocktime> for LockTime {
 #[cfg(test)]
 mod tests {
   use super::*;
-//   use crate::taker::LockTime::{Blocks, Seconds};
   use bitcoin::absolute::LockTime;
 
   #[test]
-  fn test_locktime_conversion() {
-    // Test block-based locktime
+  fn test_locktime_conversion_basic() {
     let block_locktime = LockTime::from_height(500000).unwrap();
     let napi_block = super::LockTime::from(block_locktime);
-    println!("Block locktime: {:?} -> {:?}", block_locktime, napi_block);
 
-    // Test time-based locktime
     let time_locktime = LockTime::from_time(1234567890).unwrap();
     let napi_time = super::LockTime::from(time_locktime);
-    println!("Time locktime: {:?} -> {:?}", time_locktime, napi_time);
 
-    // Test the actual values
-    assert!(matches!(napi_block, super::LockTime::Blocks));
-    assert!(matches!(napi_time, super::LockTime::Seconds));
+    println!("From Rust -> Javascript : ");
+    println!("Block locktime: {:?} -> {:?}", block_locktime, napi_block);
+    println!("Time locktime: {:?} -> {:?}", time_locktime, napi_time);
   }
 
   #[test]
@@ -544,13 +545,16 @@ mod tests {
         vout: 0,
       },
       amount: Amount { sats: 100000 },
-      lock_time: super::LockTime::Blocks,
+      lock_time: super::LockTime {
+        lock_type: "Blocks".to_string(),
+        value: 750000,
+      },
       pubkey: PublicKey {
         compressed: true,
-        inner: vec![2, 123, 45, 67, 89], // Mock compressed pubkey bytes
+        inner: vec![2, 123, 45, 67, 89],
       },
       conf_height: Some(500000),
-      cert_expiry: Some(144), // 1 difficulty period
+      cert_expiry: Some(144),
       is_spent: false,
     };
 
@@ -563,21 +567,5 @@ mod tests {
     println!("  conf_height: {:?}", bond.conf_height);
     println!("  cert_expiry: {:?}", bond.cert_expiry);
     println!("  is_spent: {}", bond.is_spent);
-  }
-
-  #[test]
-  fn test_enum_string_representation() {
-    // Show how the enum will appear in JavaScript
-    let blocks_variant = super::LockTime::Blocks;
-    let seconds_variant = super::LockTime::Seconds;
-
-    println!("NAPI enum variants:");
-    println!("  Blocks variant: {:?}", blocks_variant);
-    println!("  Seconds variant: {:?}", seconds_variant);
-
-    // In JavaScript, these will be:
-    println!("\nIn JavaScript/TypeScript:");
-    println!("  LockTime.Blocks = 'Blocks'");
-    println!("  LockTime.Seconds = 'Seconds'");
   }
 }
