@@ -35,15 +35,15 @@ impl From<CoinswapBalances> for Balances {
 
 #[napi(object)]
 pub struct Address {
-    pub address: String,
+  pub address: String,
 }
 
 impl From<bitcoin::Address> for Address {
-    fn from(addr: bitcoin::Address) -> Self {
-        Self {
-            address: addr.to_string(),
-        }
+  fn from(addr: bitcoin::Address) -> Self {
+    Self {
+      address: addr.to_string(),
     }
+  }
 }
 
 #[napi(object)]
@@ -98,19 +98,21 @@ impl From<csWalletTxInfo> for WalletTxInfo {
 
 #[napi(object)]
 pub struct GetTransactionResultDetail {
-    pub address: Option<Address>,
-    pub category: String,
-    pub amount: SignedAmountSats,
-    pub label: Option<String>,
-    pub vout: u32,
-    pub fee: Option<SignedAmountSats>,
-    pub abandoned: Option<bool>,
+  pub address: Option<Address>,
+  pub category: String,
+  pub amount: SignedAmountSats,
+  pub label: Option<String>,
+  pub vout: u32,
+  pub fee: Option<SignedAmountSats>,
+  pub abandoned: Option<bool>,
 }
 
 impl From<csGetTransactionResultDetail> for GetTransactionResultDetail {
   fn from(detail: csGetTransactionResultDetail) -> Self {
     Self {
-      address: detail.address.map(|addr| Address::from(addr.assume_checked())),
+      address: detail
+        .address
+        .map(|addr| Address::from(addr.assume_checked())),
       category: format!("{:?}", detail.category),
       amount: SignedAmountSats::from(detail.amount),
       label: detail.label,

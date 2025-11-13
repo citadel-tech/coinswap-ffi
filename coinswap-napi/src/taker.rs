@@ -2,26 +2,24 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use bitcoin::absolute::LockTime as csLocktime;
-use bitcoin::PublicKey as csPublicKey;
-use bitcoin::{OutPoint as BitcoinOutPoint, Txid};
-use coinswap::protocol::messages::FidelityProof as csFidelityProof;
-use coinswap::protocol::messages::Offer as csOffer;
-use coinswap::taker::offers::MakerAddress as csMakerAddress;
-use coinswap::taker::{
-  api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-  offers::{OfferAndAddress as csOfferAndAddress, OfferBook},
+use crate::types::{Amount, Balances, OutPoint, RPCConfig};
+use bitcoin::{
+  absolute::LockTime as csLocktime, OutPoint as BitcoinOutPoint, PublicKey as csPublicKey, Txid,
 };
-use coinswap::wallet::FidelityBond as csFidelityBond;
+use coinswap::{
+  protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
+  taker::{
+    api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
+    offers::{
+      MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
+      OfferBook as csOfferBook,
+    },
+  },
+  wallet::FidelityBond as csFidelityBond,
+};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::error::Error;
-use std::sync::Mutex;
-use std::{fmt, string};
-use std::{path::PathBuf, str::FromStr};
-
-// Import shared types
-use crate::types::{Amount, Balances, OutPoint, RPCConfig};
+use std::{error::Error, fmt, path::PathBuf, str::FromStr, sync::Mutex};
 
 #[napi]
 #[derive(Debug)]
@@ -310,7 +308,7 @@ impl Taker {
   }
 
   #[napi]
-  pub fn fetch_offers(&self) -> Result<OfferBookNapi> {
+  pub fn fetch_offers(&self) -> Result<OfferBook> {
     let mut taker = self
       .inner
       .lock()
@@ -320,7 +318,7 @@ impl Taker {
       .fetch_offers()
       .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
 
-    Ok(OfferBookNapi::from(offerbook))
+    Ok(OfferBook::from(offerbook))
   }
 }
 
@@ -472,13 +470,13 @@ impl From<csMakerAddress> for MakerAddress {
 }
 
 #[napi(object)]
-pub struct OfferBookNapi {
+pub struct OfferBook {
   pub good_makers: Vec<OfferAndAddress>,
   pub all_makers: Vec<OfferAndAddress>,
 }
 
-impl From<&OfferBook> for OfferBookNapi {
-  fn from(offerbook: &OfferBook) -> Self {
+impl From<&csOfferBook> for OfferBook {
+  fn from(offerbook: &csOfferBook) -> Self {
     Self {
       good_makers: offerbook
         .all_good_makers()

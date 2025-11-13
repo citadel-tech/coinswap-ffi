@@ -1,6 +1,5 @@
 #![deny(clippy::all)]
 
+mod taker;
 mod types;
 mod wallet;
-mod taker;
-
