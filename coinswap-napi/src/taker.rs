@@ -2,22 +2,10 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use crate::types::{Amount, Balances, OutPoint, RPCConfig as RpcConfig};
-use coinswap::bitcoin::{
-  absolute::LockTime as csLocktime, OutPoint as BitcoinOutPoint, PublicKey as csPublicKey, Txid,
-  Amount as csAmount
-};
-use coinswap::{
-  protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
-  taker::{
-    api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-    offers::{
-      MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
-      OfferBook as csOfferBook,
-    },
-  },
-  wallet::FidelityBond as csFidelityBond,
-};
+use crate::types::{Balances, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig};
+use coinswap::bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid};
+use coinswap::taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker};
+
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::{error::Error, fmt, path::PathBuf, str::FromStr, sync::Mutex};
@@ -60,11 +48,8 @@ impl Error for TakerError {}
 
 #[napi(object)]
 pub struct SwapParams {
-  /// Total Amount
   pub send_amount: i64,
-  /// How many hops (number of makers)
   pub maker_count: u32,
-  /// User selected UTXOs (optional)
   pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
@@ -323,7 +308,9 @@ impl Taker {
   }
 }
 
+// Important for initialization
 #[napi]
+#[allow(unused)]
 pub fn create_swap_params(
   send_amount: i64,
   maker_count: u32,
@@ -336,199 +323,18 @@ pub fn create_swap_params(
   }
 }
 
-#[napi(object)]
-pub struct PublicKey {
-  pub compressed: bool,
-  pub inner: Vec<u8>,
-}
-
-impl From<csPublicKey> for PublicKey {
-  fn from(publickey: csPublicKey) -> Self {
-    Self {
-      compressed: publickey.compressed,
-      inner: publickey.inner.serialize().to_vec(),
-    }
-  }
-}
-
-#[napi(object)]
-pub struct FidelityProof {
-  pub bond: FidelityBond,
-  pub cert_hash: String,
-  pub cert_sig: u8,
-}
-
-impl From<csFidelityProof> for FidelityProof {
-  fn from(fidelityproof: csFidelityProof) -> Self {
-    Self {
-      bond: fidelityproof.bond.into(),
-      cert_hash: "".to_string(),
-      cert_sig: 0,
-    }
-  }
-}
-
-#[napi(object)]
-pub struct FidelityBond {
-  pub outpoint: OutPoint,
-  pub amount: Amount,
-  pub lock_time: LockTime,
-  pub pubkey: PublicKey,
-  pub conf_height: Option<u32>,
-  pub cert_expiry: Option<u32>,
-  pub is_spent: bool,
-}
-
-impl From<csFidelityBond> for FidelityBond {
-  fn from(bond: csFidelityBond) -> Self {
-    Self {
-      outpoint: OutPoint {
-        txid: "".to_string(),
-        vout: 0,
-      },
-      amount: Amount::from(bond.amount),
-      lock_time: LockTime::from(bond.lock_time),
-      pubkey: PublicKey {
-        compressed: true,
-        inner: vec![],
-      },
-      conf_height: None,
-      cert_expiry: None,
-      is_spent: false,
-    }
-  }
-}
-
-#[napi(object)]
-pub struct MakerStats {
-  pub total_makers: u32,
-  pub online_makers: u32,
-  pub avg_base_fee: i64,
-  pub avg_amount_relative_fee_pct: f64,
-  pub avg_time_relative_fee_pct: f64,
-  pub total_liquidity: i64,
-  pub avg_min_size: i64,
-  pub avg_max_size: i64,
-}
-
-#[napi(object)]
-pub struct Offer {
-  pub base_fee: i64,
-  pub amount_relative_fee_pct: f64,
-  pub time_relative_fee_pct: f64,
-  pub required_confirms: u32,
-  pub minimum_locktime: u16,
-  pub max_size: i64,
-  pub min_size: i64,
-  pub tweakable_point: PublicKey,
-  pub fidelity: FidelityProof,
-}
-
-impl From<csOffer> for Offer {
-  fn from(offer: csOffer) -> Self {
-    Self {
-      base_fee: offer.base_fee as i64,
-      amount_relative_fee_pct: offer.amount_relative_fee_pct,
-      time_relative_fee_pct: offer.time_relative_fee_pct,
-      required_confirms: offer.required_confirms,
-      minimum_locktime: offer.minimum_locktime,
-      max_size: offer.max_size as i64,
-      min_size: offer.min_size as i64,
-      tweakable_point: offer.tweakable_point.into(),
-      fidelity: offer.fidelity.into(),
-    }
-  }
-}
-
-#[napi(object)]
-pub struct OfferAndAddress {
-  pub offer: Offer,
-  pub address: MakerAddress,
-  pub timestamp: String,
-}
-
-impl From<csOfferAndAddress> for OfferAndAddress {
-  fn from(offer_and_addr: csOfferAndAddress) -> Self {
-    Self {
-      offer: Offer::from(offer_and_addr.offer),
-      address: MakerAddress::from(offer_and_addr.address),
-      timestamp: "".to_string(), // Static null value since we don't need it
-    }
-  }
-}
-
-#[napi(object)]
-pub struct MakerAddress {
-  pub address: String,
-}
-
-impl From<csMakerAddress> for MakerAddress {
-  fn from(addr: csMakerAddress) -> Self {
-    Self {
-      address: addr.to_string(),
-    }
-  }
-}
-
-#[napi(object)]
-pub struct OfferBook {
-  pub good_makers: Vec<OfferAndAddress>,
-  pub all_makers: Vec<OfferAndAddress>,
-}
-
-impl From<&csOfferBook> for OfferBook {
-  fn from(offerbook: &csOfferBook) -> Self {
-    Self {
-      good_makers: offerbook
-        .all_good_makers()
-        .into_iter()
-        .cloned()
-        .map(OfferAndAddress::from)
-        .collect(),
-      all_makers: offerbook
-        .all_makers()
-        .into_iter()
-        .cloned()
-        .map(OfferAndAddress::from)
-        .collect(),
-    }
-  }
-}
-
-#[napi(object)]
-#[derive(Debug)]
-pub struct LockTime {
-  pub lock_type: String,
-  pub value: u32,
-}
-
-impl From<csLocktime> for LockTime {
-  fn from(locktime: csLocktime) -> Self {
-    match locktime {
-      csLocktime::Blocks(height) => LockTime {
-        lock_type: "Blocks".to_string(),
-        value: height.to_consensus_u32(),
-      },
-      csLocktime::Seconds(time) => LockTime {
-        lock_type: "Seconds".to_string(),
-        value: time.to_consensus_u32(),
-      },
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use coinswap::bitcoin::absolute::LockTime;
+  use crate::types::{Amount, FidelityBond, LockTime, OutPoint, PublicKey};
+  use coinswap::bitcoin::absolute::LockTime as csLockTime;
 
   #[test]
   fn test_locktime_conversion_basic() {
-    let block_locktime = LockTime::from_height(500000).unwrap();
-    let napi_block = super::LockTime::from(block_locktime);
+    let block_locktime = csLockTime::from_height(500000).unwrap();
+    let napi_block = LockTime::from(block_locktime);
 
-    let time_locktime = LockTime::from_time(1234567890).unwrap();
-    let napi_time = super::LockTime::from(time_locktime);
+    let time_locktime = csLockTime::from_time(1234567890).unwrap();
+    let napi_time = LockTime::from(time_locktime);
 
     println!("From Rust -> Javascript : ");
     println!("Block locktime: {:?} -> {:?}", block_locktime, napi_block);
@@ -544,7 +350,7 @@ mod tests {
         vout: 0,
       },
       amount: Amount { sats: 100000 },
-      lock_time: super::LockTime {
+      lock_time: LockTime {
         lock_type: "Blocks".to_string(),
         value: 750000,
       },

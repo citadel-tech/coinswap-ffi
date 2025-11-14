@@ -25,12 +25,12 @@ export declare class Wallet {
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
   getNextExternalAddress(): Address
-  /** Get the wallet name */
   getName(): string
-  listAllUtxos(): Array<UtxoWithSpendInfo>
+  listAllUtxos(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
   syncAndSave(): void
   backup(path: string): void
   lockUnspendableUtxos(): void
+  sendToAddress(address: string, amount: number): Txid
 }
 
 export interface Address {
@@ -111,17 +111,6 @@ export interface MakerAddress {
   address: string
 }
 
-export interface MakerStats {
-  totalMakers: number
-  onlineMakers: number
-  avgBaseFee: number
-  avgAmountRelativeFeePct: number
-  avgTimeRelativeFeePct: number
-  totalLiquidity: number
-  avgMinSize: number
-  avgMaxSize: number
-}
-
 export interface Offer {
   baseFee: number
   amountRelativeFeePct: number
@@ -171,11 +160,8 @@ export interface SignedAmountSats {
 }
 
 export interface SwapParams {
-  /** Total Amount */
   sendAmount: number
-  /** How many hops (number of makers) */
   makerCount: number
-  /** User selected UTXOs (optional) */
   manuallySelectedOutpoints?: Array<OutPoint>
 }
 
@@ -206,18 +192,13 @@ export interface UtxoSpendInfo {
   originalMultisigRedeemscript?: ScriptBuf
 }
 
-export interface UtxoWithSpendInfo {
-  utxo: ListUnspentResultEntry
-  spendInfo: UtxoSpendInfo
-}
-
 export interface WalletBackup {
   fileName: string
 }
 
 export declare const enum WalletError {
   IO = 0,
-  RPC = 1,
+  Rpc = 1,
   General = 2,
   Json = 3,
   Network = 4,

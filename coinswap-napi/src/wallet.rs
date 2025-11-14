@@ -2,23 +2,23 @@
 //!
 //! This module provides N-API bindings for the coinswap wallet functionality.
 
+use coinswap::bitcoin::Amount as csAmount;
 use coinswap::wallet::{
   UTXOSpendInfo as csUtxoSpendInfo, Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
-use coinswap::bitcoin::Amount as csAmount;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::path::Path;
 
-// Import shared types
 use crate::types::{
-  Address, Amount, Balances, ListTransactionResult, RPCConfig as RpcConfig, ScriptBuf, Txid,
+  Address, Amount, Balances, ListTransactionResult, ListUnspentResultEntry, RPCConfig as RpcConfig,
+  ScriptBuf, Txid, UtxoSpendInfo,
 };
 
 #[napi]
 pub enum WalletError {
   IO,
-  RPC,
+  Rpc,
   General,
   Json,
   Network,
@@ -29,7 +29,7 @@ impl From<CoinswapWalletError> for WalletError {
   fn from(error: CoinswapWalletError) -> Self {
     match error {
       CoinswapWalletError::IO(_) => WalletError::IO,
-      CoinswapWalletError::Rpc(_) => WalletError::RPC,
+      CoinswapWalletError::Rpc(_) => WalletError::Rpc,
       CoinswapWalletError::Json(_) => WalletError::Json,
       CoinswapWalletError::General(_) => WalletError::General,
       _ => WalletError::General,
@@ -37,27 +37,16 @@ impl From<CoinswapWalletError> for WalletError {
   }
 }
 
-#[napi(object)]
-pub struct ListUnspentResultEntry {
-  pub txid: Txid,
-  pub vout: u32,
-  pub address: Option<String>,
-  pub label: Option<String>,
-  pub script_pub_key: ScriptBuf,
-  pub amount: Amount,
-  pub confirmations: u32,
-  pub redeem_script: Option<ScriptBuf>,
-  pub witness_script: Option<ScriptBuf>,
-  pub spendable: bool,
-  pub solvable: bool,
-  pub desc: Option<String>,
-  pub safe: bool,
-}
-
-#[napi(object)]
-pub struct UtxoWithSpendInfo {
-  pub utxo: ListUnspentResultEntry,
-  pub spend_info: UtxoSpendInfo,
+// Important for initialization
+#[napi]
+#[allow(unused)]
+pub fn create_default_rpc_config() -> RpcConfig {
+  RpcConfig {
+    url: "localhost:18443".to_string(),
+    username: "user".to_string(),
+    password: "password".to_string(),
+    wallet_name: "coinswap-wallet".to_string(),
+  }
 }
 
 #[napi]
@@ -118,14 +107,13 @@ impl Wallet {
     Ok(Address::from(external_address))
   }
 
-  /// Get the wallet name
   #[napi]
   pub fn get_name(&self) -> String {
     self.inner.get_name().to_string()
   }
 
   #[napi]
-  pub fn list_all_utxos(&self) -> Vec<UtxoWithSpendInfo> {
+  pub fn list_all_utxos(&self) -> Vec<(ListUnspentResultEntry, UtxoSpendInfo)> {
     let entries = self.inner.list_all_utxo_spend_info();
     entries
       .into_iter()
@@ -217,7 +205,7 @@ impl Wallet {
             original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
           },
         };
-        UtxoWithSpendInfo { utxo, spend_info }
+        (utxo, spend_info)
       })
       .collect()
   }
@@ -256,21 +244,6 @@ impl Wallet {
       .inner
       .send_to_address(csAmount::from_sat(amount as u64), address)
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
-      Ok(txid.into())
+    Ok(txid.into())
   }
-}
-
-#[napi(object)]
-pub struct WalletBackup {
-  pub file_name: String,
-}
-
-#[napi(object)]
-pub struct UtxoSpendInfo {
-  pub spend_type: String,
-  pub path: Option<String>,
-  pub multisig_redeemscript: Option<ScriptBuf>,
-  pub input_value: Option<Amount>,
-  pub index: Option<u32>,
-  pub original_multisig_redeemscript: Option<ScriptBuf>,
 }
