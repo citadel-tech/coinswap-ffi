@@ -5,17 +5,20 @@
 use coinswap::wallet::{
   UTXOSpendInfo as csUtxoSpendInfo, Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
+use coinswap::bitcoin::Amount as csAmount;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::path::Path;
 
 // Import shared types
-use crate::types::{Address, Amount, Balances, ListTransactionResult, RPCConfig, ScriptBuf, Txid};
+use crate::types::{
+  Address, Amount, Balances, ListTransactionResult, RPCConfig as RpcConfig, ScriptBuf, Txid,
+};
 
 #[napi]
 pub enum WalletError {
   IO,
-  Rpc,
+  RPC,
   General,
   Json,
   Network,
@@ -26,7 +29,7 @@ impl From<CoinswapWalletError> for WalletError {
   fn from(error: CoinswapWalletError) -> Self {
     match error {
       CoinswapWalletError::IO(_) => WalletError::IO,
-      CoinswapWalletError::Rpc(_) => WalletError::Rpc,
+      CoinswapWalletError::Rpc(_) => WalletError::RPC,
       CoinswapWalletError::Json(_) => WalletError::Json,
       CoinswapWalletError::General(_) => WalletError::General,
       _ => WalletError::General,
@@ -65,7 +68,7 @@ pub struct Wallet {
 #[napi]
 impl Wallet {
   #[napi(constructor)]
-  pub fn init(path: String, rpc_config: RPCConfig) -> Result<Self> {
+  pub fn init(path: String, rpc_config: RpcConfig) -> Result<Self> {
     let path = Path::new(&path);
     let config = rpc_config.into();
 
@@ -245,6 +248,15 @@ impl Wallet {
       .lock_unspendable_utxos()
       .map_err(|e| napi::Error::from_reason(format!("Lock error: {:?}", e)))?;
     Ok(())
+  }
+
+  #[napi]
+  pub fn send_to_address(&mut self, address: String, amount: i64) -> Result<Txid> {
+    let txid = self
+      .inner
+      .send_to_address(csAmount::from_sat(amount as u64), address)
+      .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
+      Ok(txid.into())
   }
 }
 
