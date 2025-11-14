@@ -2,7 +2,7 @@
 /* eslint-disable */
 export declare class Taker {
   constructor(dataDir?: string | undefined | null, walletFileName?: string | undefined | null, rpcConfig?: RpcConfig | undefined | null, behavior?: TakerBehavior | undefined | null, controlPort?: number | undefined | null, torAuthPassword?: string | undefined | null)
-  sendCoinswap(swapParams: SwapParams): void
+  doCoinswap(swapParams: SwapParams): SwapReport | null
   getWalletName(): string
   /** Get wallet balances */
   getWalletBalances(): Balances
@@ -111,6 +111,15 @@ export interface MakerAddress {
   address: string
 }
 
+export interface MakerFeeInfo {
+  makerIndex: number
+  makerAddress: string
+  baseFee: number
+  amountRelativeFee: number
+  timeRelativeFee: number
+  totalFee: number
+}
+
 export interface Offer {
   baseFee: number
   amountRelativeFeePct: number
@@ -163,6 +172,43 @@ export interface SwapParams {
   sendAmount: number
   makerCount: number
   manuallySelectedOutpoints?: Array<OutPoint>
+}
+
+export interface SwapReport {
+  /** Unique swap ID */
+  swapId: string
+  /** Duration of the swap in seconds */
+  swapDurationSeconds: number
+  /** Target amount for the swap */
+  targetAmount: number
+  /** Total input amount */
+  totalInputAmount: number
+  /** Total output amount */
+  totalOutputAmount: number
+  /** Number of makers involved */
+  makersCount: number
+  /** List of maker addresses used */
+  makerAddresses: Array<string>
+  /** Total number of funding transactions */
+  totalFundingTxs: number
+  /** Funding transaction IDs organized by hop */
+  fundingTxidsByHop: Array<Array<string>>
+  /** Total fees paid */
+  totalFee: number
+  /** Total maker fees */
+  totalMakerFees: number
+  /** Mining fees */
+  miningFee: number
+  /** Fee percentage relative to target amount */
+  feePercentage: number
+  /** Individual maker fee information */
+  makerFeeInfo: Array<MakerFeeInfo>
+  /** Input UTXOs amounts */
+  inputUtxos: Array<number>
+  /** Output regular UTXOs amounts */
+  outputRegularUtxos: Array<number>
+  /** Output swap coin UTXOs amounts */
+  outputSwapUtxos: Array<number>
 }
 
 export declare const enum TakerBehavior {
