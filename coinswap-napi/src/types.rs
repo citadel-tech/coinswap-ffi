@@ -16,8 +16,12 @@ use coinswap::{
     Auth,
   },
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
-  taker::offers::{
-    MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress, OfferBook as csOfferBook,
+  taker::{
+    api::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
+    offers::{
+      MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
+      OfferBook as csOfferBook,
+    },
   },
   wallet::{
     Balances as CoinswapBalances, FidelityBond as csFidelityBond, RPCConfig as CoinswapRPCConfig,
@@ -415,6 +419,105 @@ impl From<&csOfferBook> for OfferBook {
         .into_iter()
         .cloned()
         .map(OfferAndAddress::from)
+        .collect(),
+    }
+  }
+}
+
+#[napi(object)]
+#[derive(Debug)]
+pub struct MakerFeeInfo {
+  pub maker_index: u32,
+  pub maker_address: String,
+  pub base_fee: f64,
+  pub amount_relative_fee: f64,
+  pub time_relative_fee: f64,
+  pub total_fee: f64,
+}
+
+impl From<csMakerFeeInfo> for MakerFeeInfo {
+  fn from(info: csMakerFeeInfo) -> Self {
+    Self {
+      maker_index: info.maker_index as u32,
+      maker_address: info.maker_address,
+      base_fee: info.base_fee,
+      amount_relative_fee: info.amount_relative_fee,
+      time_relative_fee: info.time_relative_fee,
+      total_fee: info.total_fee,
+    }
+  }
+}
+
+#[napi(object)]
+#[derive(Debug)]
+pub struct SwapReport {
+  /// Unique swap ID
+  pub swap_id: String,
+  /// Duration of the swap in seconds
+  pub swap_duration_seconds: f64,
+  /// Target amount for the swap
+  pub target_amount: i64,
+  /// Total input amount
+  pub total_input_amount: i64,
+  /// Total output amount
+  pub total_output_amount: i64,
+  /// Number of makers involved
+  pub makers_count: u32,
+  /// List of maker addresses used
+  pub maker_addresses: Vec<String>,
+  /// Total number of funding transactions
+  pub total_funding_txs: i64,
+  /// Funding transaction IDs organized by hop
+  pub funding_txids_by_hop: Vec<Vec<String>>,
+  /// Total fees paid
+  pub total_fee: i64,
+  /// Total maker fees
+  pub total_maker_fees: i64,
+  /// Mining fees
+  pub mining_fee: i64,
+  /// Fee percentage relative to target amount
+  pub fee_percentage: f64,
+  /// Individual maker fee information
+  pub maker_fee_info: Vec<MakerFeeInfo>,
+  /// Input UTXOs amounts
+  pub input_utxos: Vec<i64>,
+  /// Output regular UTXOs amounts
+  pub output_regular_utxos: Vec<i64>,
+  /// Output swap coin UTXOs amounts
+  pub output_swap_utxos: Vec<i64>,
+}
+
+impl From<csSwapReport> for SwapReport {
+  fn from(report: csSwapReport) -> Self {
+    Self {
+      swap_id: report.swap_id,
+      swap_duration_seconds: report.swap_duration_seconds,
+      target_amount: report.target_amount as i64,
+      total_input_amount: report.total_input_amount as i64,
+      total_output_amount: report.total_output_amount as i64,
+      makers_count: report.makers_count as u32,
+      maker_addresses: report.maker_addresses,
+      total_funding_txs: report.total_funding_txs as i64,
+      funding_txids_by_hop: report.funding_txids_by_hop,
+      total_fee: report.total_fee as i64,
+      total_maker_fees: report.total_maker_fees as i64,
+      mining_fee: report.mining_fee as i64,
+      fee_percentage: report.fee_percentage,
+      maker_fee_info: report
+        .maker_fee_info
+        .into_iter()
+        .map(MakerFeeInfo::from)
+        .collect(),
+      input_utxos: report.input_utxos.into_iter().map(|v| v as i64).collect(),
+      output_regular_utxos: report
+        .output_regular_utxos
+        .into_iter()
+        .map(|v| v as i64)
+        .collect(),
+      output_swap_utxos: report
+        .output_swap_utxos
+        .into_iter()
+        .map(|v| v as i64)
         .collect(),
     }
   }

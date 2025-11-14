@@ -2,7 +2,7 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use crate::types::{Balances, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig};
+use crate::types::{Balances, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, SwapReport};
 use coinswap::bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid};
 use coinswap::taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker};
 
@@ -138,16 +138,16 @@ impl Taker {
   }
 
   #[napi]
-  pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<()> {
+  pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>> {
     let params = CoinswapSwapParams::try_from(swap_params)?;
     let mut taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    taker
+    let swap_report = taker
       .do_coinswap(params)
       .map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
-    Ok(())
+    Ok(swap_report.map(SwapReport::from))
   }
 
   #[napi]
