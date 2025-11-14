@@ -11,17 +11,18 @@ export declare class Taker {
   syncOfferbook(): void
   /** Get basic information about all good makers (limited due to private fields) */
   getAllGoodMakers(): Array<string>
-  /** Display detailed information about a specific maker offer */
-  displayOffer(makerOffer: MakerOffer): string
+  displayOffer(makerOffer: Offer): string
   /** Recover from a failed swap */
   recoverFromSwap(): void
   fetchGoodMakers(): Array<string>
   fetchAllMakers(): Array<string>
+  fetchOffers(): OfferBook
 }
 
 export declare class Wallet {
   constructor(path: string, rpcConfig: RpcConfig)
   getBalances(): Balances
+  getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
   getNextExternalAddress(): Address
   /** Get the wallet name */
@@ -52,6 +53,39 @@ export declare function createDefaultRpcConfig(): RpcConfig
 
 export declare function createSwapParams(sendAmount: number, makerCount: number, outpoints: Array<OutPoint>): SwapParams
 
+export interface FidelityBond {
+  outpoint: OutPoint
+  amount: Amount
+  lockTime: LockTime
+  pubkey: PublicKey
+  confHeight?: number
+  certExpiry?: number
+  isSpent: boolean
+}
+
+export interface FidelityProof {
+  bond: FidelityBond
+  certHash: string
+  certSig: number
+}
+
+export interface GetTransactionResultDetail {
+  address?: Address
+  category: string
+  amount: SignedAmountSats
+  label?: string
+  vout: number
+  fee?: SignedAmountSats
+  abandoned?: boolean
+}
+
+export interface ListTransactionResult {
+  info: WalletTxInfo
+  detail: GetTransactionResultDetail
+  trusted?: boolean
+  comment?: string
+}
+
 export interface ListUnspentResultEntry {
   txid: Txid
   vout: number
@@ -68,14 +102,12 @@ export interface ListUnspentResultEntry {
   safe: boolean
 }
 
-export interface MakerOffer {
-  baseFee: number
-  amountRelativeFeePct: number
-  timeRelativeFeePct: number
-  requiredConfirms: number
-  minimumLocktime: number
-  maxSize: number
-  minSize: number
+export interface LockTime {
+  lockType: string
+  value: number
+}
+
+export interface MakerAddress {
   address: string
 }
 
@@ -90,9 +122,37 @@ export interface MakerStats {
   avgMaxSize: number
 }
 
+export interface Offer {
+  baseFee: number
+  amountRelativeFeePct: number
+  timeRelativeFeePct: number
+  requiredConfirms: number
+  minimumLocktime: number
+  maxSize: number
+  minSize: number
+  tweakablePoint: PublicKey
+  fidelity: FidelityProof
+}
+
+export interface OfferAndAddress {
+  offer: Offer
+  address: MakerAddress
+  timestamp: string
+}
+
+export interface OfferBook {
+  goodMakers: Array<OfferAndAddress>
+  allMakers: Array<OfferAndAddress>
+}
+
 export interface OutPoint {
   txid: string
   vout: number
+}
+
+export interface PublicKey {
+  compressed: boolean
+  inner: Array<number>
 }
 
 export interface RpcConfig {
@@ -104,6 +164,10 @@ export interface RpcConfig {
 
 export interface ScriptBuf {
   hex: string
+}
+
+export interface SignedAmountSats {
+  sats: number
 }
 
 export interface SwapParams {
@@ -155,7 +219,20 @@ export declare const enum WalletError {
   IO = 0,
   RPC = 1,
   General = 2,
-  JSON = 3,
+  Json = 3,
   Network = 4,
   AddressParse = 5
+}
+
+export interface WalletTxInfo {
+  confirmations: number
+  blockhash?: string
+  blockindex?: number
+  blocktime?: number
+  blockheight?: number
+  txid: Txid
+  time: number
+  timereceived: number
+  bip125Replaceable: string
+  walletConflicts: Array<Txid>
 }
