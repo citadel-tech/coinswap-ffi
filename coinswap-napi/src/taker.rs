@@ -2,9 +2,10 @@
 //!
 //! This module provides N-API bindings for the coinswap taker functionality.
 
-use crate::types::{Amount, Balances, OutPoint, RPCConfig};
-use bitcoin::{
+use crate::types::{Amount, Balances, OutPoint, RPCConfig as RpcConfig};
+use coinswap::bitcoin::{
   absolute::LockTime as csLocktime, OutPoint as BitcoinOutPoint, PublicKey as csPublicKey, Txid,
+  Amount as csAmount
 };
 use coinswap::{
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
@@ -60,7 +61,7 @@ impl Error for TakerError {}
 #[napi(object)]
 pub struct SwapParams {
   /// Total Amount
-  pub send_amount: Amount,
+  pub send_amount: i64,
   /// How many hops (number of makers)
   pub maker_count: u32,
   /// User selected UTXOs (optional)
@@ -71,7 +72,7 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
   type Error = napi::Error;
 
   fn try_from(params: SwapParams) -> Result<Self> {
-    let send_amount = bitcoin::Amount::from_sat(params.send_amount.sats as u64);
+    let send_amount = csAmount::from_sat(params.send_amount as u64);
 
     let manually_selected_outpoints = params
       .manually_selected_outpoints
@@ -127,8 +128,8 @@ impl Taker {
   pub fn init(
     data_dir: Option<String>,
     wallet_file_name: Option<String>,
-    rpc_config: Option<RPCConfig>,
-    behavior: Option<TakerBehavior>,
+    rpc_config: Option<RpcConfig>,
+    _behavior: Option<TakerBehavior>,
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
   ) -> Result<Self> {
@@ -324,7 +325,7 @@ impl Taker {
 
 #[napi]
 pub fn create_swap_params(
-  send_amount: Amount,
+  send_amount: i64,
   maker_count: u32,
   outpoints: Vec<OutPoint>,
 ) -> SwapParams {
@@ -519,7 +520,7 @@ impl From<csLocktime> for LockTime {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use bitcoin::absolute::LockTime;
+  use coinswap::bitcoin::absolute::LockTime;
 
   #[test]
   fn test_locktime_conversion_basic() {
