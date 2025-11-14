@@ -2,7 +2,6 @@
 //!
 //! This module provides N-API bindings for the coinswap wallet functionality.
 
-use coinswap::bitcoin::Amount as csAmount;
 use coinswap::wallet::{
   UTXOSpendInfo as csUtxoSpendInfo, Wallet as CoinswapWallet, WalletError as CoinswapWalletError,
 };
@@ -242,7 +241,7 @@ impl Wallet {
   pub fn send_to_address(&mut self, address: String, amount: i64) -> Result<Txid> {
     let txid = self
       .inner
-      .send_to_address(csAmount::from_sat(amount as u64), address)
+      .send_to_address(amount as u64, address)
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
     Ok(txid.into())
   }
