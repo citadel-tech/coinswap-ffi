@@ -3,12 +3,8 @@
 //! This module contains types that are used across multiple modules
 //! to avoid duplicate type definitions in TypeScript.
 
-use bitcoin::SignedAmount;
-use bitcoin::{Amount as BitcoinAmount, ScriptBuf as BitcoinScriptBuf, Txid as BitcoinTxid};
-use bitcoind::bitcoincore_rpc::json::GetTransactionResultDetail as csGetTransactionResultDetail;
-use bitcoind::bitcoincore_rpc::json::ListTransactionResult as csListTransactionResult;
-use bitcoind::bitcoincore_rpc::json::WalletTxInfo as csWalletTxInfo;
-use bitcoind::bitcoincore_rpc::Auth;
+use coinswap::bitcoin::{SignedAmount, Amount as BitcoinAmount, ScriptBuf as BitcoinScriptBuf, Txid as BitcoinTxid, Address as BitcoinAddress};
+use coinswap::bitcoind::bitcoincore_rpc::{json::{GetTransactionResultDetail as csGetTransactionResultDetail, ListTransactionResult as csListTransactionResult, WalletTxInfo as csWalletTxInfo}, Auth};
 use coinswap::wallet::{Balances as CoinswapBalances, RPCConfig as CoinswapRPCConfig};
 use napi_derive::napi;
 
@@ -38,8 +34,8 @@ pub struct Address {
   pub address: String,
 }
 
-impl From<bitcoin::Address> for Address {
-  fn from(addr: bitcoin::Address) -> Self {
+impl From<BitcoinAddress> for Address {
+  fn from(addr: BitcoinAddress) -> Self {
     Self {
       address: addr.to_string(),
     }
@@ -190,8 +186,8 @@ pub struct OutPoint {
 pub fn create_default_rpc_config() -> RPCConfig {
   RPCConfig {
     url: "localhost:18443".to_string(),
-    username: "regtestrpcuser".to_string(),
-    password: "regtestrpcpass".to_string(),
+    username: "user".to_string(),
+    password: "password".to_string(),
     wallet_name: "coinswap-wallet".to_string(),
   }
 }
