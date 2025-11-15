@@ -10,8 +10,9 @@ use napi_derive::napi;
 use std::path::Path;
 
 use crate::types::{
-  Address, Amount, Balances, ListTransactionResult, ListUnspentResultEntry, RPCConfig as RpcConfig,
-  ScriptBuf, Txid, UtxoSpendInfo,
+  Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
+  ListUnspentResultEntry, RPCConfig as RpcConfig, ScriptBuf, SignedAmountSats, Txid, UtxoSpendInfo,
+  WalletTxInfo,
 };
 
 #[napi]
@@ -85,7 +86,54 @@ impl Wallet {
       .inner
       .get_transactions(count.map(|c| c as usize), skip.map(|s| s as usize))
       .map_err(|e| napi::Error::from_reason(format!("Get Transactions Error: {:?}", e)))?;
-    Ok(txns.into_iter().map(ListTransactionResult::from).collect())
+
+    Ok(
+      txns
+        .into_iter()
+        .map(|tx| ListTransactionResult {
+          info: {
+            WalletTxInfo {
+              confirmations: tx.info.confirmations,
+              blockhash: tx.info.blockhash.map(|h| h.to_string()),
+              blockindex: tx.info.blockindex.map(|i| i as u32),
+              blocktime: tx.info.blocktime.map(|t| t as i64),
+              blockheight: tx.info.blockheight,
+              txid: Txid {
+                hex: tx.info.txid.to_string(),
+              },
+              time: tx.info.time as i64,
+              timereceived: tx.info.timereceived as i64,
+              bip125_replaceable: format!("{:?}", tx.info.bip125_replaceable),
+              wallet_conflicts: tx
+                .info
+                .wallet_conflicts
+                .into_iter()
+                .map(|txid| Txid {
+                  hex: txid.to_string(),
+                })
+                .collect(),
+            }
+          },
+          detail: {
+            GetTransactionResultDetail {
+              address: tx.detail.address.map(|addr| Address {
+                address: addr.assume_checked().to_string(),
+              }),
+              category: format!("{:?}", tx.detail.category),
+              amount: SignedAmountSats {
+                sats: tx.detail.amount.to_sat(),
+              },
+              label: tx.detail.label,
+              vout: tx.detail.vout,
+              fee: tx.detail.fee.map(|f| SignedAmountSats { sats: f.to_sat() }),
+              abandoned: tx.detail.abandoned,
+            }
+          },
+          trusted: tx.trusted,
+          comment: tx.comment,
+        })
+        .collect(),
+    )
   }
 
   #[napi]

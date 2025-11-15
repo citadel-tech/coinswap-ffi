@@ -8,13 +8,7 @@ use coinswap::{
     absolute::LockTime as csLocktime, Address as csAddress, Amount as csAmount,
     PublicKey as csPublicKey, ScriptBuf as csScriptBuf, SignedAmount, Txid as csTxid,
   },
-  bitcoind::bitcoincore_rpc::{
-    json::{
-      GetTransactionResultDetail as csGetTransactionResultDetail,
-      ListTransactionResult as csListTransactionResult, WalletTxInfo as csWalletTxInfo,
-    },
-    Auth,
-  },
+  bitcoind::bitcoincore_rpc::Auth,
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
   taker::{
     api::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
@@ -71,17 +65,6 @@ pub struct ListTransactionResult {
   pub comment: Option<String>,
 }
 
-impl From<csListTransactionResult> for ListTransactionResult {
-  fn from(result: csListTransactionResult) -> Self {
-    Self {
-      info: WalletTxInfo::from(result.info),
-      detail: GetTransactionResultDetail::from(result.detail),
-      trusted: result.trusted,
-      comment: result.comment,
-    }
-  }
-}
-
 #[napi(object)]
 pub struct WalletTxInfo {
   pub confirmations: i32,
@@ -96,23 +79,6 @@ pub struct WalletTxInfo {
   pub wallet_conflicts: Vec<Txid>,
 }
 
-impl From<csWalletTxInfo> for WalletTxInfo {
-  fn from(info: csWalletTxInfo) -> Self {
-    Self {
-      confirmations: info.confirmations,
-      blockhash: info.blockhash.map(|h| h.to_string()),
-      blockindex: info.blockindex.map(|i| i as u32),
-      blocktime: info.blocktime.map(|t| t as i64),
-      blockheight: info.blockheight,
-      txid: Txid::from(info.txid),
-      time: info.time as i64,
-      timereceived: info.timereceived as i64,
-      bip125_replaceable: format!("{:?}", info.bip125_replaceable),
-      wallet_conflicts: info.wallet_conflicts.into_iter().map(Txid::from).collect(),
-    }
-  }
-}
-
 #[napi(object)]
 pub struct GetTransactionResultDetail {
   pub address: Option<Address>,
@@ -122,22 +88,6 @@ pub struct GetTransactionResultDetail {
   pub vout: u32,
   pub fee: Option<SignedAmountSats>,
   pub abandoned: Option<bool>,
-}
-
-impl From<csGetTransactionResultDetail> for GetTransactionResultDetail {
-  fn from(detail: csGetTransactionResultDetail) -> Self {
-    Self {
-      address: detail
-        .address
-        .map(|addr| Address::from(addr.assume_checked())),
-      category: format!("{:?}", detail.category),
-      amount: SignedAmountSats::from(detail.amount),
-      label: detail.label,
-      vout: detail.vout,
-      fee: detail.fee.map(SignedAmountSats::from),
-      abandoned: detail.abandoned,
-    }
-  }
 }
 
 #[napi(object)]
