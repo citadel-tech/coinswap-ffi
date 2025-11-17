@@ -37,7 +37,6 @@ impl From<CoinswapWalletError> for WalletError {
   }
 }
 
-// Important for initialization
 #[napi]
 #[allow(unused)]
 pub fn create_default_rpc_config() -> RpcConfig {
@@ -65,6 +64,22 @@ impl Wallet {
       .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
     Ok(Self { inner: wallet })
+  }
+
+  pub fn load(path: String, rpc_config: RpcConfig) -> Result<()> {
+    let path = Path::new(&path);
+    let config = rpc_config.into();
+    let _ = CoinswapWallet::load(path, &config)
+      .map_err(|e| napi::Error::from_reason(format!("Load Wallet error: {:?}", e)))?;
+    Ok(())
+  }
+
+    pub fn load_or_init_wallet(path: String, rpc_config: RpcConfig) -> Result<()> {
+    let path = Path::new(&path);
+    let config = rpc_config.into();
+    let _ = CoinswapWallet::load_or_init_wallet(path, &config)
+      .map_err(|e| napi::Error::from_reason(format!("Load or Init Wallet error: {:?}", e)))?;
+    Ok(())
   }
 
   #[napi]
