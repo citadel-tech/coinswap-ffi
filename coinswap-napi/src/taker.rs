@@ -126,9 +126,9 @@ impl Taker {
     data_dir: Option<String>,
     wallet_file_name: Option<String>,
     rpc_config: Option<RpcConfig>,
-    _behavior: Option<TakerBehavior>,
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
+    zmq_addr: String,
   ) -> Result<Self> {
     let data_dir = data_dir.map(PathBuf::from);
     let rpc_config = rpc_config.map(|cfg| cfg.into());
@@ -137,10 +137,9 @@ impl Taker {
       data_dir,
       wallet_file_name,
       rpc_config,
-      // #[cfg(feature = "integration-test")]
-      // behavior.unwrap_or(TakerBehavior::Normal).into(),
       control_port,
       tor_auth_password,
+      zmq_addr
     )
     .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
