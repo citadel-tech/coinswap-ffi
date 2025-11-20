@@ -3,6 +3,7 @@
 export declare class Taker {
   constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string)
   static initNativeLogging(): void
+  static fetchMempoolFees(): FeeRates
   doCoinswap(swapParams: SwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
@@ -41,6 +42,12 @@ export interface Balances {
   contract: number
   fidelity: number
   spendable: number
+}
+
+export interface FeeRates {
+  fastest: number
+  standard: number
+  economy: number
 }
 
 export interface FidelityBond {

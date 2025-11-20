@@ -3,10 +3,11 @@
 //! This module provides N-API bindings for the coinswap taker functionality.
 
 use crate::types::{
-  Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
+  Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
   SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
+use coinswap::fee_estimation::{BlockTarget, FeeEstimator};
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
@@ -155,6 +156,26 @@ impl Taker {
     // This makes ALL log:: macros from any crate go to the JS console
     console_log::init_with_level(log::Level::Trace).expect("Failed to initialize console_log");
     log::info!("Rust logging → Electron console is ready!");
+  }
+
+  // Fetch fee estimates from Mempool.space API (chose mempool[live] since it's recommended for user facing apps over esplora[historical+live])
+  #[napi]
+  pub fn fetch_mempool_fees() -> Result<FeeRates> {
+    let fees = FeeEstimator::fetch_mempool_fees()
+      .map_err(|e| napi::Error::from_reason(format!("Mempool fee fetch error: {:?}", e)))?;
+
+    let get_fee = |target: BlockTarget, name: &str| -> Result<f64> {
+      fees
+        .get(&target)
+        .copied()
+        .ok_or_else(|| napi::Error::from_reason(format!("Missing {} fee", name)))
+    };
+
+    Ok(FeeRates {
+      fastest: get_fee(BlockTarget::Fastest, "fastest")?,
+      standard: get_fee(BlockTarget::Standard, "standard")?,
+      economy: get_fee(BlockTarget::Economy, "economy")?,
+    })
   }
 
   #[napi]

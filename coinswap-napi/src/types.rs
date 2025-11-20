@@ -194,6 +194,14 @@ pub struct UtxoSpendInfo {
 }
 
 #[napi(object)]
+#[derive(Debug, Clone)]
+pub struct FeeRates {
+  pub fastest: f64,  // sat/vB
+  pub standard: f64, // sat/vB
+  pub economy: f64,  // sat/vB
+}
+
+#[napi(object)]
 #[derive(Debug)]
 pub struct LockTime {
   pub lock_type: String,
