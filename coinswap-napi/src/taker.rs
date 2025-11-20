@@ -161,6 +161,7 @@ impl Taker {
   /// Fetch fee estimates from Mempool.space API with automatic fallback to Esplora
   #[napi]
   pub fn fetch_mempool_fees() -> Result<FeeRates> {
+    // mempool.space serves live data and is recommended for user facing apps over esplora, the latter serving historical(mov_avg)+live
     let fees = FeeEstimator::fetch_mempool_fees()
       .or_else(|mempool_err| {
         log::warn!(
@@ -170,25 +171,6 @@ impl Taker {
         FeeEstimator::fetch_esplora_fees()
       })
       .map_err(|e| napi::Error::from_reason(format!("Both fee APIs failed: {:?}", e)))?;
-
-    let get = |target| {
-      fees
-        .get(&target)
-        .ok_or_else(|| napi::Error::from_reason(format!("Missing fee for {:?}", target)))
-    };
-
-    Ok(FeeRates {
-      fastest: *get(BlockTarget::Fastest)?,
-      standard: *get(BlockTarget::Standard)?,
-      economy: *get(BlockTarget::Economy)?,
-    })
-  }
-
-  /// Fetch fee estimates from Esplora API directly
-  #[napi]
-  pub fn fetch_esplora_fees() -> Result<FeeRates> {
-    let fees = FeeEstimator::fetch_esplora_fees()
-      .map_err(|e| napi::Error::from_reason(format!("Esplora API failed: {:?}", e)))?;
 
     let get = |target| {
       fees

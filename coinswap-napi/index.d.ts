@@ -5,8 +5,6 @@ export declare class Taker {
   static initNativeLogging(): void
   /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates
-  /** Fetch fee estimates from Esplora API directly */
-  static fetchEsploraFees(): FeeRates
   doCoinswap(swapParams: SwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
