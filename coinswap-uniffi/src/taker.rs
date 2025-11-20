@@ -108,9 +108,10 @@ impl Taker {
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
         rpc_config: Option<RPCConfig>,
-        _behavior: Option<TakerBehavior>,
+        // _behavior: Option<TakerBehavior>,
         control_port: Option<u16>,
         tor_auth_password: Option<String>,
+        zmq_addr: String
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
@@ -119,10 +120,11 @@ impl Taker {
             data_dir,
             wallet_file_name,
             rpc_config,
-            #[cfg(feature = "integration-test")]
-            _behavior.unwrap_or(TakerBehavior::Normal).into(),
+            // #[cfg(feature = "integration-test")]
+            // _behavior.unwrap_or(TakerBehavior::Normal).into(),
             control_port,
             tor_auth_password,
+            zmq_addr
         )?;
 
         Ok(Arc::new(Self {
