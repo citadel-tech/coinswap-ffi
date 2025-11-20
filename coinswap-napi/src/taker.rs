@@ -171,7 +171,7 @@ impl Taker {
     let txns = self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet()
       .get_transactions(count.map(|c| c as usize), skip.map(|s| s as usize))
       .map_err(|e| napi::Error::from_reason(format!("Get Transactions Error: {:?}", e)))?;
@@ -230,7 +230,7 @@ impl Taker {
     let internal_addresses = self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet()
       .get_next_internal_addresses(count)
       .map_err(|e| napi::Error::from_reason(format!("Get internal addresses error: {:?}", e)))?;
@@ -242,7 +242,7 @@ impl Taker {
     let external_address = self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
       .get_next_external_address()
       .map_err(|e| napi::Error::from_reason(format!("Get next external address error: {:?}", e)))?;
@@ -251,117 +251,121 @@ impl Taker {
 
   // Get Name of the Wallet
   #[napi]
-  pub fn get_name(&self) -> String {
-    self
-      .inner
-      .lock()
-      .unwrap()
-      .get_wallet()
-      .get_name()
-      .to_string()
+  pub fn get_name(&self) -> Result<String> {
+    Ok(
+      self
+        .inner
+        .lock()
+        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
+        .get_wallet()
+        .get_name()
+        .to_string(),
+    )
   }
 
   #[napi]
-  pub fn list_all_utxo_spend_info(&self) -> Vec<(ListUnspentResultEntry, UtxoSpendInfo)> {
+  pub fn list_all_utxo_spend_info(&self) -> Result<Vec<(ListUnspentResultEntry, UtxoSpendInfo)>> {
     let entries = self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet()
       .list_all_utxo_spend_info();
-    entries
-      .into_iter()
-      .map(|(cs_utxo, cs_info)| {
-        let utxo = ListUnspentResultEntry {
-          txid: Txid::from(cs_utxo.txid),
-          vout: cs_utxo.vout,
-          address: cs_utxo.address.map(|a| a.assume_checked().to_string()),
-          label: cs_utxo.label,
-          script_pub_key: ScriptBuf::from(cs_utxo.script_pub_key),
-          amount: Amount::from(cs_utxo.amount),
-          confirmations: cs_utxo.confirmations,
-          redeem_script: cs_utxo.redeem_script.map(ScriptBuf::from),
-          witness_script: cs_utxo.witness_script.map(ScriptBuf::from),
-          spendable: cs_utxo.spendable,
-          solvable: cs_utxo.solvable,
-          desc: cs_utxo.descriptor,
-          safe: cs_utxo.safe,
-        };
-        let spend_info = match cs_info {
-          csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo {
-            spend_type: "SeedCoin".to_string(),
-            path: Some(path),
-            multisig_redeemscript: None,
-            input_value: Some(Amount::from(input_value)),
-            index: None,
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::IncomingSwapCoin {
-            multisig_redeemscript,
-          } => UtxoSpendInfo {
-            spend_type: "IncomingSwapCoin".to_string(),
-            path: None,
-            multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
-            input_value: None,
-            index: None,
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::OutgoingSwapCoin {
-            multisig_redeemscript,
-          } => UtxoSpendInfo {
-            spend_type: "OutgoingSwapCoin".to_string(),
-            path: None,
-            multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
-            input_value: None,
-            index: None,
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::TimelockContract {
-            swapcoin_multisig_redeemscript,
-            input_value,
-          } => UtxoSpendInfo {
-            spend_type: "TimelockContract".to_string(),
-            path: None,
-            multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
-            input_value: Some(Amount::from(input_value)),
-            index: None,
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::HashlockContract {
-            swapcoin_multisig_redeemscript,
-            input_value,
-          } => UtxoSpendInfo {
-            spend_type: "HashlockContract".to_string(),
-            path: None,
-            multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
-            input_value: Some(Amount::from(input_value)),
-            index: None,
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
-            spend_type: "FidelityBondCoin".to_string(),
-            path: None,
-            multisig_redeemscript: None,
-            input_value: Some(Amount::from(input_value)),
-            index: Some(index),
-            original_multisig_redeemscript: None,
-          },
-          csUtxoSpendInfo::SweptCoin {
-            path,
-            input_value,
-            original_multisig_redeemscript,
-          } => UtxoSpendInfo {
-            spend_type: "SweptCoin".to_string(),
-            path: Some(path),
-            multisig_redeemscript: None,
-            input_value: Some(Amount::from(input_value)),
-            index: None,
-            original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
-          },
-        };
-        (utxo, spend_info)
-      })
-      .collect()
+    Ok(
+      entries
+        .into_iter()
+        .map(|(cs_utxo, cs_info)| {
+          let utxo = ListUnspentResultEntry {
+            txid: Txid::from(cs_utxo.txid),
+            vout: cs_utxo.vout,
+            address: cs_utxo.address.map(|a| a.assume_checked().to_string()),
+            label: cs_utxo.label,
+            script_pub_key: ScriptBuf::from(cs_utxo.script_pub_key),
+            amount: Amount::from(cs_utxo.amount),
+            confirmations: cs_utxo.confirmations,
+            redeem_script: cs_utxo.redeem_script.map(ScriptBuf::from),
+            witness_script: cs_utxo.witness_script.map(ScriptBuf::from),
+            spendable: cs_utxo.spendable,
+            solvable: cs_utxo.solvable,
+            desc: cs_utxo.descriptor,
+            safe: cs_utxo.safe,
+          };
+          let spend_info = match cs_info {
+            csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo {
+              spend_type: "SeedCoin".to_string(),
+              path: Some(path),
+              multisig_redeemscript: None,
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::IncomingSwapCoin {
+              multisig_redeemscript,
+            } => UtxoSpendInfo {
+              spend_type: "IncomingSwapCoin".to_string(),
+              path: None,
+              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+              input_value: None,
+              index: None,
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::OutgoingSwapCoin {
+              multisig_redeemscript,
+            } => UtxoSpendInfo {
+              spend_type: "OutgoingSwapCoin".to_string(),
+              path: None,
+              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+              input_value: None,
+              index: None,
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::TimelockContract {
+              swapcoin_multisig_redeemscript,
+              input_value,
+            } => UtxoSpendInfo {
+              spend_type: "TimelockContract".to_string(),
+              path: None,
+              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::HashlockContract {
+              swapcoin_multisig_redeemscript,
+              input_value,
+            } => UtxoSpendInfo {
+              spend_type: "HashlockContract".to_string(),
+              path: None,
+              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
+              spend_type: "FidelityBondCoin".to_string(),
+              path: None,
+              multisig_redeemscript: None,
+              input_value: Some(Amount::from(input_value)),
+              index: Some(index),
+              original_multisig_redeemscript: None,
+            },
+            csUtxoSpendInfo::SweptCoin {
+              path,
+              input_value,
+              original_multisig_redeemscript,
+            } => UtxoSpendInfo {
+              spend_type: "SweptCoin".to_string(),
+              path: Some(path),
+              multisig_redeemscript: None,
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
+            },
+          };
+          (utxo, spend_info)
+        })
+        .collect(),
+    )
   }
 
   #[napi]
@@ -370,7 +374,7 @@ impl Taker {
     self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
       .backup(backup_path, None)
       .map_err(|e| napi::Error::from_reason(format!("Backup error: {:?}", e)))?;
@@ -382,7 +386,7 @@ impl Taker {
     self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet()
       .lock_unspendable_utxos()
       .map_err(|e| napi::Error::from_reason(format!("Lock error: {:?}", e)))?;
@@ -394,7 +398,7 @@ impl Taker {
     let txid = self
       .inner
       .lock()
-      .unwrap()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
       .send_to_address(amount as u64, address)
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
