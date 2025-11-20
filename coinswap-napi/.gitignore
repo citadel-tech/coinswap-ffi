@@ -1,0 +1,6 @@
+node_modules
+target
+Cargo.lock
+coinswap-napi.linux-x64-gnu.node
+package-lock.json
+install-state.gz
