@@ -139,13 +139,22 @@ impl Taker {
       rpc_config,
       control_port,
       tor_auth_password,
-      zmq_addr
+      zmq_addr,
     )
     .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
     Ok(Self {
       inner: Mutex::new(taker),
     })
+  }
+
+  #[napi]
+  pub fn init_native_logging() {
+    // For full backtrace panics
+    console_error_panic_hook::set_once();
+    // This makes ALL log:: macros from any crate go to the JS console
+    console_log::init_with_level(log::Level::Trace).expect("Failed to initialize console_log");
+    log::info!("Rust logging → Electron console is ready!");
   }
 
   #[napi]
