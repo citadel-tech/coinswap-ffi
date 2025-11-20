@@ -158,23 +158,48 @@ impl Taker {
     log::info!("Rust logging → Electron console is ready!");
   }
 
-  // Fetch fee estimates from Mempool.space API (chose mempool[live] since it's recommended for user facing apps over esplora[historical+live])
+  /// Fetch fee estimates from Mempool.space API with automatic fallback to Esplora
   #[napi]
   pub fn fetch_mempool_fees() -> Result<FeeRates> {
     let fees = FeeEstimator::fetch_mempool_fees()
-      .map_err(|e| napi::Error::from_reason(format!("Mempool fee fetch error: {:?}", e)))?;
+      .or_else(|mempool_err| {
+        log::warn!(
+          "Mempool.space API failed: {:?}, falling back to Esplora",
+          mempool_err
+        );
+        FeeEstimator::fetch_esplora_fees()
+      })
+      .map_err(|e| napi::Error::from_reason(format!("Both fee APIs failed: {:?}", e)))?;
 
-    let get_fee = |target: BlockTarget, name: &str| -> Result<f64> {
+    let get = |target| {
       fees
         .get(&target)
-        .copied()
-        .ok_or_else(|| napi::Error::from_reason(format!("Missing {} fee", name)))
+        .ok_or_else(|| napi::Error::from_reason(format!("Missing fee for {:?}", target)))
     };
 
     Ok(FeeRates {
-      fastest: get_fee(BlockTarget::Fastest, "fastest")?,
-      standard: get_fee(BlockTarget::Standard, "standard")?,
-      economy: get_fee(BlockTarget::Economy, "economy")?,
+      fastest: *get(BlockTarget::Fastest)?,
+      standard: *get(BlockTarget::Standard)?,
+      economy: *get(BlockTarget::Economy)?,
+    })
+  }
+
+  /// Fetch fee estimates from Esplora API directly
+  #[napi]
+  pub fn fetch_esplora_fees() -> Result<FeeRates> {
+    let fees = FeeEstimator::fetch_esplora_fees()
+      .map_err(|e| napi::Error::from_reason(format!("Esplora API failed: {:?}", e)))?;
+
+    let get = |target| {
+      fees
+        .get(&target)
+        .ok_or_else(|| napi::Error::from_reason(format!("Missing fee for {:?}", target)))
+    };
+
+    Ok(FeeRates {
+      fastest: *get(BlockTarget::Fastest)?,
+      standard: *get(BlockTarget::Standard)?,
+      economy: *get(BlockTarget::Economy)?,
     })
   }
 
