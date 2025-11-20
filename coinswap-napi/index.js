@@ -573,9 +573,5 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.Taker = nativeBinding.Taker
-module.exports.Wallet = nativeBinding.Wallet
-module.exports.createDefaultRpcConfig = nativeBinding.createDefaultRpcConfig
-module.exports.createSwapParams = nativeBinding.createSwapParams
 module.exports.TakerBehavior = nativeBinding.TakerBehavior
 module.exports.TakerError = nativeBinding.TakerError
-module.exports.WalletError = nativeBinding.WalletError

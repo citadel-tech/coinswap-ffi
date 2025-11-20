@@ -3,10 +3,17 @@
 export declare class Taker {
   constructor(dataDir?: string | undefined | null, walletFileName?: string | undefined | null, rpcConfig?: RpcConfig | undefined | null, behavior?: TakerBehavior | undefined | null, controlPort?: number | undefined | null, torAuthPassword?: string | undefined | null)
   doCoinswap(swapParams: SwapParams): SwapReport | null
-  getWalletName(): string
+  getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
+  getNextInternalAddresses(count: number): Array<Address>
+  getNextExternalAddress(): Address
+  getName(): string
+  listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
+  backup(path: string): void
+  lockUnspendableUtxos(): void
+  sendToAddress(address: string, amount: number): Txid
   /** Get wallet balances */
-  getWalletBalances(): Balances
-  syncWallet(): void
+  getBalances(): Balances
+  syncAndSave(): void
   /** Sync the offerbook with available makers */
   syncOfferbook(): void
   /** Get basic information about all good makers (limited due to private fields) */
@@ -17,20 +24,6 @@ export declare class Taker {
   fetchGoodMakers(): Array<string>
   fetchAllMakers(): Array<string>
   fetchOffers(): OfferBook
-}
-
-export declare class Wallet {
-  constructor(path: string, rpcConfig: RpcConfig)
-  getBalances(): Balances
-  getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
-  getNextInternalAddresses(count: number): Array<Address>
-  getNextExternalAddress(): Address
-  getName(): string
-  listAllUtxos(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
-  syncAndSave(): void
-  backup(path: string): void
-  lockUnspendableUtxos(): void
-  sendToAddress(address: string, amount: number): Txid
 }
 
 export interface Address {
@@ -48,10 +41,6 @@ export interface Balances {
   fidelity: number
   spendable: number
 }
-
-export declare function createDefaultRpcConfig(): RpcConfig
-
-export declare function createSwapParams(sendAmount: number, makerCount: number, outpoints: Array<OutPoint>): SwapParams
 
 export interface FidelityBond {
   outpoint: OutPoint
@@ -240,15 +229,6 @@ export interface UtxoSpendInfo {
 
 export interface WalletBackup {
   fileName: string
-}
-
-export declare const enum WalletError {
-  IO = 0,
-  Rpc = 1,
-  General = 2,
-  Json = 3,
-  Network = 4,
-  AddressParse = 5
 }
 
 export interface WalletTxInfo {

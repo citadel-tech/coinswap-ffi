@@ -2,4 +2,3 @@
 
 mod taker;
 mod types;
-mod wallet;
