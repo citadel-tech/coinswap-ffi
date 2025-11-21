@@ -194,7 +194,6 @@ pub struct UtxoSpendInfo {
 }
 
 #[napi(object)]
-#[derive(Debug, Clone)]
 pub struct FeeRates {
   pub fastest: f64,  // sat/vB
   pub standard: f64, // sat/vB
@@ -440,9 +439,20 @@ pub struct SwapReport {
   /// Input UTXOs amounts
   pub input_utxos: Vec<i64>,
   /// Output regular UTXOs amounts
-  pub output_regular_utxos: Vec<i64>,
+  pub output_regular_amounts: Vec<i64>,
   /// Output swap coin UTXOs amounts
-  pub output_swap_utxos: Vec<i64>,
+  pub output_swap_amounts: Vec<i64>,
+  /// Output regular coin UTXOs with amounts and addresses [(amount, address)]
+  pub output_regular_utxos_with_addrs: Vec<UtxoWithAddress>,
+  /// Output swap coin UTXOs with amounts and addresses [(amount, address)]
+  pub output_swap_utxos_with_addrs: Vec<UtxoWithAddress>,
+}
+
+#[napi(object)]
+#[derive(Debug)]
+pub struct UtxoWithAddress {
+  pub amount: i64,
+  pub address: String,
 }
 
 impl From<csSwapReport> for SwapReport {
@@ -467,20 +477,35 @@ impl From<csSwapReport> for SwapReport {
         .map(MakerFeeInfo::from)
         .collect(),
       input_utxos: report.input_utxos.into_iter().map(|v| v as i64).collect(),
-      output_regular_utxos: report
-        .output_regular_utxos
+      output_regular_amounts: report
+        .output_regular_amounts
         .into_iter()
         .map(|v| v as i64)
         .collect(),
-      output_swap_utxos: report
-        .output_swap_utxos
+      output_swap_amounts: report
+        .output_swap_amounts
         .into_iter()
         .map(|v| v as i64)
+        .collect(),
+      output_regular_utxos_with_addrs: report
+        .output_regular_utxos_with_addrs
+        .into_iter()
+        .map(|(amount, address)| UtxoWithAddress {
+          amount: amount as i64,
+          address,
+        })
+        .collect(),
+      output_swap_utxos_with_addrs: report
+        .output_swap_utxos_with_addrs
+        .into_iter()
+        .map(|(amount, address)| UtxoWithAddress {
+          amount: amount as i64,
+          address,
+        })
         .collect(),
     }
   }
 }
-
 #[napi(object)]
 #[allow(unused)]
 pub struct WalletBackup {

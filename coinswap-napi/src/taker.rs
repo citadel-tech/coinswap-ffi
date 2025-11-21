@@ -7,8 +7,8 @@ use crate::types::{
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
   SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
-use coinswap::fee_estimation::{BlockTarget, FeeEstimator};
 use coinswap::{
+  fee_estimation::{BlockTarget, FeeEstimator},
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
   wallet::UTXOSpendInfo as csUtxoSpendInfo,
@@ -430,13 +430,13 @@ impl Taker {
   }
 
   #[napi]
-  pub fn send_to_address(&mut self, address: String, amount: i64) -> Result<Txid> {
+  pub fn send_to_address(&mut self, address: String, amount: i64, fee_rate: Option<f64>) -> Result<Txid> {
     let txid = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
-      .send_to_address(amount as u64, address)
+      .send_to_address(amount as u64, address, fee_rate)
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
     Ok(txid.into())
   }

@@ -13,7 +13,7 @@ export declare class Taker {
   listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
   backup(path: string): void
   lockUnspendableUtxos(): void
-  sendToAddress(address: string, amount: number): Txid
+  sendToAddress(address: string, amount: number, feeRate?: number | undefined | null): Txid
   /** Get wallet balances */
   getBalances(): Balances
   syncAndSave(): void
@@ -204,9 +204,13 @@ export interface SwapReport {
   /** Input UTXOs amounts */
   inputUtxos: Array<number>
   /** Output regular UTXOs amounts */
-  outputRegularUtxos: Array<number>
+  outputRegularAmounts: Array<number>
   /** Output swap coin UTXOs amounts */
-  outputSwapUtxos: Array<number>
+  outputSwapAmounts: Array<number>
+  /** Output regular coin UTXOs with amounts and addresses [(amount, address)] */
+  outputRegularUtxosWithAddrs: Array<UtxoWithAddress>
+  /** Output swap coin UTXOs with amounts and addresses [(amount, address)] */
+  outputSwapUtxosWithAddrs: Array<UtxoWithAddress>
 }
 
 export declare const enum TakerBehavior {
@@ -234,6 +238,11 @@ export interface UtxoSpendInfo {
   inputValue?: Amount
   index?: number
   originalMultisigRedeemscript?: ScriptBuf
+}
+
+export interface UtxoWithAddress {
+  amount: number
+  address: string
 }
 
 export interface WalletBackup {
