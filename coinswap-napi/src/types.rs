@@ -11,7 +11,7 @@ use coinswap::{
   bitcoind::bitcoincore_rpc::Auth,
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
   taker::{
-    api::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
+    ffi::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
     offers::{
       MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
       OfferBook as csOfferBook,
@@ -240,16 +240,16 @@ impl From<csPublicKey> for PublicKey {
 #[napi(object)]
 pub struct FidelityProof {
   pub bond: FidelityBond,
-  pub cert_hash: String,
-  pub cert_sig: u8,
+  pub cert_hash: Vec<u8>,
+  pub cert_sig: Vec<u8>,
 }
 
 impl From<csFidelityProof> for FidelityProof {
   fn from(fidelityproof: csFidelityProof) -> Self {
     Self {
       bond: fidelityproof.bond.into(),
-      cert_hash: "".to_string(),
-      cert_sig: 0,
+      cert_hash: <_ as AsRef<[u8]>>::as_ref(&fidelityproof.cert_hash).to_vec(),
+      cert_sig: fidelityproof.cert_sig.serialize_compact().to_vec(),
     }
   }
 }
@@ -443,9 +443,9 @@ pub struct SwapReport {
   /// Output swap coin UTXOs amounts
   pub output_swap_amounts: Vec<i64>,
   /// Output regular coin UTXOs with amounts and addresses [(amount, address)]
-  pub output_regular_utxos_with_addrs: Vec<UtxoWithAddress>,
+  pub output_change_utxos: Vec<UtxoWithAddress>,
   /// Output swap coin UTXOs with amounts and addresses [(amount, address)]
-  pub output_swap_utxos_with_addrs: Vec<UtxoWithAddress>,
+  pub output_swap_utxos: Vec<UtxoWithAddress>,
 }
 
 #[napi(object)]
@@ -487,16 +487,16 @@ impl From<csSwapReport> for SwapReport {
         .into_iter()
         .map(|v| v as i64)
         .collect(),
-      output_regular_utxos_with_addrs: report
-        .output_regular_utxos_with_addrs
+      output_change_utxos: report
+        .output_change_utxos
         .into_iter()
         .map(|(amount, address)| UtxoWithAddress {
           amount: amount as i64,
           address,
         })
         .collect(),
-      output_swap_utxos_with_addrs: report
-        .output_swap_utxos_with_addrs
+      output_swap_utxos: report
+        .output_swap_utxos
         .into_iter()
         .map(|(amount, address)| UtxoWithAddress {
           amount: amount as i64,
