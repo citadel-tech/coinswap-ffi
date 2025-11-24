@@ -11,9 +11,10 @@ export declare class Taker {
   getNextExternalAddress(): Address
   getName(): string
   listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
-  backup(path: string): void
+  backup(path: string, password?: string | undefined | null): void
+  static restoreWalletGuiApp(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig, backupFile: string, password?: string | undefined | null): void
   lockUnspendableUtxos(): void
-  sendToAddress(address: string, amount: number, feeRate?: number | undefined | null): Txid
+  sendToAddress(address: string, amount: number, feeRate?: number | undefined | null, manuallySelectedOutpoints?: Array<OutPoint> | undefined | null): Txid
   /** Get wallet balances */
   getBalances(): Balances
   syncAndSave(): void
@@ -63,8 +64,8 @@ export interface FidelityBond {
 
 export interface FidelityProof {
   bond: FidelityBond
-  certHash: string
-  certSig: number
+  certHash: Array<number>
+  certSig: Array<number>
 }
 
 export interface GetTransactionResultDetail {
@@ -208,9 +209,9 @@ export interface SwapReport {
   /** Output swap coin UTXOs amounts */
   outputSwapAmounts: Array<number>
   /** Output regular coin UTXOs with amounts and addresses [(amount, address)] */
-  outputRegularUtxosWithAddrs: Array<UtxoWithAddress>
+  outputChangeUtxos: Array<UtxoWithAddress>
   /** Output swap coin UTXOs with amounts and addresses [(amount, address)] */
-  outputSwapUtxosWithAddrs: Array<UtxoWithAddress>
+  outputSwapUtxos: Array<UtxoWithAddress>
 }
 
 export declare const enum TakerBehavior {

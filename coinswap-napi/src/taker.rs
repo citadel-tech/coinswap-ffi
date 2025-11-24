@@ -8,8 +8,9 @@ use crate::types::{
   SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
 use coinswap::{
-  fee_estimation::{BlockTarget, FeeEstimator},
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
+  fee_estimation::{BlockTarget, FeeEstimator},
+  security::KeyMaterial,
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
   wallet::UTXOSpendInfo as csUtxoSpendInfo,
 };
@@ -405,16 +406,42 @@ impl Taker {
   }
 
   #[napi]
-  pub fn backup(&self, path: String) -> Result<()> {
+  pub fn backup(&self, path: String, password: Option<String>) -> Result<()> {
+    let km = if password.is_some() {
+      Some(KeyMaterial::new_from_password(password.unwrap()))
+    } else {
+      None
+    };
     let backup_path = Path::new(&path);
+
     self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
-      .backup(backup_path, None)
+      .backup(backup_path, km)
       .map_err(|e| napi::Error::from_reason(format!("Backup error: {:?}", e)))?;
+
     Ok(())
+  }
+
+  #[napi]
+  pub fn restore_wallet_gui_app(
+    data_dir: Option<String>,
+    wallet_file_name: Option<String>,
+    rpc_config: RpcConfig,
+    backup_file: String,
+    password: Option<String>,
+  ) {
+    let data_dir = data_dir.map(PathBuf::from);
+
+    CoinswapTaker::restore_wallet_gui_app(
+      data_dir,
+      wallet_file_name,
+      rpc_config.into(),
+      backup_file,
+      password,
+    );
   }
 
   #[napi]
@@ -430,13 +457,36 @@ impl Taker {
   }
 
   #[napi]
-  pub fn send_to_address(&mut self, address: String, amount: i64, fee_rate: Option<f64>) -> Result<Txid> {
+  pub fn send_to_address(
+    &mut self,
+    address: String,
+    amount: i64,
+    fee_rate: Option<f64>,
+    manually_selected_outpoints: Option<Vec<OutPoint>>,
+  ) -> Result<Txid> {
+    let manually_selected_outpoints = manually_selected_outpoints
+      .map(|outpoints| {
+        outpoints
+          .into_iter()
+          .map(|outpoint| {
+            let txid = csTxid::from_str(&outpoint.txid)
+              .map_err(|e| napi::Error::from_reason(format!("Invalid txid: {:?}", e)))?;
+            Ok(BitcoinOutPoint::new(txid, outpoint.vout))
+          })
+          .collect::<Result<Vec<_>, _>>()
+      })
+      .transpose()?;
     let txid = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
-      .send_to_address(amount as u64, address, fee_rate)
+      .send_to_address(
+        amount as u64,
+        address,
+        fee_rate,
+        manually_selected_outpoints,
+      )
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
     Ok(txid.into())
   }
