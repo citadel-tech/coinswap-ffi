@@ -438,11 +438,11 @@ pub struct SwapReport {
   pub maker_fee_info: Vec<MakerFeeInfo>,
   /// Input UTXOs amounts
   pub input_utxos: Vec<i64>,
-  /// Output regular UTXOs amounts
-  pub output_regular_amounts: Vec<i64>,
+  /// Output change UTXOs amounts
+  pub output_change_amounts: Vec<i64>,
   /// Output swap coin UTXOs amounts
   pub output_swap_amounts: Vec<i64>,
-  /// Output regular coin UTXOs with amounts and addresses [(amount, address)]
+  /// Output change coin UTXOs with amounts and addresses [(amount, address)]
   pub output_change_utxos: Vec<UtxoWithAddress>,
   /// Output swap coin UTXOs with amounts and addresses [(amount, address)]
   pub output_swap_utxos: Vec<UtxoWithAddress>,
@@ -477,8 +477,8 @@ impl From<csSwapReport> for SwapReport {
         .map(MakerFeeInfo::from)
         .collect(),
       input_utxos: report.input_utxos.into_iter().map(|v| v as i64).collect(),
-      output_regular_amounts: report
-        .output_regular_amounts
+      output_change_amounts: report
+        .output_change_amounts
         .into_iter()
         .map(|v| v as i64)
         .collect(),
