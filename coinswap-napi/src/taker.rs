@@ -10,16 +10,16 @@ use crate::types::{
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   fee_estimation::{BlockTarget, FeeEstimator},
-  security::KeyMaterial,
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-  wallet::UTXOSpendInfo as csUtxoSpendInfo,
+  wallet::{UTXOSpendInfo as csUtxoSpendInfo, ffi},
+  // taker::api2::{SwapParams, Taker}
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::{
   error::Error,
   fmt,
-  path::{Path, PathBuf},
+  path::PathBuf,
   str::FromStr,
   sync::Mutex,
 };
@@ -131,6 +131,7 @@ impl Taker {
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
     zmq_addr: String,
+    password: Option<String>
   ) -> Result<Self> {
     let data_dir = data_dir.map(PathBuf::from);
     let rpc_config = rpc_config.map(|cfg| cfg.into());
@@ -142,6 +143,7 @@ impl Taker {
       control_port,
       tor_auth_password,
       zmq_addr,
+      password,
     )
     .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
@@ -406,21 +408,14 @@ impl Taker {
   }
 
   #[napi]
-  pub fn backup(&self, path: String, password: Option<String>) -> Result<()> {
-    let km = if password.is_some() {
-      Some(KeyMaterial::new_from_password(password.unwrap()))
-    } else {
-      None
-    };
-    let backup_path = Path::new(&path);
-
+  pub fn backup(&self, destination_path: String, password: Option<String>) -> Result<()> {
     self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
-      .backup(backup_path, km)
-      .map_err(|e| napi::Error::from_reason(format!("Backup error: {:?}", e)))?;
+      .backup_wallet_gui_app(destination_path, password)
+      .map_err(|e| napi::Error::from_reason(format!("App's Backup error: {:?}", e)))?;
 
     Ok(())
   }
@@ -435,7 +430,7 @@ impl Taker {
   ) {
     let data_dir = data_dir.map(PathBuf::from);
 
-    CoinswapTaker::restore_wallet_gui_app(
+    ffi::restore_wallet_gui_app(
       data_dir,
       wallet_file_name,
       rpc_config.into(),

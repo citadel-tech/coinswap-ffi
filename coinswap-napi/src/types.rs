@@ -10,14 +10,11 @@ use coinswap::{
   },
   bitcoind::bitcoincore_rpc::Auth,
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
-  taker::{
-    ffi::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
-    offers::{
-      MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
-      OfferBook as csOfferBook,
-    },
+  taker::offers::{
+    MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress, OfferBook as csOfferBook,
   },
   wallet::{
+    ffi::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
     Balances as CoinswapBalances, FidelityBond as csFidelityBond, RPCConfig as CoinswapRPCConfig,
   },
 };
