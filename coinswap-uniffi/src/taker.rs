@@ -111,7 +111,8 @@ impl Taker {
         // _behavior: Option<TakerBehavior>,
         control_port: Option<u16>,
         tor_auth_password: Option<String>,
-        zmq_addr: String
+        zmq_addr: String,
+        password: Option<String>
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
@@ -124,7 +125,8 @@ impl Taker {
             // _behavior.unwrap_or(TakerBehavior::Normal).into(),
             control_port,
             tor_auth_password,
-            zmq_addr
+            zmq_addr,
+            password
         )?;
 
         Ok(Arc::new(Self {
