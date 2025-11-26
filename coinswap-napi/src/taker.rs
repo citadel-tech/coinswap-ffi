@@ -11,17 +11,11 @@ use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   fee_estimation::{BlockTarget, FeeEstimator},
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-  wallet::{UTXOSpendInfo as csUtxoSpendInfo, ffi},
+  wallet::{ffi, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::{
-  error::Error,
-  fmt,
-  path::PathBuf,
-  str::FromStr,
-  sync::Mutex,
-};
+use std::{error::Error, fmt, path::PathBuf, str::FromStr, sync::Mutex};
 
 #[napi]
 #[derive(Debug)]
@@ -130,7 +124,7 @@ impl Taker {
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
     zmq_addr: String,
-    password: Option<String>
+    password: Option<String>,
   ) -> Result<Self> {
     let data_dir = data_dir.map(PathBuf::from);
     let rpc_config = rpc_config.map(|cfg| cfg.into());
@@ -149,6 +143,13 @@ impl Taker {
     Ok(Self {
       inner: Mutex::new(taker),
     })
+  }
+
+  #[napi]
+  pub fn setup_logging(data_dir: Option<String>) -> Result<()> {
+    let path = data_dir.map(PathBuf::from);
+    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    Ok(())
   }
 
   #[napi]
@@ -631,6 +632,14 @@ impl Taker {
       .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
 
     Ok(OfferBook::from(offerbook))
+  }
+
+  #[napi]
+  pub fn is_wallet_encrypted(wallet_path: String) -> Result<bool> {
+    let path = PathBuf::from(wallet_path);
+
+    coinswap::wallet::Wallet::is_wallet_encrypted(&path)
+      .map_err(|e| napi::Error::from_reason(format!("Failed to check wallet encryption: {:?}", e)))
   }
 }
 
