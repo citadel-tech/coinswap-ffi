@@ -1,6 +1,6 @@
-//! Coinswap Taker N-API bindings
+//! Coinswap Taproot Taker N-API bindings
 //!
-//! This module provides N-API bindings for the coinswap taker functionality.
+//! This module provides N-API bindings for the coinswap taproot taker functionality.
 
 use crate::types::{
   Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,

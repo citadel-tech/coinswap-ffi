@@ -12,7 +12,6 @@ use coinswap::{
   fee_estimation::{BlockTarget, FeeEstimator},
   taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
   wallet::{UTXOSpendInfo as csUtxoSpendInfo, ffi},
-  // taker::api2::{SwapParams, Taker}
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -434,7 +433,7 @@ impl Taker {
       data_dir,
       wallet_file_name,
       rpc_config.into(),
-      backup_file,
+      backup_file.into(),
       password,
     );
   }
