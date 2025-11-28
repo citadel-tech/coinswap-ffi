@@ -42,7 +42,7 @@ coinswap-ffi/
 │       ├── taker.rs        
 │       └── lib.rs
 
-[taker-app](https://github.com/citadel-tech/taker-app)/              # Reference GUI application (Node.js/Electron)
+taker-app/              # Reference GUI application (Node.js/Electron)
     └── Uses coinswap-napi bindings
 ```
 
