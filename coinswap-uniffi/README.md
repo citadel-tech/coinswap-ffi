@@ -4,7 +4,7 @@
 
 **Multi-language bindings for the Coinswap Bitcoin privacy protocol**
 
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Rust 1.75+](https://img.shields.io/badge/rustc-1.75%2B-lightgrey.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 
 </div>
@@ -15,8 +15,8 @@ Coinswap UniFFI provides multi-language bindings for the [Coinswap protocol](htt
 
 ## Supported Languages
 
-| Language | Platform | Status |
-|----------|----------|--------|
+| Language | Platform |
+|----------|----------|
 | **Kotlin** | Android, JVM | ✅ Production Ready |
 | **Swift** | iOS, macOS | ✅ Production Ready |
 | **Python** | Linux, macOS, Windows | ✅ Production Ready |
@@ -36,239 +36,6 @@ The compiled library will be at:
 - Linux: `target/release/libcoinswap_ffi.so`
 - macOS: `target/release/libcoinswap_ffi.dylib`
 - Windows: `target/release/coinswap_ffi.dll`
-
-### Generate Language Bindings
-
-#### Kotlin (Android/JVM)
-
-```bash
-cargo run --bin uniffi-bindgen generate \
-  --library ./target/release/libcoinswap_ffi.so \
-  --language kotlin \
-  --out-dir ./bindings/kotlin
-```
-
-Add to your Android project:
-```kotlin
-// build.gradle.kts
-dependencies {
-    implementation(files("libs/coinswap_ffi.jar"))
-}
-
-// Copy libcoinswap_ffi.so to src/main/jniLibs/arm64-v8a/
-```
-
-#### Swift (iOS/macOS)
-
-```bash
-cargo run --bin uniffi-bindgen generate \
-  --library ./target/release/libcoinswap_ffi.dylib \
-  --language swift \
-  --out-dir ./bindings/swift
-```
-
-Create XCFramework:
-```bash
-# Build for multiple targets
-cargo build --release --target aarch64-apple-ios
-cargo build --release --target x86_64-apple-darwin
-cargo build --release --target aarch64-apple-darwin
-
-# Create XCFramework
-xcodebuild -create-xcframework \
-  -library target/aarch64-apple-ios/release/libcoinswap_ffi.a \
-  -library target/aarch64-apple-darwin/release/libcoinswap_ffi.dylib \
-  -output CoinswapFFI.xcframework
-```
-
-#### Python
-
-```bash
-cargo run --bin uniffi-bindgen generate \
-  --library ./target/release/libcoinswap_ffi.so \
-  --language python \
-  --out-dir ./bindings/python
-
-# Install
-cd bindings/python
-pip install -e .
-```
-
-#### Ruby
-
-```bash
-cargo run --bin uniffi-bindgen generate \
-  --library ./target/release/libcoinswap_ffi.so \
-  --language ruby \
-  --out-dir ./bindings/ruby
-```
-
-## Quick Start
-
-### Kotlin (Android)
-
-```kotlin
-import uniffi.coinswap.*
-
-// Configure RPC
-val rpcConfig = RpcConfig(
-    url = "http://127.0.0.1:38332",
-    auth = RpcAuth.UserPass("user", "password"),
-    network = Network.SIGNET,
-    walletName = "my_wallet"
-)
-
-// Create wallet
-val wallet = createWallet(
-    dataDir = null,  // Uses default
-    walletName = "my_wallet",
-    rpcConfig = rpcConfig,
-    walletBirthday = null,
-    password = "secure_password"
-)
-
-// Query balance
-val balances = getBalances(wallet)
-println("Seed: ${balances.seedBalance} sats")
-println("Swap: ${balances.swapBalance} sats")
-
-// Fetch maker offers
-val offers = fetchOffers(wallet)
-println("Found ${offers.size} makers")
-println("Total liquidity: ${offers.sumOf { it.maxSize }} sats")
-
-// Execute swap
-val swapParams = SwapParams(
-    sendAmount = 1_000_000u,  // 0.01 BTC
-    makerCount = 3u,
-    manuallySelectedOutpoints = null
-)
-
-val report = doSwap(wallet, swapParams)
-println("Swap completed in ${report.swapDurationSeconds}s")
-println("Total fee: ${report.totalFee} sats")
-```
-
-### Swift (iOS)
-
-```swift
-import CoinswapFFI
-
-// Configure RPC
-let rpcConfig = RpcConfig(
-    url: "http://127.0.0.1:38332",
-    auth: .userPass(username: "user", password: "password"),
-    network: .signet,
-    walletName: "my_wallet"
-)
-
-// Create wallet
-let wallet = try createWallet(
-    dataDir: nil,
-    walletName: "my_wallet",
-    rpcConfig: rpcConfig,
-    walletBirthday: nil,
-    password: "secure_password"
-)
-
-// Query balance
-let balances = try getBalances(wallet: wallet)
-print("Seed: \(balances.seedBalance) sats")
-print("Swap: \(balances.swapBalance) sats")
-
-// Execute swap
-let swapParams = SwapParams(
-    sendAmount: 1_000_000,
-    makerCount: 3,
-    manuallySelectedOutpoints: nil
-)
-
-let report = try doSwap(wallet: wallet, params: swapParams)
-print("Swap completed in \(report.swapDurationSeconds)s")
-print("Total fee: \(report.totalFee) sats")
-```
-
-### Python
-
-```python
-from coinswap_ffi import *
-
-# Configure RPC
-rpc_config = RpcConfig(
-    url="http://127.0.0.1:38332",
-    auth=RpcAuth.user_pass("user", "password"),
-    network=Network.SIGNET,
-    wallet_name="my_wallet"
-)
-
-# Create wallet
-wallet = create_wallet(
-    data_dir=None,
-    wallet_name="my_wallet",
-    rpc_config=rpc_config,
-    wallet_birthday=None,
-    password="secure_password"
-)
-
-# Query balance
-balances = get_balances(wallet)
-print(f"Seed: {balances.seed_balance} sats")
-print(f"Swap: {balances.swap_balance} sats")
-
-# Fetch offers
-offers = fetch_offers(wallet)
-print(f"Found {len(offers)} makers")
-
-# Execute swap
-swap_params = SwapParams(
-    send_amount=1_000_000,  # 0.01 BTC
-    maker_count=3,
-    manually_selected_outpoints=None
-)
-
-report = do_swap(wallet, swap_params)
-print(f"Swap completed in {report.swap_duration_seconds}s")
-print(f"Total fee: {report.total_fee} sats")
-```
-
-### Ruby
-
-```ruby
-require 'coinswap_ffi'
-
-# Configure RPC
-rpc_config = CoinswapFfi::RpcConfig.new(
-  url: "http://127.0.0.1:38332",
-  auth: CoinswapFfi::RpcAuth.user_pass("user", "password"),
-  network: CoinswapFfi::Network::SIGNET,
-  wallet_name: "my_wallet"
-)
-
-# Create wallet
-wallet = CoinswapFfi.create_wallet(
-  data_dir: nil,
-  wallet_name: "my_wallet",
-  rpc_config: rpc_config,
-  wallet_birthday: nil,
-  password: "secure_password"
-)
-
-# Query balance
-balances = CoinswapFfi.get_balances(wallet)
-puts "Seed: #{balances.seed_balance} sats"
-puts "Swap: #{balances.swap_balance} sats"
-
-# Execute swap
-swap_params = CoinswapFfi::SwapParams.new(
-  send_amount: 1_000_000,
-  maker_count: 3,
-  manually_selected_outpoints: nil
-)
-
-report = CoinswapFfi.do_swap(wallet, swap_params)
-puts "Swap completed in #{report.swap_duration_seconds}s"
-puts "Total fee: #{report.total_fee} sats"
-```
 
 ## Development
 
@@ -306,7 +73,7 @@ cargo build --release --target aarch64-apple-ios
 
 ## Requirements
 
-See [Coinswap documentation](https://github.com/citadel-tech/coinswap/blob/master/docs) for setup.
+See [Coinswap documentation](https://github.com/citadel-tech/coinswap/docs) for setup.
 
 ## Platform-Specific Notes
 
