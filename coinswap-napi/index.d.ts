@@ -32,6 +32,34 @@ export declare class Taker {
   static isWalletEncrypted(walletPath: string): boolean
 }
 
+export declare class TaprootTaker {
+  constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string, password?: string | undefined | null)
+  static setupLogging(dataDir?: string | undefined | null): void
+  static initNativeLogging(): void
+  static fetchMempoolFees(): FeeRates
+  // [TODO] V2 API does not return a SwapReport like V1
+  doCoinswap(swapParams: TaprootSwapParams): void
+  getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
+  getNextInternalAddresses(count: number): Array<Address>
+  getNextExternalAddress(): Address
+  getName(): string
+  listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
+  backup(destinationPath: string, password?: string | undefined | null): void
+  static restoreWalletGuiApp(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig, backupFile: string, password?: string | undefined | null): void
+  lockUnspendableUtxos(): void
+  sendToAddress(address: string, amount: number, feeRate?: number | undefined | null, manuallySelectedOutpoints?: Array<OutPoint> | undefined | null): Txid
+  getBalances(): Balances
+  syncAndSave(): void
+  syncOfferbook(): void
+  getAllGoodMakers(): Array<string>
+  displayOffer(makerOffer: Offer): string
+  recoverFromSwap(): void
+  fetchGoodMakers(): Array<string>
+  fetchAllMakers(): Array<string>
+  fetchOffers(): OfferBook
+  static isWalletEncrypted(walletPath: string): boolean
+}
+
 export interface Address {
   address: string
 }
@@ -222,12 +250,43 @@ export declare const enum TakerBehavior {
   BroadcastContractAfterFullSetup = 2
 }
 
+export declare const enum TakerBehavior {
+  Normal = 0,
+  DropConnectionAfterFullSetup = 1,
+  BroadcastContractAfterFullSetup = 2
+}
+
 export declare const enum TakerError {
   Wallet = 0,
   Protocol = 1,
   Network = 2,
   General = 3,
   IO = 4
+}
+
+export declare const enum TakerError {
+  Wallet = 0,
+  Protocol = 1,
+  Network = 2,
+  General = 3,
+  IO = 4
+}
+
+/**
+ * Swap parameters for Taproot (V2) protocol
+ * Note: V2 has additional parameters compared to V1
+ */
+export interface TaprootSwapParams {
+  /** Amount to send in satoshis */
+  sendAmount: number
+  /** Number of makers to use in the swap */
+  makerCount: number
+  /** Number of transaction splits (V2 specific) */
+  txCount?: number
+  /** Required confirmations for funding transactions (V2 specific) */
+  requiredConfirms?: number
+  /** User selected UTXOs (optional, for manual UTXO selection) */
+  manuallySelectedOutpoints?: Array<OutPoint>
 }
 
 export interface Txid {
