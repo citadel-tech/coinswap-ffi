@@ -5,7 +5,7 @@
 use crate::types::{
   Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
-  SignedAmountSats, Txid, UtxoSpendInfo, WalletTxInfo,
+  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
@@ -206,18 +206,17 @@ impl TaprootTaker {
   }
 
   /// Execute a Taproot coinswap
-  /// Note: V2 API does not return a SwapReport like V1
   #[napi]
-  pub fn do_coinswap(&self, swap_params: TaprootSwapParams) -> Result<()> {
+  pub fn do_coinswap(&self, swap_params: TaprootSwapParams) -> Result<Option<SwapReport>> {
     let params = CoinswapSwapParams::try_from(swap_params)?;
     let mut taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    taker
+    let swap_report = taker
       .do_coinswap(params)
       .map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
-    Ok(())
+    Ok(swap_report.map(SwapReport::from))
   }
 
   #[napi]
@@ -418,6 +417,18 @@ impl TaprootTaker {
               input_value: Some(Amount::from(input_value)),
               index: None,
               original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
+            },
+            csUtxoSpendInfo::SweptCoinV2 {
+              path,
+              input_value,
+              ..
+            } => UtxoSpendInfo {
+              spend_type: "SweptCoinV2".to_string(),
+              path: Some(path),
+              multisig_redeemscript: None,
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: None,
             },
           };
           (utxo, spend_info)
