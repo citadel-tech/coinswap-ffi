@@ -573,5 +573,8 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.Taker = nativeBinding.Taker
+module.exports.TaprootTaker = nativeBinding.TaprootTaker
 module.exports.TakerBehavior = nativeBinding.TakerBehavior
+module.exports.TakerBehavior = nativeBinding.TakerBehavior
+module.exports.TakerError = nativeBinding.TakerError
 module.exports.TakerError = nativeBinding.TakerError

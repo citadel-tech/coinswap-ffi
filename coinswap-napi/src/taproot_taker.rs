@@ -5,7 +5,7 @@
 use crate::types::{
   Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
-  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
+  SignedAmountSats, Txid, UtxoSpendInfo, WalletTxInfo,
 };
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
@@ -59,17 +59,26 @@ impl AsRef<str> for TakerError {
 
 impl Error for TakerError {}
 
+/// Swap parameters for Taproot (V2) protocol
+/// Note: V2 has additional parameters compared to V1
 #[napi(object)]
-pub struct SwapParams {
+pub struct TaprootSwapParams {
+  /// Amount to send in satoshis
   pub send_amount: i64,
+  /// Number of makers to use in the swap
   pub maker_count: u32,
+  /// Number of transaction splits (V2 specific)
+  pub tx_count: Option<u32>,
+  /// Required confirmations for funding transactions (V2 specific)
+  pub required_confirms: Option<u32>,
+  /// User selected UTXOs (optional, for manual UTXO selection)
   pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
-impl TryFrom<SwapParams> for CoinswapSwapParams {
+impl TryFrom<TaprootSwapParams> for CoinswapSwapParams {
   type Error = napi::Error;
 
-  fn try_from(params: SwapParams) -> Result<Self> {
+  fn try_from(params: TaprootSwapParams) -> Result<Self> {
     let send_amount = csAmount::from_sat(params.send_amount as u64);
 
     let manually_selected_outpoints = params
@@ -89,6 +98,8 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
     Ok(CoinswapSwapParams {
       send_amount,
       maker_count: params.maker_count as usize,
+      tx_count: params.tx_count.unwrap_or(1),
+      required_confirms: params.required_confirms.unwrap_or(1),
       manually_selected_outpoints,
     })
   }
@@ -116,12 +127,12 @@ impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
 }
 
 #[napi]
-pub struct Taker {
+pub struct TaprootTaker {
   inner: Mutex<CoinswapTaker>,
 }
 
 #[napi]
-impl Taker {
+impl TaprootTaker {
   #[napi(constructor)]
   pub fn init(
     data_dir: Option<String>,
@@ -149,6 +160,13 @@ impl Taker {
     Ok(Self {
       inner: Mutex::new(taker),
     })
+  }
+
+  #[napi]
+  pub fn setup_logging(data_dir: Option<String>) -> Result<()> {
+    let path = data_dir.map(PathBuf::from);
+    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    Ok(())
   }
 
   #[napi]
@@ -187,17 +205,19 @@ impl Taker {
     })
   }
 
+  /// Execute a Taproot coinswap
+  /// Note: V2 API does not return a SwapReport like V1
   #[napi]
-  pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>> {
+  pub fn do_coinswap(&self, swap_params: TaprootSwapParams) -> Result<()> {
     let params = CoinswapSwapParams::try_from(swap_params)?;
     let mut taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    let swap_report = taker
+    taker
       .do_coinswap(params)
       .map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
-    Ok(swap_report.map(SwapReport::from))
+    Ok(())
   }
 
   #[napi]
@@ -433,7 +453,7 @@ impl Taker {
       data_dir,
       wallet_file_name,
       rpc_config.into(),
-      backup_file,
+      backup_file.into(),
       password,
     );
   }
@@ -631,6 +651,14 @@ impl Taker {
       .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
 
     Ok(OfferBook::from(offerbook))
+  }
+
+  #[napi]
+  pub fn is_wallet_encrypted(wallet_path: String) -> Result<bool> {
+    let path = PathBuf::from(wallet_path);
+
+    coinswap::wallet::Wallet::is_wallet_encrypted(&path)
+      .map_err(|e| napi::Error::from_reason(format!("Failed to check wallet encryption: {:?}", e)))
   }
 }
 
