@@ -36,7 +36,9 @@ export declare class TaprootTaker {
   constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string, password?: string | undefined | null)
   static setupLogging(dataDir?: string | undefined | null): void
   static initNativeLogging(): void
+  /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates
+  /** Execute a Taproot coinswap */
   doCoinswap(swapParams: TaprootSwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
