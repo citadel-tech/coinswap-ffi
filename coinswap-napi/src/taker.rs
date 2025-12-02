@@ -400,6 +400,18 @@ impl Taker {
               index: None,
               original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
             },
+            csUtxoSpendInfo::SweptCoinV2 {
+              path,
+              input_value,
+              ..
+            } => UtxoSpendInfo {
+              spend_type: "SweptCoinV2".to_string(),
+              path: Some(path),
+              multisig_redeemscript: None,
+              input_value: Some(Amount::from(input_value)),
+              index: None,
+              original_multisig_redeemscript: None,
+            },
           };
           (utxo, spend_info)
         })
