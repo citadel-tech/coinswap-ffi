@@ -37,8 +37,7 @@ export declare class TaprootTaker {
   static setupLogging(dataDir?: string | undefined | null): void
   static initNativeLogging(): void
   static fetchMempoolFees(): FeeRates
-  // [TODO] V2 API does not return a SwapReport like V1
-  doCoinswap(swapParams: TaprootSwapParams): void
+  doCoinswap(swapParams: TaprootSwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number): Array<Address>
   getNextExternalAddress(): Address
@@ -48,11 +47,15 @@ export declare class TaprootTaker {
   static restoreWalletGuiApp(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig, backupFile: string, password?: string | undefined | null): void
   lockUnspendableUtxos(): void
   sendToAddress(address: string, amount: number, feeRate?: number | undefined | null, manuallySelectedOutpoints?: Array<OutPoint> | undefined | null): Txid
+  /** Get wallet balances */
   getBalances(): Balances
   syncAndSave(): void
+  /** Sync the offerbook with available makers */
   syncOfferbook(): void
+  /** Get basic information about all good makers (limited due to private fields) */
   getAllGoodMakers(): Array<string>
   displayOffer(makerOffer: Offer): string
+  /** Recover from a failed swap */
   recoverFromSwap(): void
   fetchGoodMakers(): Array<string>
   fetchAllMakers(): Array<string>
