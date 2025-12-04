@@ -255,20 +255,6 @@ export declare const enum TakerBehavior {
   BroadcastContractAfterFullSetup = 2
 }
 
-export declare const enum TakerBehavior {
-  Normal = 0,
-  DropConnectionAfterFullSetup = 1,
-  BroadcastContractAfterFullSetup = 2
-}
-
-export declare const enum TakerError {
-  Wallet = 0,
-  Protocol = 1,
-  Network = 2,
-  General = 3,
-  IO = 4
-}
-
 export declare const enum TakerError {
   Wallet = 0,
   Protocol = 1,

@@ -5,7 +5,7 @@
 use crate::types::{
   Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
-  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
+  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo
 };
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
@@ -15,43 +15,33 @@ use coinswap::{
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::{error::Error, fmt, path::PathBuf, str::FromStr, sync::Mutex};
+use std::{path::PathBuf, str::FromStr, sync::Mutex};
 
-#[napi]
-#[derive(Debug)]
-pub enum TakerError {
-  Wallet,
-  Protocol,
-  Network,
-  General,
-  IO,
-}
+// impl fmt::Display for TakerError {
+//   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//     match self {
+//       TakerError::Wallet => write!(f, "Wallet error"),
+//       TakerError::Protocol => write!(f, "Protocol error"),
+//       TakerError::Network => write!(f, "Network error"),
+//       TakerError::General => write!(f, "General error"),
+//       TakerError::IO => write!(f, "IO error"),
+//     }
+//   }
+// }
 
-impl fmt::Display for TakerError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      TakerError::Wallet => write!(f, "Wallet error"),
-      TakerError::Protocol => write!(f, "Protocol error"),
-      TakerError::Network => write!(f, "Network error"),
-      TakerError::General => write!(f, "General error"),
-      TakerError::IO => write!(f, "IO error"),
-    }
-  }
-}
+// impl AsRef<str> for TakerError {
+//   fn as_ref(&self) -> &str {
+//     match self {
+//       TakerError::Wallet => "Wallet error",
+//       TakerError::Protocol => "Protocol error",
+//       TakerError::Network => "Network error",
+//       TakerError::General => "General error",
+//       TakerError::IO => "IO error",
+//     }
+//   }
+// }
 
-impl AsRef<str> for TakerError {
-  fn as_ref(&self) -> &str {
-    match self {
-      TakerError::Wallet => "Wallet error",
-      TakerError::Protocol => "Protocol error",
-      TakerError::Network => "Network error",
-      TakerError::General => "General error",
-      TakerError::IO => "IO error",
-    }
-  }
-}
-
-impl Error for TakerError {}
+// impl Error for TakerError {}
 
 #[napi(object)]
 pub struct SwapParams {
@@ -85,27 +75,6 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
       maker_count: params.maker_count as usize,
       manually_selected_outpoints,
     })
-  }
-}
-
-#[napi]
-pub enum TakerBehavior {
-  Normal,
-  DropConnectionAfterFullSetup,
-  BroadcastContractAfterFullSetup,
-}
-
-impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
-  fn from(behavior: TakerBehavior) -> Self {
-    match behavior {
-      TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
-      TakerBehavior::DropConnectionAfterFullSetup => {
-        coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
-      }
-      TakerBehavior::BroadcastContractAfterFullSetup => {
-        coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
-      }
-    }
   }
 }
 
