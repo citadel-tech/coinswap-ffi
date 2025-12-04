@@ -17,32 +17,6 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::{path::PathBuf, str::FromStr, sync::Mutex};
 
-// impl fmt::Display for TakerError {
-//   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//     match self {
-//       TakerError::Wallet => write!(f, "Wallet error"),
-//       TakerError::Protocol => write!(f, "Protocol error"),
-//       TakerError::Network => write!(f, "Network error"),
-//       TakerError::General => write!(f, "General error"),
-//       TakerError::IO => write!(f, "IO error"),
-//     }
-//   }
-// }
-
-// impl AsRef<str> for TakerError {
-//   fn as_ref(&self) -> &str {
-//     match self {
-//       TakerError::Wallet => "Wallet error",
-//       TakerError::Protocol => "Protocol error",
-//       TakerError::Network => "Network error",
-//       TakerError::General => "General error",
-//       TakerError::IO => "IO error",
-//     }
-//   }
-// }
-
-// impl Error for TakerError {}
-
 #[napi(object)]
 pub struct SwapParams {
   pub send_amount: i64,
