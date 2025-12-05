@@ -1,48 +1,22 @@
-//! Coinswap Taker FFI bindings
+//! Coinswap Taker UniFFI bindings
 //!
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
-use crate::RPCConfig;
-use bitcoin::{Amount, OutPoint as coinswapOutPoint};
-use coinswap::taker::{
-    api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-    error::TakerError as CoinswapTakerError,
+use crate::types::{
+    Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
+    ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
+    SwapReport, TakerError, Txid, UtxoSpendInfo, WalletTxInfo, WalletTxInfo2,
 };
-use coinswap::wallet::RPCConfig as CoinswapRPCConfig;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-pub enum TakerError {
-    #[error("Wallet error: {msg}")]
-    Wallet { msg: String },
-    #[error("Protocol error: {msg}")]
-    Protocol { msg: String },
-    #[error("Network error: {msg}")]
-    Network { msg: String },
-    #[error("General error: {msg}")]
-    General { msg: String },
-    #[error("IO error: {msg}")]
-    IO { msg: String },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Object)]
-pub struct OutPoint(pub coinswapOutPoint);
-
-impl From<CoinswapTakerError> for TakerError {
-    fn from(error: CoinswapTakerError) -> Self {
-        match error {
-            CoinswapTakerError::Wallet(e) => TakerError::Wallet {
-                msg: format!("{:?}", e),
-            },
-            CoinswapTakerError::General(msg) => TakerError::General { msg },
-            CoinswapTakerError::IO(e) => TakerError::IO { msg: e.to_string() },
-            _ => TakerError::General {
-                msg: format!("Taker error: {:?}", error),
-            },
-        }
-    }
-}
+use coinswap::{
+    bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
+    fee_estimation::{BlockTarget, FeeEstimator},
+    taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
+    wallet::{RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo, ffi},
+};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 #[derive(uniffi::Record)]
 pub struct SwapParams {
@@ -51,21 +25,31 @@ pub struct SwapParams {
     /// How many hops (number of makers)
     pub maker_count: u32,
     /// User selected UTXOs (optional)
-    pub manually_selected_outpoints: Option<Vec<Arc<OutPoint>>>,
+    pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
 impl TryFrom<SwapParams> for CoinswapSwapParams {
     type Error = TakerError;
 
     fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
-        let send_amount = Amount::from_sat(params.send_amount);
+        let send_amount = coinswapAmount::from_sat(params.send_amount);
 
-        let manually_selected_outpoints = params.manually_selected_outpoints.map(|outpoints| {
-            outpoints
-                .into_iter()
-                .map(|arc_outpoint| arc_outpoint.0)
-                .collect()
-        });
+        let manually_selected_outpoints = params
+            .manually_selected_outpoints
+            .map(|outpoints| -> Result<Vec<coinswapOutPoint>, TakerError> {
+                outpoints
+                    .into_iter()
+                    .map(|op| {
+                        let txid = op.txid.value.parse::<coinswapTxid>().map_err(|e| {
+                            TakerError::General {
+                                msg: format!("Invalid txid: {}", e),
+                            }
+                        })?;
+                        Ok(coinswapOutPoint::new(txid, op.vout))
+                    })
+                    .collect()
+            })
+            .transpose()?;
 
         Ok(CoinswapSwapParams {
             send_amount,
@@ -112,7 +96,7 @@ impl Taker {
         control_port: Option<u16>,
         tor_auth_password: Option<String>,
         zmq_addr: String,
-        password: Option<String>
+        password: Option<String>,
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
@@ -126,7 +110,7 @@ impl Taker {
             control_port,
             tor_auth_password,
             zmq_addr,
-            password
+            password,
         )?;
 
         Ok(Arc::new(Self {
@@ -134,13 +118,338 @@ impl Taker {
         }))
     }
 
-    pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<(), TakerError> {
+    pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        taker.do_coinswap(params)?;
+        let swap_report = taker.do_coinswap(params)?;
+        Ok(swap_report.map(SwapReport::from))
+    }
+
+    pub fn get_transactions(
+        &self,
+        count: Option<u32>,
+        skip: Option<u32>,
+    ) -> Result<Vec<ListTransactionResult>, TakerError> {
+        let txns = self
+            .taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet()
+            .get_transactions(count.map(|c| c as usize), skip.map(|s| s as usize))
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Get Transactions Error: {:?}", e),
+            })?;
+
+        Ok(txns
+            .into_iter()
+            .map(|tx| ListTransactionResult {
+                info: WalletTxInfo {
+                    confirmations: tx.info.confirmations,
+                    blockhash: tx.info.blockhash.map(|h| h.to_string()),
+                    blockindex: tx.info.blockindex.map(|i| i as u32),
+                    blocktime: tx.info.blocktime.map(|t| t as i64),
+                    blockheight: tx.info.blockheight,
+                    txid: Txid::from(tx.info.txid),
+                    time: tx.info.time as i64,
+                    timereceived: tx.info.timereceived as i64,
+                    bip125_replaceable: format!("{:?}", tx.info.bip125_replaceable),
+                    wallet_conflicts: tx
+                        .info
+                        .wallet_conflicts
+                        .into_iter()
+                        .map(Txid::from)
+                        .collect(),
+                },
+                detail: GetTransactionResultDetail {
+                    address: tx.detail.address.map(|a| Address::from(a.assume_checked())),
+                    category: format!("{:?}", tx.detail.category),
+                    amount: SignedAmountSats::from(tx.detail.amount),
+                    label: tx.detail.label,
+                    vout: tx.detail.vout,
+                    fee: tx.detail.fee.map(SignedAmountSats::from),
+                    abandoned: tx.detail.abandoned,
+                },
+                trusted: tx.trusted,
+                comment: tx.comment,
+            })
+            .collect())
+    }
+
+    pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>, TakerError> {
+        let internal_addresses = self
+            .taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet()
+            .get_next_internal_addresses(count)
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Get internal addresses error: {:?}", e),
+            })?;
+        Ok(internal_addresses.into_iter().map(Address::from).collect())
+    }
+
+    pub fn get_next_external_address(&self) -> Result<Address, TakerError> {
+        let external_address = self
+            .taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet_mut()
+            .get_next_external_address()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Get next external address error: {:?}", e),
+            })?;
+        Ok(Address::from(external_address))
+    }
+
+    pub fn list_all_utxo_spend_info(&self) -> Result<Vec<WalletTxInfo2>, TakerError> {
+        let entries = self
+            .taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet()
+            .list_all_utxo_spend_info();
+
+        Ok(entries
+            .into_iter()
+            .map(|(cs_utxo, cs_info)| {
+                let utxo = ListUnspentResultEntry {
+                    txid: Txid::from(cs_utxo.txid),
+                    vout: cs_utxo.vout,
+                    address: cs_utxo.address.map(|a| a.assume_checked().to_string()),
+                    label: cs_utxo.label,
+                    script_pub_key: ScriptBuf::from(cs_utxo.script_pub_key),
+                    amount: Amount::from(cs_utxo.amount),
+                    confirmations: cs_utxo.confirmations,
+                    redeem_script: cs_utxo.redeem_script.map(ScriptBuf::from),
+                    witness_script: cs_utxo.witness_script.map(ScriptBuf::from),
+                    spendable: cs_utxo.spendable,
+                    solvable: cs_utxo.solvable,
+                    desc: cs_utxo.descriptor,
+                    safe: cs_utxo.safe,
+                };
+                let spend_info = match cs_info {
+                    csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo {
+                        spend_type: "SeedCoin".to_string(),
+                        path: Some(path),
+                        multisig_redeemscript: None,
+                        input_value: Some(Amount::from(input_value)),
+                        index: None,
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::IncomingSwapCoin {
+                        multisig_redeemscript,
+                    } => UtxoSpendInfo {
+                        spend_type: "IncomingSwapCoin".to_string(),
+                        path: None,
+                        multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+                        input_value: None,
+                        index: None,
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::OutgoingSwapCoin {
+                        multisig_redeemscript,
+                    } => UtxoSpendInfo {
+                        spend_type: "OutgoingSwapCoin".to_string(),
+                        path: None,
+                        multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+                        input_value: None,
+                        index: None,
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::TimelockContract {
+                        swapcoin_multisig_redeemscript,
+                        input_value,
+                    } => UtxoSpendInfo {
+                        spend_type: "TimelockContract".to_string(),
+                        path: None,
+                        multisig_redeemscript: Some(ScriptBuf::from(
+                            swapcoin_multisig_redeemscript,
+                        )),
+                        input_value: Some(Amount::from(input_value)),
+                        index: None,
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::HashlockContract {
+                        swapcoin_multisig_redeemscript,
+                        input_value,
+                    } => UtxoSpendInfo {
+                        spend_type: "HashlockContract".to_string(),
+                        path: None,
+                        multisig_redeemscript: Some(ScriptBuf::from(
+                            swapcoin_multisig_redeemscript,
+                        )),
+                        input_value: Some(Amount::from(input_value)),
+                        index: None,
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
+                        spend_type: "FidelityBondCoin".to_string(),
+                        path: None,
+                        multisig_redeemscript: None,
+                        input_value: Some(Amount::from(input_value)),
+                        index: Some(index),
+                        original_multisig_redeemscript: None,
+                    },
+                    csUtxoSpendInfo::SweptCoin {
+                        path,
+                        input_value,
+                        original_multisig_redeemscript,
+                    } => UtxoSpendInfo {
+                        spend_type: "SweptCoin".to_string(),
+                        path: Some(path),
+                        multisig_redeemscript: None,
+                        input_value: Some(Amount::from(input_value)),
+                        index: None,
+                        original_multisig_redeemscript: Some(ScriptBuf::from(
+                            original_multisig_redeemscript,
+                        )),
+                    },
+                };
+
+                WalletTxInfo2 {
+                    outpoint: OutPoint::from(coinswapOutPoint::new(cs_utxo.txid, cs_utxo.vout)),
+                    listunspent: utxo,
+                    spend_info,
+                }
+            })
+            .collect())
+    }
+
+    pub fn backup(
+        &self,
+        destination_path: String,
+        password: Option<String>,
+    ) -> Result<(), TakerError> {
+        self.taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet_mut()
+            .backup_wallet_gui_app(destination_path, password)
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Backup error: {:?}", e),
+            })?;
         Ok(())
+    }
+
+    pub fn lock_unspendable_utxos(&self) -> Result<(), TakerError> {
+        self.taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet()
+            .lock_unspendable_utxos()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Lock error: {:?}", e),
+            })?;
+        Ok(())
+    }
+
+    pub fn send_to_address(
+        &self,
+        address: String,
+        amount: i64,
+        fee_rate: Option<f64>,
+        manually_selected_outpoints: Option<Vec<OutPoint>>,
+    ) -> Result<String, TakerError> {
+        let manually_selected_outpoints = manually_selected_outpoints
+            .map(|outpoints| -> Result<Vec<coinswapOutPoint>, TakerError> {
+                outpoints
+                    .into_iter()
+                    .map(|op| {
+                        let txid = op.txid.value.parse::<coinswapTxid>().map_err(|e| {
+                            TakerError::General {
+                                msg: format!("Invalid txid: {}", e),
+                            }
+                        })?;
+                        Ok(coinswapOutPoint::new(txid, op.vout))
+                    })
+                    .collect()
+            })
+            .transpose()?;
+
+        let txid = self
+            .taker
+            .lock()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire taker lock".to_string(),
+            })?
+            .get_wallet_mut()
+            .send_to_address(
+                amount as u64,
+                address,
+                fee_rate,
+                manually_selected_outpoints,
+            )
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Send to Address error: {:?}", e),
+            })?;
+        Ok(txid.to_string())
+    }
+
+    pub fn get_balances(&self) -> Result<Balances, TakerError> {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let balances = taker
+            .get_wallet()
+            .get_balances()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Get balances error: {:?}", e),
+            })?;
+        Ok(Balances::from(balances))
+    }
+
+    pub fn sync_and_save(&self) -> Result<(), TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        taker
+            .get_wallet_mut()
+            .sync_and_save()
+            .map_err(|e| TakerError::Wallet {
+                msg: format!("Sync wallet error: {:?}", e),
+            })?;
+        Ok(())
+    }
+
+    pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+
+        let offerbook = taker.fetch_offers().map_err(|e| TakerError::Network {
+            msg: format!("Fetch offers error: {:?}", e),
+        })?;
+
+        Ok(OfferBook::from(&*offerbook))
+    }
+
+    pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
+        let offer_json = serde_json::json!({
+            "base_fee": maker_offer.base_fee,
+            "amount_relative_fee_pct": maker_offer.amount_relative_fee_pct,
+            "time_relative_fee_pct": maker_offer.time_relative_fee_pct,
+            "required_confirms": maker_offer.required_confirms,
+            "minimum_locktime": maker_offer.minimum_locktime,
+            "max_size": maker_offer.max_size,
+            "min_size": maker_offer.min_size,
+        });
+
+        serde_json::to_string_pretty(&offer_json)
+            .map_err(|e| TakerError::General { msg: e.to_string() })
     }
 
     pub fn get_wallet_name(&self) -> Result<String, TakerError> {
@@ -150,34 +459,6 @@ impl Taker {
         Ok(taker.get_wallet().get_name().to_string())
     }
 
-    /// Get wallet balances
-    pub fn get_wallet_balances(&self) -> Result<crate::Balances, TakerError> {
-        let taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-        let balances = taker
-            .get_wallet()
-            .get_balances()
-            .map_err(|e| TakerError::Wallet {
-                msg: format!("{:?}", e),
-            })?;
-        Ok(crate::Balances::from(balances))
-    }
-
-    pub fn sync_wallet(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-        taker
-            .get_wallet_mut()
-            .sync_and_save()
-            .map_err(|e| TakerError::Wallet {
-                msg: format!("{:?}", e),
-            })?;
-        Ok(())
-    }
-
-    /// Sync the offerbook with available makers
     pub fn sync_offerbook(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -186,17 +467,14 @@ impl Taker {
         Ok(())
     }
 
-    /// Get basic information about all good makers (limited due to private fields)
     pub fn get_all_good_makers(&self) -> Result<Vec<String>, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
 
-        // Fetch fresh offers
         let offerbook = taker.fetch_offers()?;
         let good_makers = offerbook.all_good_makers();
 
-        // Since fields are private, we can only return addresses
         let addresses = good_makers
             .into_iter()
             .map(|maker| maker.address.to_string())
@@ -205,51 +483,6 @@ impl Taker {
         Ok(addresses)
     }
 
-    // /// Get detailed information about all good makers
-    // pub fn get_all_good_makers(&self) -> Result<Vec<MakerOffer>, TakerError> {
-    //     let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-    //         msg: "Failed to acquire taker lock".to_string()
-    //     })?;
-
-    //     // Fetch fresh offers
-    //     let offerbook = taker.fetch_offers()?;
-    //     let good_makers = offerbook.all_good_makers();
-
-    //     let offers = good_makers
-    //         .into_iter()
-    //         .map(|maker| MakerOffer {
-    //             base_fee: maker.offer.base_fee,
-    //             amount_relative_fee_pct: maker.offer.amount_relative_fee_pct,
-    //             time_relative_fee_pct: maker.offer.time_relative_fee_pct,
-    //             required_confirms: maker.offer.required_confirms,
-    //             minimum_locktime: maker.offer.minimum_locktime,
-    //             max_size: maker.offer.max_size,
-    //             min_size: maker.offer.min_size,
-    //             address: maker.address.to_string(),
-    //         })
-    //         .collect();
-
-    //     Ok(offers)
-    // }
-
-    /// Display detailed information about a specific maker offer
-    pub fn display_offer(&self, maker_offer: &MakerOffer) -> Result<String, TakerError> {
-        let offer_json = serde_json::json!({
-            "base_fee": maker_offer.base_fee,
-            "amount_relative_fee_pct": maker_offer.amount_relative_fee_pct,
-            "time_relative_fee_pct": maker_offer.time_relative_fee_pct,
-            "required_confirms": maker_offer.required_confirms,
-            "minimum_locktime": maker_offer.minimum_locktime,
-            "max_size": maker_offer.max_size,
-            "min_size": maker_offer.min_size,
-            "address": maker_offer.address
-        });
-
-        serde_json::to_string_pretty(&offer_json)
-            .map_err(|e| TakerError::General { msg: e.to_string() })
-    }
-
-    /// Recover from a failed swap
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -292,38 +525,62 @@ impl Taker {
 }
 
 #[uniffi::export]
-pub fn create_swap_params(
-    send_amount_sats: u64,
-    maker_count: u32,
-    outpoints: Vec<Arc<OutPoint>>,
-) -> SwapParams {
-    SwapParams {
-        send_amount: send_amount_sats,
-        maker_count,
-        manually_selected_outpoints: Some(outpoints),
+pub fn fetch_mempool_fees() -> Result<FeeRates, TakerError> {
+    let fees = FeeEstimator::fetch_mempool_fees()
+        .or_else(|_mempool_err| {
+            FeeEstimator::fetch_esplora_fees()
+        })
+        .map_err(|e| TakerError::Network {
+            msg: format!("Both fee APIs failed: {:?}", e),
+        })?;
+
+    let get = |target| {
+        fees.get(&target).ok_or_else(|| TakerError::General {
+            msg: format!("Missing fee for {:?}", target),
+        })
+    };
+
+    Ok(FeeRates {
+        fastest: *get(BlockTarget::Fastest)?,
+        standard: *get(BlockTarget::Standard)?,
+        economy: *get(BlockTarget::Economy)?,
+    })
+}
+
+#[uniffi::export]
+pub fn restore_wallet_gui_app(
+    data_dir: Option<String>,
+    wallet_file_name: Option<String>,
+    rpc_config: RPCConfig,
+    backup_file_path: String,
+    password: Option<String>,
+) {
+    let data_dir = data_dir.map(PathBuf::from);
+
+    ffi::restore_wallet_gui_app(
+        data_dir,
+        wallet_file_name,
+        rpc_config.into(),
+        backup_file_path.into(),
+        password,
+    );
+}
+
+#[uniffi::export]
+pub fn is_wallet_encrypted(wallet_path: String) -> Result<bool, TakerError> {
+    let path = PathBuf::from(wallet_path);
+
+    coinswap::wallet::Wallet::is_wallet_encrypted(&path).map_err(|e| TakerError::Wallet {
+        msg: format!("Failed to check wallet encryption: {:?}", e),
+    })
+}
+
+#[uniffi::export]
+pub fn create_default_rpc_config() -> RPCConfig {
+    RPCConfig {
+        url: "http://127.0.0.1:38332".to_string(),
+        username: "user".to_string(),
+        password: "password".to_string(),
+        wallet_name: "coinswap_wallet".to_string(),
     }
-}
-
-#[derive(uniffi::Record)]
-pub struct MakerOffer {
-    pub base_fee: u64,
-    pub amount_relative_fee_pct: f64,
-    pub time_relative_fee_pct: f64,
-    pub required_confirms: u32,
-    pub minimum_locktime: u16,
-    pub max_size: u64,
-    pub min_size: u64,
-    pub address: String,
-}
-
-#[derive(uniffi::Record)]
-pub struct MakerStats {
-    pub total_makers: u32,
-    pub online_makers: u32,
-    pub avg_base_fee: u64,
-    pub avg_amount_relative_fee_pct: f64,
-    pub avg_time_relative_fee_pct: f64,
-    pub total_liquidity: u64,
-    pub avg_min_size: u64,
-    pub avg_max_size: u64,
 }

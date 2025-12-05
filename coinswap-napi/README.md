@@ -66,7 +66,7 @@ await Taker.restoreWallet(
   null,              // data_dir
   'restored_wallet', // wallet name
   rpcConfig,
-  backupPath,
+  backupPath,       //.json backup file
   password
 );
 ```
