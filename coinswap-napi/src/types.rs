@@ -178,13 +178,13 @@ impl From<csAmount> for Amount {
 
 #[napi(object)]
 pub struct Txid {
-  pub hex: String,
+  pub value: String,
 }
 
 impl From<csTxid> for Txid {
   fn from(txid: csTxid) -> Self {
     Self {
-      hex: txid.to_string(),
+      value: txid.to_string(),
     }
   }
 }

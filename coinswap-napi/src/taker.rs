@@ -5,7 +5,7 @@
 use crate::types::{
   Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
-  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo
+  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
@@ -64,6 +64,7 @@ impl Taker {
     data_dir: Option<String>,
     wallet_file_name: Option<String>,
     rpc_config: Option<RpcConfig>,
+    // _behavior: Option<TakerBehavior>,
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
     zmq_addr: String,
@@ -76,6 +77,8 @@ impl Taker {
       data_dir,
       wallet_file_name,
       rpc_config,
+      // #[cfg(feature = "integration-test")]
+      // _behavior.unwrap_or(TakerBehavior::Normal).into(),
       control_port,
       tor_auth_password,
       zmq_addr,
@@ -170,7 +173,7 @@ impl Taker {
               blocktime: tx.info.blocktime.map(|t| t as i64),
               blockheight: tx.info.blockheight,
               txid: Txid {
-                hex: tx.info.txid.to_string(),
+                value: tx.info.txid.to_string(),
               },
               time: tx.info.time as i64,
               timereceived: tx.info.timereceived as i64,
@@ -180,7 +183,7 @@ impl Taker {
                 .wallet_conflicts
                 .into_iter()
                 .map(|txid| Txid {
-                  hex: txid.to_string(),
+                  value: txid.to_string(),
                 })
                 .collect(),
             }

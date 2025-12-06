@@ -186,7 +186,7 @@ impl TaprootTaker {
               blocktime: tx.info.blocktime.map(|t| t as i64),
               blockheight: tx.info.blockheight,
               txid: Txid {
-                hex: tx.info.txid.to_string(),
+                value: tx.info.txid.to_string(),
               },
               time: tx.info.time as i64,
               timereceived: tx.info.timereceived as i64,
@@ -196,7 +196,7 @@ impl TaprootTaker {
                 .wallet_conflicts
                 .into_iter()
                 .map(|txid| Txid {
-                  hex: txid.to_string(),
+                  value: txid.to_string(),
                 })
                 .collect(),
             }
