@@ -762,6 +762,46 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -823,7 +863,45 @@ fun uniffi_coinswap_ffi_checksum_method_taker_sync_and_save(
 ): Short
 fun uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook(
 ): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_backup(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save(
+): Short
+fun uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook(
+): Short
 fun uniffi_coinswap_ffi_checksum_constructor_taker_init(
+): Short
+fun uniffi_coinswap_ffi_checksum_constructor_taproottaker_init(
 ): Short
 fun ffi_coinswap_ffi_uniffi_contract_version(
 ): Int
@@ -915,6 +993,48 @@ fun uniffi_coinswap_ffi_fn_method_taker_send_to_address(`ptr`: Pointer,`address`
 fun uniffi_coinswap_ffi_fn_method_taker_sync_and_save(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_coinswap_ffi_fn_method_taker_sync_offerbook(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_clone_taproottaker(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_coinswap_ffi_fn_free_taproottaker(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_constructor_taproottaker_init(`dataDir`: RustBuffer.ByValue,`walletFileName`: RustBuffer.ByValue,`rpcConfig`: RustBuffer.ByValue,`controlPort`: RustBuffer.ByValue,`torAuthPassword`: RustBuffer.ByValue,`zmqAddr`: RustBuffer.ByValue,`password`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_coinswap_ffi_fn_method_taproottaker_backup(`ptr`: Pointer,`destinationPath`: RustBuffer.ByValue,`password`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_method_taproottaker_display_offer(`ptr`: Pointer,`makerOffer`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap(`ptr`: Pointer,`swapParams`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_balances(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses(`ptr`: Pointer,`count`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions(`ptr`: Pointer,`count`: RustBuffer.ByValue,`skip`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`amount`: Long,`feeRate`: RustBuffer.ByValue,`manuallySelectedOutpoints`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_coinswap_ffi_fn_func_create_default_rpc_config(uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1121,7 +1241,64 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook() != 23241.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_backup() != 14546.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer() != 39258.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap() != 19818.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers() != 51619.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers() != 50272.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers() != 34915.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers() != 11020.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances() != 61569.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address() != 10127.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses() != 49793.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions() != 17891.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name() != 51305.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info() != 14333.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos() != 41043.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap() != 32296.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook() != 1376.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 58322.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_constructor_taproottaker_init() != 33076.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1997,6 +2174,505 @@ public object FfiConverterTypeTaker: FfiConverter<Taker, Pointer> {
     override fun allocationSize(value: Taker) = 8UL
 
     override fun write(value: Taker, buf: ByteBuffer) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
+// to the live Rust struct on the other side of the FFI.
+//
+// Each instance implements core operations for working with the Rust `Arc<T>` and the
+// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque pointer to the underlying Rust struct.
+//     Method calls need to read this pointer from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its pointer should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the pointer, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
+//      before it can pass the pointer over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+public interface TaprootTakerInterface {
+    
+    fun `backup`(`destinationPath`: kotlin.String, `password`: kotlin.String?)
+    
+    fun `displayOffer`(`makerOffer`: Offer): kotlin.String
+    
+    fun `doCoinswap`(`swapParams`: TaprootSwapParams): SwapReport?
+    
+    fun `fetchAllMakers`(): List<kotlin.String>
+    
+    fun `fetchGoodMakers`(): List<kotlin.String>
+    
+    fun `fetchOffers`(): OfferBook
+    
+    fun `getAllGoodMakers`(): List<kotlin.String>
+    
+    fun `getBalances`(): Balances
+    
+    fun `getNextExternalAddress`(): Address
+    
+    fun `getNextInternalAddresses`(`count`: kotlin.UInt): List<Address>
+    
+    fun `getTransactions`(`count`: kotlin.UInt?, `skip`: kotlin.UInt?): List<ListTransactionResult>
+    
+    fun `getWalletName`(): kotlin.String
+    
+    fun `listAllUtxoSpendInfo`(): List<TotalUtxoInfo>
+    
+    fun `lockUnspendableUtxos`()
+    
+    fun `recoverFromSwap`()
+    
+    fun `sendToAddress`(`address`: kotlin.String, `amount`: kotlin.Long, `feeRate`: kotlin.Double?, `manuallySelectedOutpoints`: List<OutPoint>?): kotlin.String
+    
+    fun `syncAndSave`()
+    
+    fun `syncOfferbook`()
+    
+    companion object
+}
+
+open class TaprootTaker: Disposable, AutoCloseable, TaprootTakerInterface
+{
+
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the pointer being freed concurrently.
+        try {
+            return block(this.uniffiClonePointer())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_free_taproottaker(ptr, status)
+                }
+            }
+        }
+    }
+
+    fun uniffiClonePointer(): Pointer {
+        return uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_clone_taproottaker(pointer!!, status)
+        }
+    }
+
+    
+    @Throws(TakerException::class)override fun `backup`(`destinationPath`: kotlin.String, `password`: kotlin.String?)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_backup(
+        it, FfiConverterString.lower(`destinationPath`),FfiConverterOptionalString.lower(`password`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(TakerException::class)override fun `displayOffer`(`makerOffer`: Offer): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_display_offer(
+        it, FfiConverterTypeOffer.lower(`makerOffer`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `doCoinswap`(`swapParams`: TaprootSwapParams): SwapReport? {
+            return FfiConverterOptionalTypeSwapReport.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap(
+        it, FfiConverterTypeTaprootSwapParams.lower(`swapParams`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `fetchAllMakers`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `fetchGoodMakers`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `fetchOffers`(): OfferBook {
+            return FfiConverterTypeOfferBook.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getAllGoodMakers`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getBalances`(): Balances {
+            return FfiConverterTypeBalances.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_balances(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getNextExternalAddress`(): Address {
+            return FfiConverterTypeAddress.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getNextInternalAddresses`(`count`: kotlin.UInt): List<Address> {
+            return FfiConverterSequenceTypeAddress.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses(
+        it, FfiConverterUInt.lower(`count`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getTransactions`(`count`: kotlin.UInt?, `skip`: kotlin.UInt?): List<ListTransactionResult> {
+            return FfiConverterSequenceTypeListTransactionResult.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions(
+        it, FfiConverterOptionalUInt.lower(`count`),FfiConverterOptionalUInt.lower(`skip`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `getWalletName`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `listAllUtxoSpendInfo`(): List<TotalUtxoInfo> {
+            return FfiConverterSequenceTypeTotalUtxoInfo.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `lockUnspendableUtxos`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos(
+        it, _status)
+}
+    }
+    
+    
+
+    
+    @Throws(TakerException::class)override fun `recoverFromSwap`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap(
+        it, _status)
+}
+    }
+    
+    
+
+    
+    @Throws(TakerException::class)override fun `sendToAddress`(`address`: kotlin.String, `amount`: kotlin.Long, `feeRate`: kotlin.Double?, `manuallySelectedOutpoints`: List<OutPoint>?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(
+        it, FfiConverterString.lower(`address`),FfiConverterLong.lower(`amount`),FfiConverterOptionalDouble.lower(`feeRate`),FfiConverterOptionalSequenceTypeOutPoint.lower(`manuallySelectedOutpoints`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(TakerException::class)override fun `syncAndSave`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(
+        it, _status)
+}
+    }
+    
+    
+
+    
+    @Throws(TakerException::class)override fun `syncOfferbook`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook(
+        it, _status)
+}
+    }
+    
+    
+
+    
+
+    
+    companion object {
+        
+    @Throws(TakerException::class) fun `init`(`dataDir`: kotlin.String?, `walletFileName`: kotlin.String?, `rpcConfig`: RpcConfig?, `controlPort`: kotlin.UShort?, `torAuthPassword`: kotlin.String?, `zmqAddr`: kotlin.String, `password`: kotlin.String?): TaprootTaker {
+            return FfiConverterTypeTaprootTaker.lift(
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_coinswap_ffi_fn_constructor_taproottaker_init(
+        FfiConverterOptionalString.lower(`dataDir`),FfiConverterOptionalString.lower(`walletFileName`),FfiConverterOptionalTypeRPCConfig.lower(`rpcConfig`),FfiConverterOptionalUShort.lower(`controlPort`),FfiConverterOptionalString.lower(`torAuthPassword`),FfiConverterString.lower(`zmqAddr`),FfiConverterOptionalString.lower(`password`),_status)
+}
+    )
+    }
+    
+
+        
+    }
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaprootTaker: FfiConverter<TaprootTaker, Pointer> {
+
+    override fun lower(value: TaprootTaker): Pointer {
+        return value.uniffiClonePointer()
+    }
+
+    override fun lift(value: Pointer): TaprootTaker {
+        return TaprootTaker(value)
+    }
+
+    override fun read(buf: ByteBuffer): TaprootTaker {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(Pointer(buf.getLong()))
+    }
+
+    override fun allocationSize(value: TaprootTaker) = 8UL
+
+    override fun write(value: TaprootTaker, buf: ByteBuffer) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
@@ -2913,6 +3589,69 @@ public object FfiConverterTypeSwapReport: FfiConverterRustBuffer<SwapReport> {
             FfiConverterSequenceLong.write(value.`outputSwapAmounts`, buf)
             FfiConverterSequenceTypeUtxoWithAddress.write(value.`outputChangeUtxos`, buf)
             FfiConverterSequenceTypeUtxoWithAddress.write(value.`outputSwapUtxos`, buf)
+    }
+}
+
+
+
+/**
+ * Swap parameters for Taproot (V2) protocol
+ * Note: V2 has additional parameters compared to V1
+ */
+data class TaprootSwapParams (
+    /**
+     * Amount to send in satoshis
+     */
+    var `sendAmount`: kotlin.ULong, 
+    /**
+     * Number of makers to use in the swap
+     */
+    var `makerCount`: kotlin.UInt, 
+    /**
+     * Number of transaction splits (V2 specific)
+     */
+    var `txCount`: kotlin.UInt?, 
+    /**
+     * Required confirmations for funding transactions (V2 specific)
+     */
+    var `requiredConfirms`: kotlin.UInt?, 
+    /**
+     * User selected UTXOs (optional, for manual UTXO selection)
+     */
+    var `manuallySelectedOutpoints`: List<OutPoint>?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaprootSwapParams: FfiConverterRustBuffer<TaprootSwapParams> {
+    override fun read(buf: ByteBuffer): TaprootSwapParams {
+        return TaprootSwapParams(
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalSequenceTypeOutPoint.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaprootSwapParams) = (
+            FfiConverterULong.allocationSize(value.`sendAmount`) +
+            FfiConverterUInt.allocationSize(value.`makerCount`) +
+            FfiConverterOptionalUInt.allocationSize(value.`txCount`) +
+            FfiConverterOptionalUInt.allocationSize(value.`requiredConfirms`) +
+            FfiConverterOptionalSequenceTypeOutPoint.allocationSize(value.`manuallySelectedOutpoints`)
+    )
+
+    override fun write(value: TaprootSwapParams, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`sendAmount`, buf)
+            FfiConverterUInt.write(value.`makerCount`, buf)
+            FfiConverterOptionalUInt.write(value.`txCount`, buf)
+            FfiConverterOptionalUInt.write(value.`requiredConfirms`, buf)
+            FfiConverterOptionalSequenceTypeOutPoint.write(value.`manuallySelectedOutpoints`, buf)
     }
 }
 

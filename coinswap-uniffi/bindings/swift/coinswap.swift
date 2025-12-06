@@ -872,6 +872,301 @@ public func FfiConverterTypeTaker_lower(_ value: Taker) -> UnsafeMutableRawPoint
 
 
 
+
+
+public protocol TaprootTakerProtocol: AnyObject, Sendable {
+    
+    func backup(destinationPath: String, password: String?) throws 
+    
+    func displayOffer(makerOffer: Offer) throws  -> String
+    
+    func doCoinswap(swapParams: TaprootSwapParams) throws  -> SwapReport?
+    
+    func fetchAllMakers() throws  -> [String]
+    
+    func fetchGoodMakers() throws  -> [String]
+    
+    func fetchOffers() throws  -> OfferBook
+    
+    func getAllGoodMakers() throws  -> [String]
+    
+    func getBalances() throws  -> Balances
+    
+    func getNextExternalAddress() throws  -> Address
+    
+    func getNextInternalAddresses(count: UInt32) throws  -> [Address]
+    
+    func getTransactions(count: UInt32?, skip: UInt32?) throws  -> [ListTransactionResult]
+    
+    func getWalletName() throws  -> String
+    
+    func listAllUtxoSpendInfo() throws  -> [TotalUtxoInfo]
+    
+    func lockUnspendableUtxos() throws 
+    
+    func recoverFromSwap() throws 
+    
+    func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?) throws  -> String
+    
+    func syncAndSave() throws 
+    
+    func syncOfferbook() throws 
+    
+}
+open class TaprootTaker: TaprootTakerProtocol, @unchecked Sendable {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_coinswap_ffi_fn_clone_taproottaker(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_coinswap_ffi_fn_free_taproottaker(pointer, $0) }
+    }
+
+    
+public static func `init`(dataDir: String?, walletFileName: String?, rpcConfig: RpcConfig?, controlPort: UInt16?, torAuthPassword: String?, zmqAddr: String, password: String?)throws  -> TaprootTaker  {
+    return try  FfiConverterTypeTaprootTaker_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_constructor_taproottaker_init(
+        FfiConverterOptionString.lower(dataDir),
+        FfiConverterOptionString.lower(walletFileName),
+        FfiConverterOptionTypeRPCConfig.lower(rpcConfig),
+        FfiConverterOptionUInt16.lower(controlPort),
+        FfiConverterOptionString.lower(torAuthPassword),
+        FfiConverterString.lower(zmqAddr),
+        FfiConverterOptionString.lower(password),$0
+    )
+})
+}
+    
+
+    
+open func backup(destinationPath: String, password: String?)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_backup(self.uniffiClonePointer(),
+        FfiConverterString.lower(destinationPath),
+        FfiConverterOptionString.lower(password),$0
+    )
+}
+}
+    
+open func displayOffer(makerOffer: Offer)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_display_offer(self.uniffiClonePointer(),
+        FfiConverterTypeOffer_lower(makerOffer),$0
+    )
+})
+}
+    
+open func doCoinswap(swapParams: TaprootSwapParams)throws  -> SwapReport?  {
+    return try  FfiConverterOptionTypeSwapReport.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap(self.uniffiClonePointer(),
+        FfiConverterTypeTaprootSwapParams_lower(swapParams),$0
+    )
+})
+}
+    
+open func fetchAllMakers()throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func fetchGoodMakers()throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func fetchOffers()throws  -> OfferBook  {
+    return try  FfiConverterTypeOfferBook_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getAllGoodMakers()throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getBalances()throws  -> Balances  {
+    return try  FfiConverterTypeBalances_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_balances(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getNextExternalAddress()throws  -> Address  {
+    return try  FfiConverterTypeAddress_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getNextInternalAddresses(count: UInt32)throws  -> [Address]  {
+    return try  FfiConverterSequenceTypeAddress.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses(self.uniffiClonePointer(),
+        FfiConverterUInt32.lower(count),$0
+    )
+})
+}
+    
+open func getTransactions(count: UInt32?, skip: UInt32?)throws  -> [ListTransactionResult]  {
+    return try  FfiConverterSequenceTypeListTransactionResult.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions(self.uniffiClonePointer(),
+        FfiConverterOptionUInt32.lower(count),
+        FfiConverterOptionUInt32.lower(skip),$0
+    )
+})
+}
+    
+open func getWalletName()throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func listAllUtxoSpendInfo()throws  -> [TotalUtxoInfo]  {
+    return try  FfiConverterSequenceTypeTotalUtxoInfo.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func lockUnspendableUtxos()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+open func recoverFromSwap()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(self.uniffiClonePointer(),
+        FfiConverterString.lower(address),
+        FfiConverterInt64.lower(amount),
+        FfiConverterOptionDouble.lower(feeRate),
+        FfiConverterOptionSequenceTypeOutPoint.lower(manuallySelectedOutpoints),$0
+    )
+})
+}
+    
+open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+open func syncOfferbook()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaprootTaker: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = TaprootTaker
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> TaprootTaker {
+        return TaprootTaker(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: TaprootTaker) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaprootTaker {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: TaprootTaker, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaprootTaker_lift(_ pointer: UnsafeMutableRawPointer) throws -> TaprootTaker {
+    return try FfiConverterTypeTaprootTaker.lift(pointer)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaprootTaker_lower(_ value: TaprootTaker) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeTaprootTaker.lower(value)
+}
+
+
+
+
 public struct Address {
     public var address: String
 
@@ -2830,6 +3125,134 @@ public func FfiConverterTypeSwapReport_lower(_ value: SwapReport) -> RustBuffer 
 }
 
 
+/**
+ * Swap parameters for Taproot (V2) protocol
+ * Note: V2 has additional parameters compared to V1
+ */
+public struct TaprootSwapParams {
+    /**
+     * Amount to send in satoshis
+     */
+    public var sendAmount: UInt64
+    /**
+     * Number of makers to use in the swap
+     */
+    public var makerCount: UInt32
+    /**
+     * Number of transaction splits (V2 specific)
+     */
+    public var txCount: UInt32?
+    /**
+     * Required confirmations for funding transactions (V2 specific)
+     */
+    public var requiredConfirms: UInt32?
+    /**
+     * User selected UTXOs (optional, for manual UTXO selection)
+     */
+    public var manuallySelectedOutpoints: [OutPoint]?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Amount to send in satoshis
+         */sendAmount: UInt64, 
+        /**
+         * Number of makers to use in the swap
+         */makerCount: UInt32, 
+        /**
+         * Number of transaction splits (V2 specific)
+         */txCount: UInt32?, 
+        /**
+         * Required confirmations for funding transactions (V2 specific)
+         */requiredConfirms: UInt32?, 
+        /**
+         * User selected UTXOs (optional, for manual UTXO selection)
+         */manuallySelectedOutpoints: [OutPoint]?) {
+        self.sendAmount = sendAmount
+        self.makerCount = makerCount
+        self.txCount = txCount
+        self.requiredConfirms = requiredConfirms
+        self.manuallySelectedOutpoints = manuallySelectedOutpoints
+    }
+}
+
+#if compiler(>=6)
+extension TaprootSwapParams: Sendable {}
+#endif
+
+
+extension TaprootSwapParams: Equatable, Hashable {
+    public static func ==(lhs: TaprootSwapParams, rhs: TaprootSwapParams) -> Bool {
+        if lhs.sendAmount != rhs.sendAmount {
+            return false
+        }
+        if lhs.makerCount != rhs.makerCount {
+            return false
+        }
+        if lhs.txCount != rhs.txCount {
+            return false
+        }
+        if lhs.requiredConfirms != rhs.requiredConfirms {
+            return false
+        }
+        if lhs.manuallySelectedOutpoints != rhs.manuallySelectedOutpoints {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(sendAmount)
+        hasher.combine(makerCount)
+        hasher.combine(txCount)
+        hasher.combine(requiredConfirms)
+        hasher.combine(manuallySelectedOutpoints)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaprootSwapParams: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaprootSwapParams {
+        return
+            try TaprootSwapParams(
+                sendAmount: FfiConverterUInt64.read(from: &buf), 
+                makerCount: FfiConverterUInt32.read(from: &buf), 
+                txCount: FfiConverterOptionUInt32.read(from: &buf), 
+                requiredConfirms: FfiConverterOptionUInt32.read(from: &buf), 
+                manuallySelectedOutpoints: FfiConverterOptionSequenceTypeOutPoint.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaprootSwapParams, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.sendAmount, into: &buf)
+        FfiConverterUInt32.write(value.makerCount, into: &buf)
+        FfiConverterOptionUInt32.write(value.txCount, into: &buf)
+        FfiConverterOptionUInt32.write(value.requiredConfirms, into: &buf)
+        FfiConverterOptionSequenceTypeOutPoint.write(value.manuallySelectedOutpoints, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaprootSwapParams_lift(_ buf: RustBuffer) throws -> TaprootSwapParams {
+    return try FfiConverterTypeTaprootSwapParams.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaprootSwapParams_lower(_ value: TaprootSwapParams) -> RustBuffer {
+    return FfiConverterTypeTaprootSwapParams.lower(value)
+}
+
+
 public struct TotalUtxoInfo {
     public var listUnspentResultEntry: ListUnspentResultEntry
     public var utxoSpendInfo: UtxoSpendInfo
@@ -4166,7 +4589,64 @@ private let initializationResult: InitializationResult = {
     if (uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook() != 23241) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_backup() != 14546) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer() != 39258) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap() != 19818) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers() != 51619) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers() != 50272) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers() != 34915) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers() != 11020) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances() != 61569) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address() != 10127) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses() != 49793) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions() != 17891) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name() != 51305) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info() != 14333) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos() != 41043) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap() != 32296) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook() != 1376) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_coinswap_ffi_checksum_constructor_taker_init() != 58322) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_constructor_taproottaker_init() != 33076) {
         return InitializationResult.apiChecksumMismatch
     }
 

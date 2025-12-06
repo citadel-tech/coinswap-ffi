@@ -29,7 +29,8 @@ Coinswap UniFFI provides multi-language bindings for the [Coinswap protocol](htt
 ```bash
 git clone https://github.com/citadel-tech/coinswap-ffi.git
 cd coinswap-ffi/coinswap-uniffi
-cargo build --release
+chmod +x create_bindings.sh
+./create_bindings.sh
 ```
 
 The compiled library will be at:

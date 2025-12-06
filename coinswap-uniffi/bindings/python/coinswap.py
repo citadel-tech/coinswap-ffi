@@ -506,7 +506,45 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook() != 23241:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_backup() != 14546:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer() != 39258:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap() != 19818:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers() != 51619:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers() != 50272:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers() != 34915:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers() != 11020:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances() != 61569:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address() != 10127:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses() != 49793:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions() != 17891:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name() != 51305:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info() != 14333:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos() != 41043:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap() != 32296:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook() != 1376:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 58322:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_constructor_taproottaker_init() != 33076:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -736,6 +774,128 @@ _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_offerbook.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_offerbook.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_taproottaker.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_clone_taproottaker.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_free_taproottaker.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_free_taproottaker.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taproottaker_init.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taproottaker_init.restype = ctypes.c_void_p
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_backup.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_backup.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_display_offer.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_display_offer.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_balances.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_balances.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_uint32,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.c_int64,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save.restype = None
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_func_create_default_rpc_config.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
@@ -1100,9 +1260,66 @@ _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_and_save.restype = cty
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_offerbook.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_backup.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_backup.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_display_offer.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_do_coinswap.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_all_makers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_good_makers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_fetch_offers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_all_good_makers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_balances.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_external_address.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_next_internal_addresses.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_transactions.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_get_wallet_name.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_list_all_utxo_spend_info.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_lock_unspendable_utxos.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taker_init.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taproottaker_init.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_constructor_taproottaker_init.restype = ctypes.c_uint16
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_coinswap_ffi_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1259,6 +1476,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -2415,6 +2634,88 @@ class _UniffiConverterTypeSwapReport(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceInt64.write(value.output_swap_amounts, buf)
         _UniffiConverterSequenceTypeUtxoWithAddress.write(value.output_change_utxos, buf)
         _UniffiConverterSequenceTypeUtxoWithAddress.write(value.output_swap_utxos, buf)
+
+
+class TaprootSwapParams:
+    """
+    Swap parameters for Taproot (V2) protocol
+    Note: V2 has additional parameters compared to V1
+    """
+
+    send_amount: "int"
+    """
+    Amount to send in satoshis
+    """
+
+    maker_count: "int"
+    """
+    Number of makers to use in the swap
+    """
+
+    tx_count: "typing.Optional[int]"
+    """
+    Number of transaction splits (V2 specific)
+    """
+
+    required_confirms: "typing.Optional[int]"
+    """
+    Required confirmations for funding transactions (V2 specific)
+    """
+
+    manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]"
+    """
+    User selected UTXOs (optional, for manual UTXO selection)
+    """
+
+    def __init__(self, *, send_amount: "int", maker_count: "int", tx_count: "typing.Optional[int]", required_confirms: "typing.Optional[int]", manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]"):
+        self.send_amount = send_amount
+        self.maker_count = maker_count
+        self.tx_count = tx_count
+        self.required_confirms = required_confirms
+        self.manually_selected_outpoints = manually_selected_outpoints
+
+    def __str__(self):
+        return "TaprootSwapParams(send_amount={}, maker_count={}, tx_count={}, required_confirms={}, manually_selected_outpoints={})".format(self.send_amount, self.maker_count, self.tx_count, self.required_confirms, self.manually_selected_outpoints)
+
+    def __eq__(self, other):
+        if self.send_amount != other.send_amount:
+            return False
+        if self.maker_count != other.maker_count:
+            return False
+        if self.tx_count != other.tx_count:
+            return False
+        if self.required_confirms != other.required_confirms:
+            return False
+        if self.manually_selected_outpoints != other.manually_selected_outpoints:
+            return False
+        return True
+
+class _UniffiConverterTypeTaprootSwapParams(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return TaprootSwapParams(
+            send_amount=_UniffiConverterUInt64.read(buf),
+            maker_count=_UniffiConverterUInt32.read(buf),
+            tx_count=_UniffiConverterOptionalUInt32.read(buf),
+            required_confirms=_UniffiConverterOptionalUInt32.read(buf),
+            manually_selected_outpoints=_UniffiConverterOptionalSequenceTypeOutPoint.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterUInt64.check_lower(value.send_amount)
+        _UniffiConverterUInt32.check_lower(value.maker_count)
+        _UniffiConverterOptionalUInt32.check_lower(value.tx_count)
+        _UniffiConverterOptionalUInt32.check_lower(value.required_confirms)
+        _UniffiConverterOptionalSequenceTypeOutPoint.check_lower(value.manually_selected_outpoints)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterUInt64.write(value.send_amount, buf)
+        _UniffiConverterUInt32.write(value.maker_count, buf)
+        _UniffiConverterOptionalUInt32.write(value.tx_count, buf)
+        _UniffiConverterOptionalUInt32.write(value.required_confirms, buf)
+        _UniffiConverterOptionalSequenceTypeOutPoint.write(value.manually_selected_outpoints, buf)
 
 
 class TotalUtxoInfo:
@@ -3784,6 +4085,314 @@ class _UniffiConverterTypeTaker:
     @classmethod
     def write(cls, value: TakerProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
+class TaprootTakerProtocol(typing.Protocol):
+    def backup(self, destination_path: "str",password: "typing.Optional[str]"):
+        raise NotImplementedError
+    def display_offer(self, maker_offer: "Offer"):
+        raise NotImplementedError
+    def do_coinswap(self, swap_params: "TaprootSwapParams"):
+        raise NotImplementedError
+    def fetch_all_makers(self, ):
+        raise NotImplementedError
+    def fetch_good_makers(self, ):
+        raise NotImplementedError
+    def fetch_offers(self, ):
+        raise NotImplementedError
+    def get_all_good_makers(self, ):
+        raise NotImplementedError
+    def get_balances(self, ):
+        raise NotImplementedError
+    def get_next_external_address(self, ):
+        raise NotImplementedError
+    def get_next_internal_addresses(self, count: "int"):
+        raise NotImplementedError
+    def get_transactions(self, count: "typing.Optional[int]",skip: "typing.Optional[int]"):
+        raise NotImplementedError
+    def get_wallet_name(self, ):
+        raise NotImplementedError
+    def list_all_utxo_spend_info(self, ):
+        raise NotImplementedError
+    def lock_unspendable_utxos(self, ):
+        raise NotImplementedError
+    def recover_from_swap(self, ):
+        raise NotImplementedError
+    def send_to_address(self, address: "str",amount: "int",fee_rate: "typing.Optional[float]",manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]"):
+        raise NotImplementedError
+    def sync_and_save(self, ):
+        raise NotImplementedError
+    def sync_offerbook(self, ):
+        raise NotImplementedError
+# TaprootTaker is a Rust-only trait - it's a wrapper around a Rust implementation.
+class TaprootTaker():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_free_taproottaker, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_coinswap_ffi_fn_clone_taproottaker, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+    @classmethod
+    def init(cls, data_dir: "typing.Optional[str]",wallet_file_name: "typing.Optional[str]",rpc_config: "typing.Optional[RpcConfig]",control_port: "typing.Optional[int]",tor_auth_password: "typing.Optional[str]",zmq_addr: "str",password: "typing.Optional[str]"):
+        _UniffiConverterOptionalString.check_lower(data_dir)
+        
+        _UniffiConverterOptionalString.check_lower(wallet_file_name)
+        
+        _UniffiConverterOptionalTypeRpcConfig.check_lower(rpc_config)
+        
+        _UniffiConverterOptionalUInt16.check_lower(control_port)
+        
+        _UniffiConverterOptionalString.check_lower(tor_auth_password)
+        
+        _UniffiConverterString.check_lower(zmq_addr)
+        
+        _UniffiConverterOptionalString.check_lower(password)
+        
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_constructor_taproottaker_init,
+        _UniffiConverterOptionalString.lower(data_dir),
+        _UniffiConverterOptionalString.lower(wallet_file_name),
+        _UniffiConverterOptionalTypeRpcConfig.lower(rpc_config),
+        _UniffiConverterOptionalUInt16.lower(control_port),
+        _UniffiConverterOptionalString.lower(tor_auth_password),
+        _UniffiConverterString.lower(zmq_addr),
+        _UniffiConverterOptionalString.lower(password))
+        return cls._make_instance_(pointer)
+
+
+
+    def backup(self, destination_path: "str",password: "typing.Optional[str]") -> None:
+        _UniffiConverterString.check_lower(destination_path)
+        
+        _UniffiConverterOptionalString.check_lower(password)
+        
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_backup,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(destination_path),
+        _UniffiConverterOptionalString.lower(password))
+
+
+
+
+
+
+    def display_offer(self, maker_offer: "Offer") -> "str":
+        _UniffiConverterTypeOffer.check_lower(maker_offer)
+        
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_display_offer,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeOffer.lower(maker_offer))
+        )
+
+
+
+
+
+    def do_coinswap(self, swap_params: "TaprootSwapParams") -> "typing.Optional[SwapReport]":
+        _UniffiConverterTypeTaprootSwapParams.check_lower(swap_params)
+        
+        return _UniffiConverterOptionalTypeSwapReport.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeTaprootSwapParams.lower(swap_params))
+        )
+
+
+
+
+
+    def fetch_all_makers(self, ) -> "typing.List[str]":
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def fetch_good_makers(self, ) -> "typing.List[str]":
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_good_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def fetch_offers(self, ) -> "OfferBook":
+        return _UniffiConverterTypeOfferBook.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_all_good_makers(self, ) -> "typing.List[str]":
+        return _UniffiConverterSequenceString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_all_good_makers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_balances(self, ) -> "Balances":
+        return _UniffiConverterTypeBalances.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_balances,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_next_external_address(self, ) -> "Address":
+        return _UniffiConverterTypeAddress.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def get_next_internal_addresses(self, count: "int") -> "typing.List[Address]":
+        _UniffiConverterUInt32.check_lower(count)
+        
+        return _UniffiConverterSequenceTypeAddress.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses,self._uniffi_clone_pointer(),
+        _UniffiConverterUInt32.lower(count))
+        )
+
+
+
+
+
+    def get_transactions(self, count: "typing.Optional[int]",skip: "typing.Optional[int]") -> "typing.List[ListTransactionResult]":
+        _UniffiConverterOptionalUInt32.check_lower(count)
+        
+        _UniffiConverterOptionalUInt32.check_lower(skip)
+        
+        return _UniffiConverterSequenceTypeListTransactionResult.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions,self._uniffi_clone_pointer(),
+        _UniffiConverterOptionalUInt32.lower(count),
+        _UniffiConverterOptionalUInt32.lower(skip))
+        )
+
+
+
+
+
+    def get_wallet_name(self, ) -> "str":
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def list_all_utxo_spend_info(self, ) -> "typing.List[TotalUtxoInfo]":
+        return _UniffiConverterSequenceTypeTotalUtxoInfo.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def lock_unspendable_utxos(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+    def recover_from_swap(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+    def send_to_address(self, address: "str",amount: "int",fee_rate: "typing.Optional[float]",manually_selected_outpoints: "typing.Optional[typing.List[OutPoint]]") -> "str":
+        _UniffiConverterString.check_lower(address)
+        
+        _UniffiConverterInt64.check_lower(amount)
+        
+        _UniffiConverterOptionalDouble.check_lower(fee_rate)
+        
+        _UniffiConverterOptionalSequenceTypeOutPoint.check_lower(manually_selected_outpoints)
+        
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(address),
+        _UniffiConverterInt64.lower(amount),
+        _UniffiConverterOptionalDouble.lower(fee_rate),
+        _UniffiConverterOptionalSequenceTypeOutPoint.lower(manually_selected_outpoints))
+        )
+
+
+
+
+
+    def sync_and_save(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+    def sync_offerbook(self, ) -> None:
+        _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_offerbook,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
+
+class _UniffiConverterTypeTaprootTaker:
+
+    @staticmethod
+    def lift(value: int):
+        return TaprootTaker._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: TaprootTaker):
+        if not isinstance(value, TaprootTaker):
+            raise TypeError("Expected TaprootTaker instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: TaprootTakerProtocol):
+        if not isinstance(value, TaprootTaker):
+            raise TypeError("Expected TaprootTaker instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: TaprootTakerProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 
 # Async support
 
@@ -3854,6 +4463,7 @@ __all__ = [
     "SignedAmountSats",
     "SwapParams",
     "SwapReport",
+    "TaprootSwapParams",
     "TotalUtxoInfo",
     "Txid",
     "UtxoSpendInfo",
@@ -3865,5 +4475,6 @@ __all__ = [
     "restore_wallet_gui_app",
     "setup_logging",
     "Taker",
+    "TaprootTaker",
 ]
 

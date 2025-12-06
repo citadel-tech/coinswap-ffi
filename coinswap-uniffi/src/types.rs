@@ -10,6 +10,7 @@ use coinswap::{
         absolute::LockTime as csLocktime,
     },
     bitcoind::bitcoincore_rpc::Auth,
+    fee_estimation::{BlockTarget, FeeEstimator},
     protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
     taker::{
         error::TakerError as CoinswapTakerError,
@@ -21,9 +22,13 @@ use coinswap::{
     wallet::{
         Balances as CoinswapBalances, FidelityBond as csFidelityBond,
         RPCConfig as CoinswapRPCConfig,
-        ffi::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
+        ffi::{
+            MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport,
+            restore_wallet_gui_app as cs_restore_wallet_gui_app,
+        },
     },
 };
+use std::path::PathBuf;
 
 #[derive(Clone, uniffi::Record)]
 pub struct RPCConfig {
@@ -524,4 +529,70 @@ impl From<csSwapReport> for SwapReport {
                 .collect(),
         }
     }
+}
+
+#[uniffi::export]
+pub fn fetch_mempool_fees() -> Result<FeeRates, TakerError> {
+    let fees = FeeEstimator::fetch_mempool_fees()
+        .or_else(|_mempool_err| FeeEstimator::fetch_esplora_fees())
+        .map_err(|e| TakerError::Network {
+            msg: format!("Both fee APIs failed: {:?}", e),
+        })?;
+
+    let get = |target| {
+        fees.get(&target).ok_or_else(|| TakerError::General {
+            msg: format!("Missing fee for {:?}", target),
+        })
+    };
+
+    Ok(FeeRates {
+        fastest: *get(BlockTarget::Fastest)?,
+        standard: *get(BlockTarget::Standard)?,
+        economy: *get(BlockTarget::Economy)?,
+    })
+}
+
+#[uniffi::export]
+pub fn restore_wallet_gui_app(
+    data_dir: Option<String>,
+    wallet_file_name: Option<String>,
+    rpc_config: RPCConfig,
+    backup_file_path: String,
+    password: Option<String>,
+) {
+    let data_dir = data_dir.map(PathBuf::from);
+
+    cs_restore_wallet_gui_app(
+        data_dir,
+        wallet_file_name,
+        rpc_config.into(),
+        backup_file_path.into(),
+        password,
+    );
+}
+
+#[uniffi::export]
+pub fn is_wallet_encrypted(wallet_path: String) -> Result<bool, TakerError> {
+    let path = PathBuf::from(wallet_path);
+
+    coinswap::wallet::Wallet::is_wallet_encrypted(&path).map_err(|e| TakerError::Wallet {
+        msg: format!("Failed to check wallet encryption: {:?}", e),
+    })
+}
+
+#[uniffi::export]
+pub fn create_default_rpc_config() -> RPCConfig {
+    RPCConfig {
+        url: "http://127.0.0.1:38332".to_string(),
+        username: "user".to_string(),
+        password: "password".to_string(),
+        wallet_name: "coinswap_wallet".to_string(),
+    }
+}
+
+#[uniffi::export]
+pub fn setup_logging(data_dir: Option<String>) -> Result<(), TakerError> {
+    let path = data_dir.map(PathBuf::from);
+    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    Ok(())
 }

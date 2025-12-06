@@ -61,9 +61,9 @@ See [coinswap-napi/README.md](./coinswap-napi/README.md) for detailed usage.
 ### Kotlin/Swift/Python (UniFFI)
 
 ```bash
-cd coinswap-uniffi
-cargo build --release
-cargo run --bin uniffi-bindgen generate --library ./target/release/libcoinswap_ffi.so --language kotlin --out-dir ./bindings/kotlin
+cd coinswap-ffi/coinswap-uniffi
+chmod +x create_bindings.sh
+./create_bindings.sh
 ```
 
 See [coinswap-uniffi/README.md](./coinswap-uniffi/README.md) for language-specific instructions.

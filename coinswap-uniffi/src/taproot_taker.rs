@@ -9,7 +9,7 @@ use crate::types::{
 };
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
-    taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
+    taker::api2::{SwapParams as CoinswapTaprootSwapParams, Taker as CoinswapTaprootTaker},
     wallet::{RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use std::{
@@ -17,20 +17,26 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+/// Swap parameters for Taproot (V2) protocol
+/// Note: V2 has additional parameters compared to V1
 #[derive(uniffi::Record)]
-pub struct SwapParams {
-    /// Total Amount
+pub struct TaprootSwapParams {
+    /// Amount to send in satoshis
     pub send_amount: u64,
-    /// How many hops (number of makers)
+    /// Number of makers to use in the swap
     pub maker_count: u32,
-    /// User selected UTXOs (optional)
+    /// Number of transaction splits (V2 specific)
+    pub tx_count: Option<u32>,
+    /// Required confirmations for funding transactions (V2 specific)
+    pub required_confirms: Option<u32>,
+    /// User selected UTXOs (optional, for manual UTXO selection)
     pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
-impl TryFrom<SwapParams> for CoinswapSwapParams {
+impl TryFrom<TaprootSwapParams> for CoinswapTaprootSwapParams {
     type Error = TakerError;
 
-    fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
+    fn try_from(params: TaprootSwapParams) -> Result<Self, Self::Error> {
         let send_amount = coinswapAmount::from_sat(params.send_amount);
 
         let manually_selected_outpoints = params
@@ -50,21 +56,23 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
             })
             .transpose()?;
 
-        Ok(CoinswapSwapParams {
+        Ok(CoinswapTaprootSwapParams {
             send_amount,
             maker_count: params.maker_count as usize,
+            tx_count: params.tx_count.unwrap_or(1),
+            required_confirms: params.required_confirms.unwrap_or(1),
             manually_selected_outpoints,
         })
     }
 }
 
 #[derive(uniffi::Object)]
-pub struct Taker {
-    taker: Mutex<CoinswapTaker>,
+pub struct TaprootTaker {
+    taker: Mutex<CoinswapTaprootTaker>,
 }
 
 #[uniffi::export]
-impl Taker {
+impl TaprootTaker {
     #[uniffi::constructor]
     pub fn init(
         data_dir: Option<String>,
@@ -79,7 +87,7 @@ impl Taker {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
 
-        let taker = CoinswapTaker::init(
+        let taker = CoinswapTaprootTaker::init(
             data_dir,
             wallet_file_name,
             rpc_config,
@@ -96,8 +104,11 @@ impl Taker {
         }))
     }
 
-    pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
-        let params = CoinswapSwapParams::try_from(swap_params)?;
+    pub fn do_coinswap(
+        &self,
+        swap_params: TaprootSwapParams,
+    ) -> Result<Option<SwapReport>, TakerError> {
+        let params = CoinswapTaprootSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
