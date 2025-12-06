@@ -494,7 +494,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name() != 45636:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_coinswap_ffi_checksum_method_taker_list_all_utxo_spend_info() != 32425:
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_list_all_utxo_spend_info() != 28116:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_lock_unspendable_utxos() != 12155:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -2417,6 +2417,42 @@ class _UniffiConverterTypeSwapReport(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceTypeUtxoWithAddress.write(value.output_swap_utxos, buf)
 
 
+class TotalUtxoInfo:
+    list_unspent_result_entry: "ListUnspentResultEntry"
+    utxo_spend_info: "UtxoSpendInfo"
+    def __init__(self, *, list_unspent_result_entry: "ListUnspentResultEntry", utxo_spend_info: "UtxoSpendInfo"):
+        self.list_unspent_result_entry = list_unspent_result_entry
+        self.utxo_spend_info = utxo_spend_info
+
+    def __str__(self):
+        return "TotalUtxoInfo(list_unspent_result_entry={}, utxo_spend_info={})".format(self.list_unspent_result_entry, self.utxo_spend_info)
+
+    def __eq__(self, other):
+        if self.list_unspent_result_entry != other.list_unspent_result_entry:
+            return False
+        if self.utxo_spend_info != other.utxo_spend_info:
+            return False
+        return True
+
+class _UniffiConverterTypeTotalUtxoInfo(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return TotalUtxoInfo(
+            list_unspent_result_entry=_UniffiConverterTypeListUnspentResultEntry.read(buf),
+            utxo_spend_info=_UniffiConverterTypeUtxoSpendInfo.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeListUnspentResultEntry.check_lower(value.list_unspent_result_entry)
+        _UniffiConverterTypeUtxoSpendInfo.check_lower(value.utxo_spend_info)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeListUnspentResultEntry.write(value.list_unspent_result_entry, buf)
+        _UniffiConverterTypeUtxoSpendInfo.write(value.utxo_spend_info, buf)
+
+
 class Txid:
     value: "str"
     def __init__(self, *, value: "str"):
@@ -2636,49 +2672,6 @@ class _UniffiConverterTypeWalletTxInfo(_UniffiConverterRustBuffer):
         _UniffiConverterInt64.write(value.timereceived, buf)
         _UniffiConverterString.write(value.bip125_replaceable, buf)
         _UniffiConverterSequenceTypeTxid.write(value.wallet_conflicts, buf)
-
-
-class WalletTxInfo2:
-    outpoint: "OutPoint"
-    listunspent: "ListUnspentResultEntry"
-    spend_info: "UtxoSpendInfo"
-    def __init__(self, *, outpoint: "OutPoint", listunspent: "ListUnspentResultEntry", spend_info: "UtxoSpendInfo"):
-        self.outpoint = outpoint
-        self.listunspent = listunspent
-        self.spend_info = spend_info
-
-    def __str__(self):
-        return "WalletTxInfo2(outpoint={}, listunspent={}, spend_info={})".format(self.outpoint, self.listunspent, self.spend_info)
-
-    def __eq__(self, other):
-        if self.outpoint != other.outpoint:
-            return False
-        if self.listunspent != other.listunspent:
-            return False
-        if self.spend_info != other.spend_info:
-            return False
-        return True
-
-class _UniffiConverterTypeWalletTxInfo2(_UniffiConverterRustBuffer):
-    @staticmethod
-    def read(buf):
-        return WalletTxInfo2(
-            outpoint=_UniffiConverterTypeOutPoint.read(buf),
-            listunspent=_UniffiConverterTypeListUnspentResultEntry.read(buf),
-            spend_info=_UniffiConverterTypeUtxoSpendInfo.read(buf),
-        )
-
-    @staticmethod
-    def check_lower(value):
-        _UniffiConverterTypeOutPoint.check_lower(value.outpoint)
-        _UniffiConverterTypeListUnspentResultEntry.check_lower(value.listunspent)
-        _UniffiConverterTypeUtxoSpendInfo.check_lower(value.spend_info)
-
-    @staticmethod
-    def write(value, buf):
-        _UniffiConverterTypeOutPoint.write(value.outpoint, buf)
-        _UniffiConverterTypeListUnspentResultEntry.write(value.listunspent, buf)
-        _UniffiConverterTypeUtxoSpendInfo.write(value.spend_info, buf)
 
 
 
@@ -3384,6 +3377,31 @@ class _UniffiConverterSequenceTypeOutPoint(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterSequenceTypeTotalUtxoInfo(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeTotalUtxoInfo.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeTotalUtxoInfo.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeTotalUtxoInfo.read(buf) for i in range(count)
+        ]
+
+
+
 class _UniffiConverterSequenceTypeTxid(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -3430,31 +3448,6 @@ class _UniffiConverterSequenceTypeUtxoWithAddress(_UniffiConverterRustBuffer):
 
         return [
             _UniffiConverterTypeUtxoWithAddress.read(buf) for i in range(count)
-        ]
-
-
-
-class _UniffiConverterSequenceTypeWalletTxInfo2(_UniffiConverterRustBuffer):
-    @classmethod
-    def check_lower(cls, value):
-        for item in value:
-            _UniffiConverterTypeWalletTxInfo2.check_lower(item)
-
-    @classmethod
-    def write(cls, value, buf):
-        items = len(value)
-        buf.write_i32(items)
-        for item in value:
-            _UniffiConverterTypeWalletTxInfo2.write(item, buf)
-
-    @classmethod
-    def read(cls, buf):
-        count = buf.read_i32()
-        if count < 0:
-            raise InternalError("Unexpected negative sequence length")
-
-        return [
-            _UniffiConverterTypeWalletTxInfo2.read(buf) for i in range(count)
         ]
 
 
@@ -3701,8 +3694,8 @@ class Taker():
 
 
 
-    def list_all_utxo_spend_info(self, ) -> "typing.List[WalletTxInfo2]":
-        return _UniffiConverterSequenceTypeWalletTxInfo2.lift(
+    def list_all_utxo_spend_info(self, ) -> "typing.List[TotalUtxoInfo]":
+        return _UniffiConverterSequenceTypeTotalUtxoInfo.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeTakerError,_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info,self._uniffi_clone_pointer(),)
         )
 
@@ -3861,11 +3854,11 @@ __all__ = [
     "SignedAmountSats",
     "SwapParams",
     "SwapReport",
+    "TotalUtxoInfo",
     "Txid",
     "UtxoSpendInfo",
     "UtxoWithAddress",
     "WalletTxInfo",
-    "WalletTxInfo2",
     "create_default_rpc_config",
     "fetch_mempool_fees",
     "is_wallet_encrypted",

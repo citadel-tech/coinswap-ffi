@@ -616,6 +616,26 @@ end
     end
   end
 
+  # The Record type TotalUtxoInfo.
+
+  def self.check_lower_TypeTotalUtxoInfo(v)
+    RustBuffer.check_lower_TypeListUnspentResultEntry(v.list_unspent_result_entry)
+    RustBuffer.check_lower_TypeUtxoSpendInfo(v.utxo_spend_info)
+  end
+
+  def self.alloc_from_TypeTotalUtxoInfo(v)
+    RustBuffer.allocWithBuilder do |builder|
+      builder.write_TypeTotalUtxoInfo(v)
+      return builder.finalize
+    end
+  end
+
+  def consumeIntoTypeTotalUtxoInfo
+    consumeWithStream do |stream|
+      return stream.readTypeTotalUtxoInfo
+    end
+  end
+
   # The Record type Txid.
 
   def self.check_lower_TypeTxid(v)
@@ -704,27 +724,6 @@ end
   def consumeIntoTypeWalletTxInfo
     consumeWithStream do |stream|
       return stream.readTypeWalletTxInfo
-    end
-  end
-
-  # The Record type WalletTxInfo2.
-
-  def self.check_lower_TypeWalletTxInfo2(v)
-    RustBuffer.check_lower_TypeOutPoint(v.outpoint)
-    RustBuffer.check_lower_TypeListUnspentResultEntry(v.listunspent)
-    RustBuffer.check_lower_TypeUtxoSpendInfo(v.spend_info)
-  end
-
-  def self.alloc_from_TypeWalletTxInfo2(v)
-    RustBuffer.allocWithBuilder do |builder|
-      builder.write_TypeWalletTxInfo2(v)
-      return builder.finalize
-    end
-  end
-
-  def consumeIntoTypeWalletTxInfo2
-    consumeWithStream do |stream|
-      return stream.readTypeWalletTxInfo2
     end
   end
 
@@ -1169,6 +1168,27 @@ end
     end
   end
 
+  # The Sequence<T> type for TypeTotalUtxoInfo.
+
+  def self.check_lower_SequenceTypeTotalUtxoInfo(v)
+    v.each do |item|
+      RustBuffer.check_lower_TypeTotalUtxoInfo(item)
+    end
+  end
+
+  def self.alloc_from_SequenceTypeTotalUtxoInfo(v)
+    RustBuffer.allocWithBuilder do |builder|
+      builder.write_SequenceTypeTotalUtxoInfo(v)
+      return builder.finalize()
+    end
+  end
+
+  def consumeIntoSequenceTypeTotalUtxoInfo
+    consumeWithStream do |stream|
+      return stream.readSequenceTypeTotalUtxoInfo
+    end
+  end
+
   # The Sequence<T> type for TypeTxid.
 
   def self.check_lower_SequenceTypeTxid(v)
@@ -1208,27 +1228,6 @@ end
   def consumeIntoSequenceTypeUtxoWithAddress
     consumeWithStream do |stream|
       return stream.readSequenceTypeUtxoWithAddress
-    end
-  end
-
-  # The Sequence<T> type for TypeWalletTxInfo2.
-
-  def self.check_lower_SequenceTypeWalletTxInfo2(v)
-    v.each do |item|
-      RustBuffer.check_lower_TypeWalletTxInfo2(item)
-    end
-  end
-
-  def self.alloc_from_SequenceTypeWalletTxInfo2(v)
-    RustBuffer.allocWithBuilder do |builder|
-      builder.write_SequenceTypeWalletTxInfo2(v)
-      return builder.finalize()
-    end
-  end
-
-  def consumeIntoSequenceTypeWalletTxInfo2
-    consumeWithStream do |stream|
-      return stream.readSequenceTypeWalletTxInfo2
     end
   end
 
@@ -1603,6 +1602,15 @@ class RustBufferStream
     )
   end
 
+  # The Record type TotalUtxoInfo.
+
+  def readTypeTotalUtxoInfo
+    TotalUtxoInfo.new(
+      list_unspent_result_entry: readTypeListUnspentResultEntry,
+      utxo_spend_info: readTypeUtxoSpendInfo
+    )
+  end
+
   # The Record type Txid.
 
   def readTypeTxid
@@ -1647,16 +1655,6 @@ class RustBufferStream
       timereceived: readI64,
       bip125_replaceable: readString,
       wallet_conflicts: readSequenceTypeTxid
-    )
-  end
-
-  # The Record type WalletTxInfo2.
-
-  def readTypeWalletTxInfo2
-    WalletTxInfo2.new(
-      outpoint: readTypeOutPoint,
-      listunspent: readTypeListUnspentResultEntry,
-      spend_info: readTypeUtxoSpendInfo
     )
   end
 
@@ -2015,6 +2013,22 @@ class RustBufferStream
     items
   end
 
+  # The Sequence<T> type for TypeTotalUtxoInfo.
+
+  def readSequenceTypeTotalUtxoInfo
+    count = unpack_from 4, 'l>'
+
+    raise InternalError, 'Unexpected negative sequence length' if count.negative?
+
+    items = []
+
+    count.times do
+      items.append readTypeTotalUtxoInfo
+    end
+
+    items
+  end
+
   # The Sequence<T> type for TypeTxid.
 
   def readSequenceTypeTxid
@@ -2042,22 +2056,6 @@ class RustBufferStream
 
     count.times do
       items.append readTypeUtxoWithAddress
-    end
-
-    items
-  end
-
-  # The Sequence<T> type for TypeWalletTxInfo2.
-
-  def readSequenceTypeWalletTxInfo2
-    count = unpack_from 4, 'l>'
-
-    raise InternalError, 'Unexpected negative sequence length' if count.negative?
-
-    items = []
-
-    count.times do
-      items.append readTypeWalletTxInfo2
     end
 
     items
@@ -2381,6 +2379,13 @@ class RustBufferBuilder
     self.write_SequenceTypeUtxoWithAddress(v.output_swap_utxos)
   end
 
+  # The Record type TotalUtxoInfo.
+
+  def write_TypeTotalUtxoInfo(v)
+    self.write_TypeListUnspentResultEntry(v.list_unspent_result_entry)
+    self.write_TypeUtxoSpendInfo(v.utxo_spend_info)
+  end
+
   # The Record type Txid.
 
   def write_TypeTxid(v)
@@ -2418,14 +2423,6 @@ class RustBufferBuilder
     self.write_I64(v.timereceived)
     self.write_String(v.bip125_replaceable)
     self.write_SequenceTypeTxid(v.wallet_conflicts)
-  end
-
-  # The Record type WalletTxInfo2.
-
-  def write_TypeWalletTxInfo2(v)
-    self.write_TypeOutPoint(v.outpoint)
-    self.write_TypeListUnspentResultEntry(v.listunspent)
-    self.write_TypeUtxoSpendInfo(v.spend_info)
   end
 
   # The Enum type TakerBehavior.
@@ -2650,6 +2647,16 @@ class RustBufferBuilder
     end
   end
 
+  # The Sequence<T> type for TypeTotalUtxoInfo.
+
+  def write_SequenceTypeTotalUtxoInfo(items)
+    pack_into(4, 'l>', items.size)
+
+    items.each do |item|
+      self.write_TypeTotalUtxoInfo(item)
+    end
+  end
+
   # The Sequence<T> type for TypeTxid.
 
   def write_SequenceTypeTxid(items)
@@ -2667,16 +2674,6 @@ class RustBufferBuilder
 
     items.each do |item|
       self.write_TypeUtxoWithAddress(item)
-    end
-  end
-
-  # The Sequence<T> type for TypeWalletTxInfo2.
-
-  def write_SequenceTypeWalletTxInfo2(items)
-    pack_into(4, 'l>', items.size)
-
-    items.each do |item|
-      self.write_TypeWalletTxInfo2(item)
     end
   end
 
@@ -3729,6 +3726,27 @@ class SwapReport
   end
 end
   
+  # Record type TotalUtxoInfo
+class TotalUtxoInfo
+  attr_reader :list_unspent_result_entry, :utxo_spend_info
+
+  def initialize(list_unspent_result_entry:, utxo_spend_info:)
+    @list_unspent_result_entry = list_unspent_result_entry
+    @utxo_spend_info = utxo_spend_info
+  end
+
+  def ==(other)
+    if @list_unspent_result_entry != other.list_unspent_result_entry
+      return false
+    end
+    if @utxo_spend_info != other.utxo_spend_info
+      return false
+    end
+
+    true
+  end
+end
+  
   # Record type Txid
 class Txid
   attr_reader :value
@@ -3850,31 +3868,6 @@ class WalletTxInfo
       return false
     end
     if @wallet_conflicts != other.wallet_conflicts
-      return false
-    end
-
-    true
-  end
-end
-  
-  # Record type WalletTxInfo2
-class WalletTxInfo2
-  attr_reader :outpoint, :listunspent, :spend_info
-
-  def initialize(outpoint:, listunspent:, spend_info:)
-    @outpoint = outpoint
-    @listunspent = listunspent
-    @spend_info = spend_info
-  end
-
-  def ==(other)
-    if @outpoint != other.outpoint
-      return false
-    end
-    if @listunspent != other.listunspent
-      return false
-    end
-    if @spend_info != other.spend_info
       return false
     end
 
@@ -4078,7 +4071,7 @@ end
   end
   def list_all_utxo_spend_info()
     result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info,uniffi_clone_pointer(),)
-    return result.consumeIntoSequenceTypeWalletTxInfo2
+    return result.consumeIntoSequenceTypeTotalUtxoInfo
   end
   def lock_unspendable_utxos()
       Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos,uniffi_clone_pointer(),)

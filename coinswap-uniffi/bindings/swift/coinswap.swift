@@ -605,7 +605,7 @@ public protocol TakerProtocol: AnyObject, Sendable {
     
     func getWalletName() throws  -> String
     
-    func listAllUtxoSpendInfo() throws  -> [WalletTxInfo2]
+    func listAllUtxoSpendInfo() throws  -> [TotalUtxoInfo]
     
     func lockUnspendableUtxos() throws 
     
@@ -774,8 +774,8 @@ open func getWalletName()throws  -> String  {
 })
 }
     
-open func listAllUtxoSpendInfo()throws  -> [WalletTxInfo2]  {
-    return try  FfiConverterSequenceTypeWalletTxInfo2.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
+open func listAllUtxoSpendInfo()throws  -> [TotalUtxoInfo]  {
+    return try  FfiConverterSequenceTypeTotalUtxoInfo.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
     uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info(self.uniffiClonePointer(),$0
     )
 })
@@ -2830,6 +2830,76 @@ public func FfiConverterTypeSwapReport_lower(_ value: SwapReport) -> RustBuffer 
 }
 
 
+public struct TotalUtxoInfo {
+    public var listUnspentResultEntry: ListUnspentResultEntry
+    public var utxoSpendInfo: UtxoSpendInfo
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(listUnspentResultEntry: ListUnspentResultEntry, utxoSpendInfo: UtxoSpendInfo) {
+        self.listUnspentResultEntry = listUnspentResultEntry
+        self.utxoSpendInfo = utxoSpendInfo
+    }
+}
+
+#if compiler(>=6)
+extension TotalUtxoInfo: Sendable {}
+#endif
+
+
+extension TotalUtxoInfo: Equatable, Hashable {
+    public static func ==(lhs: TotalUtxoInfo, rhs: TotalUtxoInfo) -> Bool {
+        if lhs.listUnspentResultEntry != rhs.listUnspentResultEntry {
+            return false
+        }
+        if lhs.utxoSpendInfo != rhs.utxoSpendInfo {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(listUnspentResultEntry)
+        hasher.combine(utxoSpendInfo)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTotalUtxoInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TotalUtxoInfo {
+        return
+            try TotalUtxoInfo(
+                listUnspentResultEntry: FfiConverterTypeListUnspentResultEntry.read(from: &buf), 
+                utxoSpendInfo: FfiConverterTypeUtxoSpendInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TotalUtxoInfo, into buf: inout [UInt8]) {
+        FfiConverterTypeListUnspentResultEntry.write(value.listUnspentResultEntry, into: &buf)
+        FfiConverterTypeUtxoSpendInfo.write(value.utxoSpendInfo, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTotalUtxoInfo_lift(_ buf: RustBuffer) throws -> TotalUtxoInfo {
+    return try FfiConverterTypeTotalUtxoInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTotalUtxoInfo_lower(_ value: TotalUtxoInfo) -> RustBuffer {
+    return FfiConverterTypeTotalUtxoInfo.lower(value)
+}
+
+
 public struct Txid {
     public var value: String
 
@@ -3195,84 +3265,6 @@ public func FfiConverterTypeWalletTxInfo_lift(_ buf: RustBuffer) throws -> Walle
 #endif
 public func FfiConverterTypeWalletTxInfo_lower(_ value: WalletTxInfo) -> RustBuffer {
     return FfiConverterTypeWalletTxInfo.lower(value)
-}
-
-
-public struct WalletTxInfo2 {
-    public var outpoint: OutPoint
-    public var listunspent: ListUnspentResultEntry
-    public var spendInfo: UtxoSpendInfo
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(outpoint: OutPoint, listunspent: ListUnspentResultEntry, spendInfo: UtxoSpendInfo) {
-        self.outpoint = outpoint
-        self.listunspent = listunspent
-        self.spendInfo = spendInfo
-    }
-}
-
-#if compiler(>=6)
-extension WalletTxInfo2: Sendable {}
-#endif
-
-
-extension WalletTxInfo2: Equatable, Hashable {
-    public static func ==(lhs: WalletTxInfo2, rhs: WalletTxInfo2) -> Bool {
-        if lhs.outpoint != rhs.outpoint {
-            return false
-        }
-        if lhs.listunspent != rhs.listunspent {
-            return false
-        }
-        if lhs.spendInfo != rhs.spendInfo {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(outpoint)
-        hasher.combine(listunspent)
-        hasher.combine(spendInfo)
-    }
-}
-
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeWalletTxInfo2: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WalletTxInfo2 {
-        return
-            try WalletTxInfo2(
-                outpoint: FfiConverterTypeOutPoint.read(from: &buf), 
-                listunspent: FfiConverterTypeListUnspentResultEntry.read(from: &buf), 
-                spendInfo: FfiConverterTypeUtxoSpendInfo.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: WalletTxInfo2, into buf: inout [UInt8]) {
-        FfiConverterTypeOutPoint.write(value.outpoint, into: &buf)
-        FfiConverterTypeListUnspentResultEntry.write(value.listunspent, into: &buf)
-        FfiConverterTypeUtxoSpendInfo.write(value.spendInfo, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeWalletTxInfo2_lift(_ buf: RustBuffer) throws -> WalletTxInfo2 {
-    return try FfiConverterTypeWalletTxInfo2.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeWalletTxInfo2_lower(_ value: WalletTxInfo2) -> RustBuffer {
-    return FfiConverterTypeWalletTxInfo2.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -3958,6 +3950,31 @@ fileprivate struct FfiConverterSequenceTypeOutPoint: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeTotalUtxoInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [TotalUtxoInfo]
+
+    public static func write(_ value: [TotalUtxoInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTotalUtxoInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TotalUtxoInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TotalUtxoInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTotalUtxoInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTxid: FfiConverterRustBuffer {
     typealias SwiftType = [Txid]
 
@@ -4000,31 +4017,6 @@ fileprivate struct FfiConverterSequenceTypeUtxoWithAddress: FfiConverterRustBuff
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeUtxoWithAddress.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceTypeWalletTxInfo2: FfiConverterRustBuffer {
-    typealias SwiftType = [WalletTxInfo2]
-
-    public static func write(_ value: [WalletTxInfo2], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeWalletTxInfo2.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [WalletTxInfo2] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [WalletTxInfo2]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeWalletTxInfo2.read(from: &buf))
         }
         return seq
     }
@@ -4156,7 +4148,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_coinswap_ffi_checksum_method_taker_get_wallet_name() != 45636) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_coinswap_ffi_checksum_method_taker_list_all_utxo_spend_info() != 32425) {
+    if (uniffi_coinswap_ffi_checksum_method_taker_list_all_utxo_spend_info() != 28116) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taker_lock_unspendable_utxos() != 12155) {

@@ -5,7 +5,7 @@
 use crate::types::{
     Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
     ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
-    SwapReport, TakerError, Txid, UtxoSpendInfo, WalletTxInfo, WalletTxInfo2,
+    SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
 };
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
@@ -59,27 +59,6 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
     }
 }
 
-#[derive(uniffi::Enum)]
-pub enum TakerBehavior {
-    Normal,
-    DropConnectionAfterFullSetup,
-    BroadcastContractAfterFullSetup,
-}
-
-impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
-    fn from(behavior: TakerBehavior) -> Self {
-        match behavior {
-            TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
-            TakerBehavior::DropConnectionAfterFullSetup => {
-                coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
-            }
-            TakerBehavior::BroadcastContractAfterFullSetup => {
-                coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
-            }
-        }
-    }
-}
-
 #[derive(uniffi::Object)]
 pub struct Taker {
     taker: Mutex<CoinswapTaker>,
@@ -118,7 +97,7 @@ impl Taker {
         }))
     }
 
-    pub fn send_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
+    pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -209,7 +188,7 @@ impl Taker {
         Ok(Address::from(external_address))
     }
 
-    pub fn list_all_utxo_spend_info(&self) -> Result<Vec<WalletTxInfo2>, TakerError> {
+    pub fn list_all_utxo_spend_info(&self) -> Result<Vec<TotalUtxoInfo>, TakerError> {
         let entries = self
             .taker
             .lock()
@@ -316,10 +295,9 @@ impl Taker {
                     },
                 };
 
-                WalletTxInfo2 {
-                    outpoint: OutPoint::from(coinswapOutPoint::new(cs_utxo.txid, cs_utxo.vout)),
-                    listunspent: utxo,
-                    spend_info,
+                TotalUtxoInfo {
+                    list_unspent_result_entry: utxo,
+                    utxo_spend_info: spend_info,
                 }
             })
             .collect())
@@ -434,7 +412,7 @@ impl Taker {
             msg: format!("Fetch offers error: {:?}", e),
         })?;
 
-        Ok(OfferBook::from(&*offerbook))
+        Ok(OfferBook::from(offerbook))
     }
 
     pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
@@ -527,9 +505,7 @@ impl Taker {
 #[uniffi::export]
 pub fn fetch_mempool_fees() -> Result<FeeRates, TakerError> {
     let fees = FeeEstimator::fetch_mempool_fees()
-        .or_else(|_mempool_err| {
-            FeeEstimator::fetch_esplora_fees()
-        })
+        .or_else(|_mempool_err| FeeEstimator::fetch_esplora_fees())
         .map_err(|e| TakerError::Network {
             msg: format!("Both fee APIs failed: {:?}", e),
         })?;
@@ -583,4 +559,11 @@ pub fn create_default_rpc_config() -> RPCConfig {
         password: "password".to_string(),
         wallet_name: "coinswap_wallet".to_string(),
     }
+}
+
+#[uniffi::export]
+pub fn setup_logging(data_dir: Option<String>) -> Result<(), TakerError> {
+    let path = data_dir.map(PathBuf::from);
+    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    Ok(())
 }

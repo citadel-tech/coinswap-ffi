@@ -72,6 +72,27 @@ impl From<CoinswapTakerError> for TakerError {
     }
 }
 
+#[derive(uniffi::Enum)]
+pub enum TakerBehavior {
+    Normal,
+    DropConnectionAfterFullSetup,
+    BroadcastContractAfterFullSetup,
+}
+
+impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
+    fn from(behavior: TakerBehavior) -> Self {
+        match behavior {
+            TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
+            TakerBehavior::DropConnectionAfterFullSetup => {
+                coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
+            }
+            TakerBehavior::BroadcastContractAfterFullSetup => {
+                coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
+            }
+        }
+    }
+}
+
 #[derive(uniffi::Record)]
 pub struct Balances {
     pub regular: i64,
@@ -233,11 +254,10 @@ pub struct UtxoSpendInfo {
     pub original_multisig_redeemscript: Option<ScriptBuf>,
 }
 
-#[derive(Clone, uniffi::Record)]
-pub struct WalletTxInfo2 {
-    pub outpoint: OutPoint,
-    pub listunspent: ListUnspentResultEntry,
-    pub spend_info: UtxoSpendInfo,
+#[derive(uniffi::Record)]
+pub struct TotalUtxoInfo {
+    pub list_unspent_result_entry: ListUnspentResultEntry,
+    pub utxo_spend_info: UtxoSpendInfo,
 }
 
 #[derive(Clone, uniffi::Record)]
