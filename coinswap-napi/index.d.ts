@@ -281,7 +281,7 @@ export interface TaprootSwapParams {
 }
 
 export interface Txid {
-  hex: string
+  value: string
 }
 
 export interface UtxoSpendInfo {

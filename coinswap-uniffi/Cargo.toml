@@ -8,7 +8,8 @@ crate-type = ["cdylib"]
 name = "coinswap_ffi"
 
 [features]
-integration-test = []
+default = []
+integration-test = ["coinswap/integration-test"]
 
 [[bin]]
 name = "uniffi-bindgen"
