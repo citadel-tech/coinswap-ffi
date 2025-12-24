@@ -28,3 +28,6 @@ log = "0.4.29"
 
 [build-dependencies]
 uniffi = { version = "0.30.0", features = [ "build" ] }
+
+[dev-dependencies]
+env_logger = "0.10"
