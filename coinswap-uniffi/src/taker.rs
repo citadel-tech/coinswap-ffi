@@ -96,6 +96,26 @@ impl Taker {
         }))
     }
 
+    pub fn setup_logging(&self, data_dir: Option<String>) -> Result<(), TakerError> {
+        let path = data_dir.map(PathBuf::from);
+        coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+        Ok(())
+    }
+
+    pub fn setup_logging_with_level(&self, data_dir: Option<String>, log_level: String) -> Result<(), TakerError> {
+        let path = data_dir.map(PathBuf::from);
+        let level = match log_level.to_lowercase().as_str() {
+            "trace" => log::LevelFilter::Trace,
+            "debug" => log::LevelFilter::Debug,
+            "info" => log::LevelFilter::Info,
+            "warn" => log::LevelFilter::Warn,
+            "error" => log::LevelFilter::Error,
+            _ => log::LevelFilter::Info,
+        };
+        coinswap::utill::setup_taker_logger(level, true, path);
+        Ok(())
+    }
+
     pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
