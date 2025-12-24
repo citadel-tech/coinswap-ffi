@@ -1,0 +1,407 @@
+#!/bin/bash
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COINSWAP_REPO="https://github.com/citadel-tech/coinswap.git"
+COINSWAP_DIR="$SCRIPT_DIR/.coinswap-test-stack"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.ffi-test.yml"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed. Please install Docker first."
+        exit 1
+    fi
+    
+    if ! docker info &> /dev/null; then
+        print_error "Docker is not running. Please start Docker first."
+        exit 1
+    fi
+}
+
+setup_coinswap_repo() {
+    if [ ! -d "$COINSWAP_DIR" ]; then
+        print_info "Cloning coinswap repository for Docker images..."
+        git clone --depth 1 "$COINSWAP_REPO" "$COINSWAP_DIR"
+    else
+        print_info "Coinswap repository already exists at $COINSWAP_DIR"
+    fi
+}
+
+generate_test_compose() {
+    print_info "Generating FFI test docker-compose configuration..."
+    
+    cat > "$COMPOSE_FILE" << 'COMPOSE_EOF'
+services:
+  bitcoind:
+    image: coinswap/bitcoin-mutinynet:latest
+    container_name: coinswap-ffi-bitcoind
+    command: >
+      bitcoind -datadir=/home/bitcoin/.bitcoin
+      -server=1 -rpcuser=user -rpcpassword=password
+      -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0
+      -regtest=1 -fallbackfee=0.00001000
+      -txindex=1 -blockfilterindex=1
+      -rpcport=18443
+      -zmqpubrawblock=tcp://127.0.0.1:28332
+      -zmqpubrawtx=tcp://127.0.0.1:28332
+    ports:
+      - "127.0.0.1:18443:18443"
+      - "127.0.0.1:28332:28332"
+    volumes:
+      - bitcoin-test-data:/home/bitcoin/.bitcoin
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=user", "-rpcpassword=password", "getblockchaininfo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  tor:
+    image: osminogin/tor-simple
+    container_name: coinswap-ffi-tor
+    volumes:
+      - tor-test-data:/var/lib/tor
+      - ./torrc.ffi-test:/etc/tor/torrc:ro
+    ports:
+      - "127.0.0.1:9050:9050"
+      - "127.0.0.1:9051:9051"
+      - "127.0.0.1:6103:6103"
+      - "127.0.0.1:16103:16103"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9050"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  maker1:
+    image: coinswap/coinswap:latest
+    container_name: coinswap-ffi-maker1
+    network_mode: "service:tor"
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+      tor:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        sleep 10
+        echo "Waiting for Tor to be fully ready..."
+        i=0
+        while [ $$i -lt 30 ]; do
+          if nc -z 127.0.0.1 9050 2>/dev/null; then
+            echo "Tor is ready!"
+            break
+          fi
+          i=$$((i + 1))
+          echo "Waiting for Tor... attempt $$i/30"
+          sleep 2
+        done
+        
+        mkdir -p /home/coinswap/.coinswap/maker
+        
+        printf '%s\n' \
+          "network_port = 6102" \
+          "rpc_port = 6103" \
+          "socks_port = 9050" \
+          "control_port = 9051" \
+          "tor_auth_password = password" \
+          "min_swap_amount = 1000" \
+          "fidelity_amount = 500000" \
+          "fidelity_timelock = 100" \
+          "connection_type = TOR" \
+          "base_fee = 10" \
+          "amount_relative_fee_ppt = 100" \
+          > /home/coinswap/.coinswap/maker/config.toml
+        
+        makerd -r bitcoind:18443 -a user:password -w maker1-test-wallet
+    volumes:
+      - maker1-test-data:/home/coinswap/.coinswap
+    environment:
+      - RUST_LOG=info
+
+  maker2:
+    image: coinswap/coinswap:latest
+    container_name: coinswap-ffi-maker2
+    network_mode: "service:tor"
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+      tor:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        sleep 15
+        echo "Waiting for Tor to be fully ready..."
+        i=0
+        while [ $$i -lt 30 ]; do
+          if nc -z 127.0.0.1 9050 2>/dev/null; then
+            echo "Tor is ready!"
+            break
+          fi
+          i=$$((i + 1))
+          echo "Waiting for Tor... attempt $$i/30"
+          sleep 2
+        done
+        
+        mkdir -p /home/coinswap/.coinswap/maker
+        
+        printf '%s\n' \
+          "network_port = 16102" \
+          "rpc_port = 16103" \
+          "socks_port = 9050" \
+          "control_port = 9051" \
+          "tor_auth_password = password" \
+          "min_swap_amount = 1000" \
+          "fidelity_amount = 500000" \
+          "fidelity_timelock = 100" \
+          "connection_type = TOR" \
+          "base_fee = 10" \
+          "amount_relative_fee_ppt = 100" \
+          > /home/coinswap/.coinswap/maker/config.toml
+        
+        makerd -r bitcoind:18443 -a user:password -w maker2-test-wallet
+    volumes:
+      - maker2-test-data:/home/coinswap/.coinswap
+    environment:
+      - RUST_LOG=info
+
+volumes:
+  bitcoin-test-data:
+    driver: local
+  tor-test-data:
+    driver: local
+  maker1-test-data:
+    driver: local
+  maker2-test-data:
+    driver: local
+
+networks:
+  default:
+    name: coinswap-ffi-test-network
+COMPOSE_EOF
+
+    print_success "Generated: $COMPOSE_FILE"
+}
+
+generate_torrc() {
+    print_info "Generating torrc for FFI tests..."
+    
+    cat > "$SCRIPT_DIR/torrc.ffi-test" << 'EOF'
+SocksPort 127.0.0.1:9050
+ControlPort 127.0.0.1:9051
+HashedControlPassword 16:2FAC223B5F1BEF3360CBA4F1C924E31D916C7804637A757044216DF201
+CookieAuthentication 0
+DataDirectory /var/lib/tor
+EOF
+
+    print_success "Generated: $SCRIPT_DIR/torrc.ffi-test"
+}
+
+build_images() {
+    print_info "Building Docker images from coinswap repo..."
+    cd "$COINSWAP_DIR"
+    
+    # Build Bitcoin image
+    print_info "Building Bitcoin image..."
+    ./docker-setup build-bitcoin
+    
+    # Build Coinswap image
+    print_info "Building Coinswap image..."
+    ./docker-setup build
+    
+    cd "$SCRIPT_DIR"
+    print_success "Images built successfully"
+}
+
+start_services() {
+    print_info "Starting FFI test services..."
+    
+    if docker compose -f "$COMPOSE_FILE" up -d; then
+        print_success "Services started successfully"
+        
+        print_info "Waiting for services to be ready..."
+
+        print_info "Checking service health..."
+        docker compose -f "$COMPOSE_FILE" ps
+        
+        print_info "Mining initial blocks for coinbase maturity..."
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            createwallet "test" || true
+        
+        local addr=$(docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            -rpcwallet=test getnewaddress)
+        
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            generatetoaddress 101 "$addr"
+        
+        print_info "Funding maker wallets with 1 BTC each..."
+        
+        # Get addresses from maker wallets
+        sleep 15
+        local maker1_addr=$(docker logs coinswap-ffi-maker1 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+        local maker2_addr=$(docker logs coinswap-ffi-maker2 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+       
+        # Send 1 BTC to each maker
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            -rpcwallet=test sendtoaddress "$maker1_addr" 1.0
+        
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            -rpcwallet=test sendtoaddress "$maker2_addr" 1.0
+        
+        # Mine a block to confirm the funding maker transactions
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            generatetoaddress 1 "$addr"
+
+        # Mine a block to confirm the fidelity bond transaction
+        sleep 30
+        docker exec coinswap-ffi-bitcoind bitcoin-cli \
+            -regtest -rpcuser=user -rpcpassword=password \
+            generatetoaddress 5 "$addr"
+        
+        print_success "Makers funded with 1 BTC each"
+        
+        print_success "FFI test environment is ready!"
+        echo ""
+        echo "Connection details:"
+        echo "  Bitcoin RPC: localhost:18443 (user:password)"
+        echo "  Bitcoin ZMQ: tcp://localhost:28332"
+        echo "  Tor SOCKS: localhost:9050"
+        echo "  Maker1 RPC: localhost:6103 (funded with 1 BTC)"
+        echo "  Maker2 RPC: localhost:16103 (funded with 1 BTC)"
+        echo ""
+        echo "Run tests with: cargo test --features integration-test"
+    else
+        print_error "Failed to start services"
+        exit 1
+    fi
+}
+
+stop_services() {
+    print_info "Stopping FFI test services..."
+    docker compose -f "$COMPOSE_FILE" down
+    print_success "Services stopped"
+}
+
+cleanup() {
+    print_info "Cleaning up FFI test environment..."
+    
+    # Clean up wallet directories in containers before stopping them
+    print_info "Cleaning wallet directories in containers..."
+    # docker exec coinswap-ffi-bitcoind rm -rf /home/bitcoin/.bitcoin/regtest/wallets/* 2>/dev/null || true
+    docker exec coinswap-ffi-bitcoind rm -rf /home/bitcoin/* 2>/dev/null || true
+    docker exec coinswap-ffi-maker1 rm -rf /home/coinswap/* 2>/dev/null || true
+    docker exec coinswap-ffi-maker2 rm -rf /home/coinswap/* 2>/dev/null || true
+    
+    docker compose -f "$COMPOSE_FILE" down -v
+    rm -f "$COMPOSE_FILE" "$SCRIPT_DIR/torrc.ffi-test"
+    print_success "Cleanup complete"
+}
+
+show_logs() {
+    if [ -n "$1" ]; then
+        docker compose -f "$COMPOSE_FILE" logs -f "$1"
+    else
+        docker compose -f "$COMPOSE_FILE" logs -f
+    fi
+}
+
+show_status() {
+    docker compose -f "$COMPOSE_FILE" ps
+}
+
+show_help() {
+    echo "FFI Test Docker Setup Script"
+    echo ""
+    echo "Usage: $0 [COMMAND]"
+    echo ""
+    echo "Commands:"
+    echo "  setup      Setup test environment (clone repo, build images)"
+    echo "  start      Start FFI test services (bitcoind, tor, 2 makers)"
+    echo "  stop       Stop FFI test services"
+    echo "  restart    Restart FFI test services"
+    echo "  logs [svc] Show logs (bitcoind, tor, maker1, maker2)"
+    echo "  status     Show service status"
+    echo "  cleanup    Stop services and remove all data"
+    echo ""
+    echo "Examples:"
+    echo "  $0 setup    # First time setup"
+    echo "  $0 start    # Start services for testing"
+    echo "  cargo test --features integration-test  # Run tests"
+    echo "  $0 logs maker1  # Check maker logs"
+    echo "  $0 stop     # Stop when done"
+}
+
+case "${1:-}" in
+    "setup")
+        check_docker
+        setup_coinswap_repo
+        build_images
+        generate_torrc
+        generate_test_compose
+        print_success "Setup complete! Run '$0 start' to start services"
+        ;;
+    "start")
+        check_docker
+        if [ ! -f "$COMPOSE_FILE" ]; then
+            generate_torrc
+            generate_test_compose
+        fi
+        start_services
+        ;;
+    "stop")
+        stop_services
+        ;;
+    "restart")
+        stop_services
+        sleep 2
+        start_services
+        ;;
+    "logs")
+        show_logs "$2"
+        ;;
+    "status")
+        show_status
+        ;;
+    "cleanup")
+        cleanup
+        ;;
+    "help"|"--help"|"-h"|"")
+        show_help
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac
