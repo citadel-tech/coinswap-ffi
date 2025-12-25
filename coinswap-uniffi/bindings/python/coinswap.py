@@ -542,7 +542,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_offerbook() != 1376:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 58322:
+    if lib.uniffi_coinswap_ffi_checksum_constructor_taker_init() != 16202:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_constructor_taproottaker_init() != 33076:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -663,6 +663,7 @@ _UniffiLib.uniffi_coinswap_ffi_fn_free_taker.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_free_taker.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_constructor_taker_init.argtypes = (
+    _UniffiRustBuffer,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
@@ -3476,6 +3477,33 @@ class _UniffiConverterOptionalTypeSwapReport(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterOptionalTypeTakerBehavior(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeTakerBehavior.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeTakerBehavior.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeTakerBehavior.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalSequenceTypeOutPoint(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -3839,12 +3867,14 @@ class Taker():
         inst._pointer = pointer
         return inst
     @classmethod
-    def init(cls, data_dir: "typing.Optional[str]",wallet_file_name: "typing.Optional[str]",rpc_config: "typing.Optional[RpcConfig]",control_port: "typing.Optional[int]",tor_auth_password: "typing.Optional[str]",zmq_addr: "str",password: "typing.Optional[str]"):
+    def init(cls, data_dir: "typing.Optional[str]",wallet_file_name: "typing.Optional[str]",rpc_config: "typing.Optional[RpcConfig]",behavior: "typing.Optional[TakerBehavior]",control_port: "typing.Optional[int]",tor_auth_password: "typing.Optional[str]",zmq_addr: "str",password: "typing.Optional[str]"):
         _UniffiConverterOptionalString.check_lower(data_dir)
         
         _UniffiConverterOptionalString.check_lower(wallet_file_name)
         
         _UniffiConverterOptionalTypeRpcConfig.check_lower(rpc_config)
+        
+        _UniffiConverterOptionalTypeTakerBehavior.check_lower(behavior)
         
         _UniffiConverterOptionalUInt16.check_lower(control_port)
         
@@ -3859,6 +3889,7 @@ class Taker():
         _UniffiConverterOptionalString.lower(data_dir),
         _UniffiConverterOptionalString.lower(wallet_file_name),
         _UniffiConverterOptionalTypeRpcConfig.lower(rpc_config),
+        _UniffiConverterOptionalTypeTakerBehavior.lower(behavior),
         _UniffiConverterOptionalUInt16.lower(control_port),
         _UniffiConverterOptionalString.lower(tor_auth_password),
         _UniffiConverterString.lower(zmq_addr),
