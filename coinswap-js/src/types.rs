@@ -3,7 +3,6 @@
 //! This module contains types that are used across multiple modules
 //! to avoid duplicate type definitions in TypeScript.
 
-use std::{error::Error, fmt};
 use coinswap::{
   bitcoin::{
     absolute::LockTime as csLocktime, Address as csAddress, Amount as csAmount,
@@ -12,7 +11,8 @@ use coinswap::{
   bitcoind::bitcoincore_rpc::Auth,
   protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
   taker::offers::{
-    MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress, OfferBook as csOfferBook,
+    MakerAddress as csMakerAddress, MakerOfferCandidate as csMakerOfferCandidate,
+    MakerProtocol as csMakerProtocol, MakerState as csMakerState, OfferBook as csOfferBook,
   },
   wallet::{
     ffi::{MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport},
@@ -20,6 +20,7 @@ use coinswap::{
   },
 };
 use napi_derive::napi;
+use std::{error::Error, fmt};
 
 #[napi]
 #[derive(Debug)]
@@ -382,23 +383,6 @@ impl From<csOffer> for Offer {
 }
 
 #[napi(object)]
-pub struct OfferAndAddress {
-  pub offer: Offer,
-  pub address: MakerAddress,
-  pub timestamp: String,
-}
-
-impl From<csOfferAndAddress> for OfferAndAddress {
-  fn from(offer_and_addr: csOfferAndAddress) -> Self {
-    Self {
-      offer: Offer::from(offer_and_addr.offer),
-      address: MakerAddress::from(offer_and_addr.address),
-      timestamp: "".to_string(), // Static null value since we don't need it
-    }
-  }
-}
-
-#[napi(object)]
 pub struct MakerAddress {
   pub address: String,
 }
@@ -412,25 +396,84 @@ impl From<csMakerAddress> for MakerAddress {
 }
 
 #[napi(object)]
+#[derive(Debug, Clone)]
+pub struct MakerState {
+    /// State type: "Good", "Unresponsive", or "Bad"
+    pub state_type: String,
+    /// Number of retries (only for Unresponsive state)
+    pub retries: Option<u8>,
+}
+
+impl From<csMakerState> for MakerState {
+    fn from(state: csMakerState) -> Self {
+        match state {
+            csMakerState::Good => MakerState {
+                state_type: "Good".to_string(),
+                retries: None,
+            },
+            csMakerState::Unresponsive { retries } => MakerState {
+                state_type: "Unresponsive".to_string(),
+                retries: Some(retries),
+            },
+            csMakerState::Bad => MakerState {
+                state_type: "Bad".to_string(),
+                retries: None,
+            },
+        }
+    }
+}
+
+#[napi(object)]
+#[derive(Debug, Clone)]
+pub struct MakerProtocol {
+    /// Protocol type: "Legacy" or "Taproot"
+    pub protocol_type: String,
+}
+
+impl From<csMakerProtocol> for MakerProtocol {
+    fn from(protocol: csMakerProtocol) -> Self {
+        match protocol {
+            csMakerProtocol::Legacy => MakerProtocol {
+                protocol_type: "Legacy".to_string(),
+            },
+            csMakerProtocol::Taproot => MakerProtocol {
+                protocol_type: "Taproot".to_string(),
+            },
+        }
+    }
+}
+
+#[napi(object)]
+pub struct MakerOfferCandidate {
+  pub address: MakerAddress,
+  pub offer: Option<Offer>,
+  pub state: MakerState,
+  pub protocol: Option<MakerProtocol>,
+}
+
+impl From<csMakerOfferCandidate> for MakerOfferCandidate {
+  fn from(maker: csMakerOfferCandidate) -> Self {
+    Self {
+      address: maker.address.into(),
+      offer: maker.offer.map(Offer::from),
+      state: maker.state.into(),
+      protocol: maker.protocol.map(|p| p.into()),
+    }
+  }
+}
+
+#[napi(object)]
 pub struct OfferBook {
-  pub good_makers: Vec<OfferAndAddress>,
-  pub all_makers: Vec<OfferAndAddress>,
+  pub makers: Vec<MakerOfferCandidate>,
 }
 
 impl From<&csOfferBook> for OfferBook {
   fn from(offerbook: &csOfferBook) -> Self {
     Self {
-      good_makers: offerbook
-        .all_good_makers()
-        .into_iter()
-        .cloned()
-        .map(OfferAndAddress::from)
-        .collect(),
-      all_makers: offerbook
+      makers: offerbook
         .all_makers()
         .into_iter()
-        .cloned()
-        .map(OfferAndAddress::from)
+        .map(MakerOfferCandidate::from)
         .collect(),
     }
   }
