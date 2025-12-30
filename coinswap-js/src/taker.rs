@@ -459,42 +459,6 @@ impl Taker {
     Ok(())
   }
 
-  /// Sync the offerbook with available makers
-  #[napi]
-  pub fn sync_offerbook(&mut self) -> Result<()> {
-    let mut taker = self
-      .inner
-      .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    taker
-      .sync_offerbook()
-      .map_err(|e| napi::Error::from_reason(format!("Sync offerbook error: {:?}", e)))?;
-    Ok(())
-  }
-
-  /// Get basic information about all good makers (limited due to private fields)
-  #[napi]
-  pub fn get_all_good_makers(&self) -> Result<Vec<String>> {
-    let mut taker = self
-      .inner
-      .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-
-    // Fetch fresh offers
-    let offerbook = taker
-      .fetch_offers()
-      .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
-    let good_makers = offerbook.all_good_makers();
-
-    // Since fields are private, we can only return addresses
-    let addresses = good_makers
-      .into_iter()
-      .map(|maker| maker.address.to_string())
-      .collect();
-
-    Ok(addresses)
-  }
-
   #[napi]
   pub fn display_offer(&self, maker_offer: Offer) -> Result<String> {
     let offer_json = serde_json::json!({
@@ -524,26 +488,6 @@ impl Taker {
       .recover_from_swap()
       .map_err(|e| napi::Error::from_reason(format!("Recover error: {:?}", e)))?;
     Ok(())
-  }
-
-  #[napi]
-  pub fn fetch_good_makers(&self) -> Result<Vec<String>> {
-    let mut taker = self
-      .inner
-      .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-
-    let offerbook = taker
-      .fetch_offers()
-      .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
-    let all_good_makers = offerbook.all_good_makers();
-
-    let addresses = all_good_makers
-      .into_iter()
-      .map(|maker| maker.address.to_string())
-      .collect();
-
-    Ok(addresses)
   }
 
   #[napi]
@@ -577,7 +521,7 @@ impl Taker {
       .fetch_offers()
       .map_err(|e| napi::Error::from_reason(format!("Fetch offers error: {:?}", e)))?;
 
-    Ok(OfferBook::from(offerbook))
+    Ok(OfferBook::from(&offerbook))
   }
 
   #[napi]

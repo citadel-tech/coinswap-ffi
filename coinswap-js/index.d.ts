@@ -19,14 +19,9 @@ export declare class Taker {
   /** Get wallet balances */
   getBalances(): Balances
   syncAndSave(): void
-  /** Sync the offerbook with available makers */
-  syncOfferbook(): void
-  /** Get basic information about all good makers (limited due to private fields) */
-  getAllGoodMakers(): Array<string>
   displayOffer(makerOffer: Offer): string
   /** Recover from a failed swap */
   recoverFromSwap(): void
-  fetchGoodMakers(): Array<string>
   fetchAllMakers(): Array<string>
   fetchOffers(): OfferBook
   static isWalletEncrypted(walletPath: string): boolean
@@ -52,14 +47,9 @@ export declare class TaprootTaker {
   /** Get wallet balances */
   getBalances(): Balances
   syncAndSave(): void
-  /** Sync the offerbook with available makers */
-  syncOfferbook(): void
-  /** Get basic information about all good makers (limited due to private fields) */
-  getAllGoodMakers(): Array<string>
   displayOffer(makerOffer: Offer): string
   /** Recover from a failed swap */
   recoverFromSwap(): void
-  fetchGoodMakers(): Array<string>
   fetchAllMakers(): Array<string>
   fetchOffers(): OfferBook
   static isWalletEncrypted(walletPath: string): boolean
@@ -154,6 +144,25 @@ export interface MakerFeeInfo {
   totalFee: number
 }
 
+export interface MakerOfferCandidate {
+  address: MakerAddress
+  offer?: Offer
+  state: MakerState
+  protocol?: MakerProtocol
+}
+
+export interface MakerProtocol {
+  /** Protocol type: "Legacy" or "Taproot" */
+  protocolType: string
+}
+
+export interface MakerState {
+  /** State type: "Good", "Unresponsive", or "Bad" */
+  stateType: string
+  /** Number of retries (only for Unresponsive state) */
+  retries?: number
+}
+
 export interface Offer {
   baseFee: number
   amountRelativeFeePct: number
@@ -166,15 +175,8 @@ export interface Offer {
   fidelity: FidelityProof
 }
 
-export interface OfferAndAddress {
-  offer: Offer
-  address: MakerAddress
-  timestamp: string
-}
-
 export interface OfferBook {
-  goodMakers: Array<OfferAndAddress>
-  allMakers: Array<OfferAndAddress>
+  makers: Array<MakerOfferCandidate>
 }
 
 export interface OutPoint {
