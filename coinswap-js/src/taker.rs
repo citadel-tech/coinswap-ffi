@@ -3,7 +3,7 @@
 //! This module provides N-API bindings for the coinswap taker functionality.
 
 use crate::types::{
-  Address, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
+  Address, AddressType, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
   ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
   SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo,
 };
@@ -211,25 +211,27 @@ impl Taker {
   }
 
   #[napi]
-  pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>> {
+  pub fn get_next_internal_addresses(&self, count: u32, address_type: AddressType) -> Result<Vec<Address>> {
+    let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
     let internal_addresses = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet()
-      .get_next_internal_addresses(count)
+      .get_next_internal_addresses(count, cs_address_type)
       .map_err(|e| napi::Error::from_reason(format!("Get internal addresses error: {:?}", e)))?;
     Ok(internal_addresses.into_iter().map(Address::from).collect())
   }
 
   #[napi]
-  pub fn get_next_external_address(&mut self) -> Result<Address> {
+  pub fn get_next_external_address(&mut self, address_type: AddressType) -> Result<Address> {
+    let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
     let external_address = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
       .get_wallet_mut()
-      .get_next_external_address()
+      .get_next_external_address(cs_address_type)
       .map_err(|e| napi::Error::from_reason(format!("Get next external address error: {:?}", e)))?;
     Ok(Address::from(external_address))
   }
@@ -276,13 +278,12 @@ impl Taker {
             safe: cs_utxo.safe,
           };
           let spend_info = match cs_info {
-            csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo {
+            csUtxoSpendInfo::SeedCoin { path, input_value, address_type: _ } => UtxoSpendInfo {
               spend_type: "SeedCoin".to_string(),
               path: Some(path),
               multisig_redeemscript: None,
               input_value: Some(Amount::from(input_value)),
               index: None,
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::IncomingSwapCoin {
               multisig_redeemscript,
@@ -292,7 +293,6 @@ impl Taker {
               multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
               input_value: None,
               index: None,
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::OutgoingSwapCoin {
               multisig_redeemscript,
@@ -302,7 +302,6 @@ impl Taker {
               multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
               input_value: None,
               index: None,
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::TimelockContract {
               swapcoin_multisig_redeemscript,
@@ -313,7 +312,6 @@ impl Taker {
               multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
               input_value: Some(Amount::from(input_value)),
               index: None,
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::HashlockContract {
               swapcoin_multisig_redeemscript,
@@ -324,7 +322,6 @@ impl Taker {
               multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
               input_value: Some(Amount::from(input_value)),
               index: None,
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
               spend_type: "FidelityBondCoin".to_string(),
@@ -332,19 +329,17 @@ impl Taker {
               multisig_redeemscript: None,
               input_value: Some(Amount::from(input_value)),
               index: Some(index),
-              original_multisig_redeemscript: None,
             },
             csUtxoSpendInfo::SweptCoin {
               path,
               input_value,
-              original_multisig_redeemscript,
+              address_type: _,
             } => UtxoSpendInfo {
               spend_type: "SweptCoin".to_string(),
               path: Some(path),
               multisig_redeemscript: None,
               input_value: Some(Amount::from(input_value)),
               index: None,
-              original_multisig_redeemscript: Some(ScriptBuf::from(original_multisig_redeemscript)),
             },
           };
           (utxo, spend_info)

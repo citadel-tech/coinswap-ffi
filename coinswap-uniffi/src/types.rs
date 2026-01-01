@@ -21,7 +21,7 @@ use coinswap::{
     },
     wallet::{
         Balances as CoinswapBalances, FidelityBond as csFidelityBond,
-        RPCConfig as CoinswapRPCConfig,
+        RPCConfig as CoinswapRPCConfig, AddressType as csAddressType,
         ffi::{
             MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport,
             restore_wallet_gui_app as cs_restore_wallet_gui_app,
@@ -30,7 +30,7 @@ use coinswap::{
 };
 use std::path::PathBuf;
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct RPCConfig {
     pub url: String,
     pub username: String,
@@ -180,7 +180,7 @@ pub struct GetTransactionResultDetail {
     pub abandoned: Option<bool>,
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct Amount {
     pub sats: i64,
 }
@@ -256,7 +256,6 @@ pub struct UtxoSpendInfo {
     pub multisig_redeemscript: Option<ScriptBuf>,
     pub input_value: Option<Amount>,
     pub index: Option<u32>,
-    pub original_multisig_redeemscript: Option<ScriptBuf>,
 }
 
 #[derive(uniffi::Record)]
@@ -272,7 +271,7 @@ pub struct FeeRates {
     pub economy: f64,
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct LockTime {
     pub lock_type: String,
     pub value: u32,
@@ -293,7 +292,7 @@ impl From<csLocktime> for LockTime {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct PublicKey {
     pub compressed: bool,
     pub inner: Vec<u8>,
@@ -308,7 +307,7 @@ impl From<csPublicKey> for PublicKey {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct FidelityProof {
     pub bond: FidelityBond,
     pub cert_hash: Vec<u8>,
@@ -325,7 +324,7 @@ impl From<csFidelityProof> for FidelityProof {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, Debug, uniffi::Record)]
 pub struct FidelityBond {
     pub amount: Amount,
     pub lock_time: LockTime,
@@ -345,7 +344,7 @@ impl From<csFidelityBond> for FidelityBond {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct Offer {
     pub base_fee: i64,
     pub amount_relative_fee_pct: f64,
@@ -374,7 +373,7 @@ impl From<csOffer> for Offer {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MakerAddress {
     pub address: String,
 }
@@ -387,7 +386,7 @@ impl From<csMakerAddress> for MakerAddress {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MakerState {
     /// State type: "Good", "Unresponsive", or "Bad"
     pub state_type: String,
@@ -414,7 +413,7 @@ impl From<csMakerState> for MakerState {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MakerProtocol {
     /// Protocol type: "Legacy" or "Taproot"
     pub protocol_type: String,
@@ -433,7 +432,28 @@ impl From<csMakerProtocol> for MakerProtocol {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct AddressType {
+    /// P2WPKH or P2TR
+    pub addr_type: String,
+}
+
+
+impl TryFrom<AddressType> for csAddressType {
+    type Error = TakerError;
+
+    fn try_from(addr: AddressType) -> Result<Self, Self::Error> {
+        match addr.addr_type.as_str() {
+            "P2TR" => Ok(csAddressType::P2TR),
+            "P2WPKH" => Ok(csAddressType::P2WPKH),
+            _ => Err(TakerError::General {
+                msg: format!("Invalid address type: {}", addr.addr_type),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MakerOfferCandidate {
     pub address: MakerAddress,
     pub offer: Option<Offer>,
@@ -452,7 +472,7 @@ impl From<csMakerOfferCandidate> for MakerOfferCandidate {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct OfferBook {
     pub makers: Vec<MakerOfferCandidate>,
 }
@@ -469,7 +489,7 @@ impl From<&csOfferBook> for OfferBook {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MakerFeeInfo {
     pub maker_index: u32,
     pub maker_address: String,
@@ -492,7 +512,7 @@ impl From<csMakerFeeInfo> for MakerFeeInfo {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct SwapReport {
     pub swap_id: String,
     pub swap_duration_seconds: f64,
@@ -515,7 +535,7 @@ pub struct SwapReport {
     pub output_swap_utxos: Vec<UtxoWithAddress>,
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct UtxoWithAddress {
     pub amount: i64,
     pub address: String,

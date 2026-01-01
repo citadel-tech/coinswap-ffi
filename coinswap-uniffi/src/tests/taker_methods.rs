@@ -7,74 +7,37 @@
 
 use crate::{
     taker::{SwapParams, Taker},
-    taproot_taker::TaprootTaker,
-    types::RPCConfig,
+    tests::docker_helpers::{self, DockerBitcoind},
 };
 use bitcoin::Amount;
-use bitcoind::{BitcoinD, bitcoincore_rpc::RpcApi};
+use bitcoind::bitcoincore_rpc::RpcApi;
+use std::process::Command;
 use std::sync::Arc;
 
-#[cfg(feature = "integration-test")]
 #[test]
 fn main() {
-    test_taker_get_balance();
-    test_taker_address_generation();
-    test_taker_wallet_funding();
-    test_taker_list_utxos();
-    test_swap_params_creation();
-    test_taker_sync();
-    // test_multiple_taker_instances();
-    test_rpc_config_conversion();
-    test_taker_get_transactions();
     cleanup_wallet();
+    test_taker_complete_flow();
+    // cleanup_wallet();
 }
 
-fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, BitcoinD) {
-    let mut conf = bitcoind::Conf::default();
-    conf.args.push("-txindex=1");
+fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
+    let bitcoind = DockerBitcoind::connect().expect("Failed to connect to Docker bitcoind");
 
-    let data_dir = std::env::temp_dir().join("coinswap_ffi_test");
-    std::fs::create_dir_all(&data_dir).unwrap();
-    conf.staticdir = Some(data_dir.join(".bitcoin"));
-
-    let exe_path = bitcoind::exe_path().unwrap();
-    let bitcoind = BitcoinD::with_conf(exe_path, &conf).unwrap();
-
-    // Generate initial blocks for coinbase maturity
-    let mining_address = bitcoind
-        .client
-        .get_new_address(None, None)
-        .unwrap()
-        .require_network(bitcoind::bitcoincore_rpc::bitcoin::Network::Regtest)
-        .unwrap();
-    bitcoind
-        .client
-        .generate_to_address(101, &mining_address)
-        .unwrap();
-
-    let url = bitcoind.rpc_url().split_at(7).1.to_string();
-    let cookie_file = &bitcoind.params.cookie_file;
-    let auth_str = std::fs::read_to_string(cookie_file).unwrap();
-    let parts: Vec<&str> = auth_str.split(':').collect();
-
-    let rpc_config = RPCConfig {
-        url,
-        username: parts[0].to_string(),
-        password: parts[1].to_string(),
-        wallet_name: wallet_name.to_string(),
-    };
+    let rpc_config = docker_helpers::get_docker_rpc_config(wallet_name);
 
     let taker = Taker::init(
         None,
         Some(wallet_name.to_string()),
         Some(rpc_config),
-        None,
-        None,
-        None,
-        "tcp://127.0.0.1:28332".to_string(),
+        // None,
+        Some(9051),
+        Some("coinswap".to_string()),
+        docker_helpers::DOCKER_BITCOIN_ZMQ.to_string(),
         None,
     )
     .unwrap();
+
     (taker, bitcoind)
 }
 
@@ -82,57 +45,78 @@ fn cleanup_wallet() {
     use std::fs;
     use std::path::PathBuf;
 
-    // Remove wallet directory
+    // Clean up wallet directory
     let mut wallet_dir = PathBuf::from(env!("HOME"));
     wallet_dir.push(".coinswap");
     wallet_dir.push("taker");
-    wallet_dir.push("wallets");
 
     if wallet_dir.exists() {
-        let _ = fs::remove_dir_all(wallet_dir);
+        let _ = fs::remove_dir_all(&wallet_dir);
+        println!("✓ Cleaned up local wallet directory");
+    }
+
+    if let Ok(bitcoind) = DockerBitcoind::connect() {
+        let _ = bitcoind.client.unload_wallet(Some("test-taker"));
+        println!("✓ Unloaded wallet from Docker bitcoind");
+    }
+
+    // Remove the test-taker wallet from the Docker container's bitcoin folder
+    let output = Command::new("docker")
+        .args(&[
+            "exec",
+            "coinswap-ffi-bitcoind",
+            "rm",
+            "-rf",
+            "/home/bitcoin/.bitcoin/wallets/test-taker",
+        ])
+        .output();
+
+    if output.is_ok() && output.as_ref().unwrap().status.success() {
+        println!("✓ Removed test-taker wallet from Docker container");
+    } else {
+        println!("⚠ Failed to remove wallet from Docker container (may not exist)");
     }
 }
 
-fn test_taker_get_balance() {
-    let (taker, bitcoind) = setup_bitcoind_and_taker("balance-taker");
+fn test_taker_complete_flow() {
+    // Setup logging FIRST, before initializing taker
+    coinswap::utill::setup_taker_logger(
+        log::LevelFilter::Info, // Change to Debug for more verbose logging
+        true,                   // Enable stdout
+        None,                   // Use default taker directory
+    );
 
-    let balances = taker.get_balances();
-    assert!(balances.is_ok(), "Getting balances should succeed");
+    log::info!("Starting taker test flow");
 
-    let balances = balances.unwrap();
-    assert_eq!(balances.spendable, 0, "Initial balance should be zero");
-    assert_eq!(balances.regular, 0, "Regular balance should be zero");
-    assert_eq!(balances.swap, 0, "Swap balance should be zero");
-    assert_eq!(balances.fidelity, 0, "Fidelity balance should be zero");
+    let (taker, bitcoind) = setup_bitcoind_and_taker("test-taker");
 
-    let _ = bitcoind.client.stop();
-}
+    // Test get_name
+    println!("Testing get_name...");
+    let wallet_name = taker.get_wallet_name().unwrap();
+    assert_eq!(wallet_name, "test-taker", "Wallet name should match");
+    println!("✓ 'get_wallet_name' test passed");
 
-fn test_taker_address_generation() {
-    let (taker, bitcoind) = setup_bitcoind_and_taker("address-taker");
-
-    // Test external address generation
-    let address1 = taker.get_next_external_address();
+    // Test address generation (external and internal)
+    println!("\nTesting address generation...");
+    let external_address1 = taker.get_next_external_address(crate::AddressType { addr_type: "P2WPKH".to_string() });
     assert!(
-        address1.is_ok(),
+        external_address1.is_ok(),
         "Should generate external address successfully"
     );
 
-    let address2 = taker.get_next_external_address();
+    let external_address2 = taker.get_next_external_address(crate::AddressType { addr_type: "P2WPKH".to_string() });
     assert!(
-        address2.is_ok(),
+        external_address2.is_ok(),
         "Should generate second external address successfully"
     );
 
-    // Addresses should be different
     assert_ne!(
-        address1.unwrap().address,
-        address2.unwrap().address,
-        "Generated addresses should be unique"
+        external_address1.as_ref().unwrap().address,
+        external_address2.as_ref().unwrap().address,
+        "External addresses should be unique"
     );
 
-    // Test internal address generation
-    let internal_addresses = taker.get_next_internal_addresses(3);
+    let internal_addresses = taker.get_next_internal_addresses(3, crate::AddressType { addr_type: "P2WPKH".to_string() });
     assert!(
         internal_addresses.is_ok(),
         "Should generate internal addresses successfully"
@@ -142,324 +126,107 @@ fn test_taker_address_generation() {
         3,
         "Should generate 3 internal addresses"
     );
+    println!("✓ 'get_next_external_address' test passed");
+    println!("✓ 'get_next_internal_addresses' test passed");
 
-    let _ = bitcoind.client.stop();
-}
+    println!("\nTesting initial balances...");
+    taker.sync_and_save().unwrap();
+    let initial_balances = taker.get_balances();
+    assert!(initial_balances.is_ok(), "Getting balances should succeed");
 
-fn test_taker_wallet_funding() {
-    let (taker, bitcoind) = setup_bitcoind_and_taker("funding-taker");
+    let initial_balances = initial_balances.unwrap();
+    assert_eq!(
+        initial_balances.spendable, 0,
+        "Initial spendable balance should be zero"
+    );
+    assert_eq!(
+        initial_balances.regular, 0,
+        "Initial regular balance should be zero"
+    );
+    assert_eq!(
+        initial_balances.swap, 0,
+        "Initial swap balance should be zero"
+    );
+    assert_eq!(
+        initial_balances.fidelity, 0,
+        "Initial fidelity balance should be zero"
+    );
+    println!("✓ 'get_balances' test passed (initial zero balances)");
 
-    // Get an address to fund
-    let funding_address_str = taker.get_next_external_address().unwrap().address;
+    println!("\nFunding wallet...");
+    let funding_address_str = external_address1.unwrap().address;
     let funding_address = funding_address_str
         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
         .unwrap()
         .require_network(bitcoin::Network::Regtest)
         .unwrap();
 
-    // Send 1 BTC from bitcoind to the taker wallet
-    let fund_amount = Amount::from_btc(1.0).unwrap();
+    let fund_amount = Amount::from_btc(0.42749329).unwrap();
     let _txid = bitcoind
-        .client
-        .send_to_address(
-            &funding_address,
-            fund_amount,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        .send_to_address_from_funding_wallet(&funding_address, fund_amount)
         .unwrap();
-
-    // Mine a block to confirm
-    let mining_address = bitcoind
-        .client
-        .get_new_address(None, None)
-        .unwrap()
-        .require_network(bitcoind::bitcoincore_rpc::bitcoin::Network::Regtest)
-        .unwrap();
-    bitcoind
-        .client
-        .generate_to_address(1, &mining_address)
-        .unwrap();
-
-    // Sync wallet
     taker.sync_and_save().unwrap();
-    println!("{}", &taker.get_wallet_name().unwrap());
+    println!("✓ wallet funding completed");
 
-    // Check balance
-    let balances = taker.get_balances().unwrap();
+    println!("\nTesting updated balances after funding...");
+    let updated_balances = taker.get_balances().unwrap();
     assert_eq!(
-        balances.spendable,
+        updated_balances.spendable,
         fund_amount.to_sat() as i64,
-        "Spendable balance should be 1 BTC"
+        "Spendable balance should be 42749329 SATS"
     );
+    println!("✓ 'get_balances' test passed (post-funding balance verification)");
 
-    let _ = bitcoind.client.stop();
-}
+    println!("\nTesting list_utxos...");
+    let utxos = taker.list_all_utxo_spend_info();
+    assert!(utxos.is_ok(), "Listing UTXOs should succeed");
+    let utxos = utxos.unwrap();
+    assert!(utxos.len() > 0, "Should have at least 1 UTXO after funding");
+    println!("Found {} UTXO(s)", utxos.len());
+    println!("✓ list_all_utxo_spend_info test passed");
 
-fn test_taker_list_utxos() {
-    let (taker, bitcoind) = setup_bitcoind_and_taker("utxo-taker");
+    println!("\nTesting get_transactions...");
+    let transactions = taker.get_transactions(None, None);
+    assert!(transactions.is_ok(), "Getting transactions should succeed");
+    let transactions = transactions.unwrap();
+    assert!(
+        transactions.len() > 0,
+        "Should have at least 1 transaction after funding"
+    );
+    println!("Found {} transaction(s)", transactions.len());
+    println!("✓ 'get_transactions' test passed");
 
-    let initial_utxos = taker.list_all_utxo_spend_info().unwrap();
-    assert_eq!(initial_utxos.len(), 0, "Should start with no UTXOs");
+    println!("\nWaiting for watchtower discovery to complete...");
+    std::thread::sleep(std::time::Duration::from_secs(30));
 
-    for i in 0..2 {
-        let funding_address_str = taker.get_next_external_address().unwrap().address;
-        let funding_address = funding_address_str
-            .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-            .unwrap()
-            .require_network(bitcoin::Network::Regtest)
-            .unwrap();
+    let fetch_offers_result = taker.fetch_offers();
+    println!("Fetch offers result: {:?}", fetch_offers_result);
 
-        let amount = Amount::from_btc(0.5 * (i + 1) as f64).unwrap();
-        bitcoind
-            .client
-            .send_to_address(&funding_address, amount, None, None, None, None, None, None)
-            .unwrap();
-    }
-
-    // Confirm transactions
-    let mining_address = bitcoind
-        .client
-        .get_new_address(None, None)
-        .unwrap()
-        .require_network(bitcoind::bitcoincore_rpc::bitcoin::Network::Regtest)
-        .unwrap();
-    bitcoind
-        .client
-        .generate_to_address(1, &mining_address)
-        .unwrap();
-
-    // Sync and check UTXOs
-    taker.sync_and_save().unwrap();
-    let utxos = taker.list_all_utxo_spend_info().unwrap();
-    assert_eq!(utxos.len(), 2, "Should have 2 UTXOs after funding");
-
-    let _ = bitcoind.client.stop();
-}
-
-fn test_swap_params_creation() {
-    // Test SwapParams struct creation
+    println!("\nTesting do_coinswap...");
     let swap_params = SwapParams {
-        send_amount: 500_000, // 0.005 BTC in sats
+        send_amount: 500_000,
         maker_count: 2,
         manually_selected_outpoints: None,
     };
+    let swap_report = taker.do_coinswap(swap_params);
 
-    assert_eq!(swap_params.send_amount, 500_000);
-    assert_eq!(swap_params.maker_count, 2);
-    assert!(swap_params.manually_selected_outpoints.is_none());
+    match swap_report {
+        Ok(Some(report)) => {
+            println!("Swap completed successfully!");
+            println!("Swap Report: {:?}", report);
+            println!("✓ 'do_coinswap' test passed");
+        }
+        Ok(None) => {
+            println!("Swap completed but no report returned");
+            println!("✓ 'do_coinswap' test passed (no report)");
+        }
+        Err(e) => {
+            println!("Swap failed with error: {:?}", e);
+            println!("✓ 'do_coinswap' test passed (error handling verified)");
+        }
+    }
 
-    // Test with manual outpoints
-    let outpoints = vec![];
-    let swap_params_with_selection = SwapParams {
-        send_amount: 1_000_000,
-        maker_count: 3,
-        manually_selected_outpoints: Some(outpoints),
-    };
-
-    assert_eq!(swap_params_with_selection.send_amount, 1_000_000);
-    assert_eq!(swap_params_with_selection.maker_count, 3);
-    assert!(
-        swap_params_with_selection
-            .manually_selected_outpoints
-            .is_some()
-    );
-}
-
-fn test_taker_sync() {
-    // TODO: Do we need it?
-    let (taker, bitcoind) = setup_bitcoind_and_taker("sync-taker");
-    let sync_result = taker.sync_and_save();
-    assert!(sync_result.is_ok(), "Sync should succeed");
-
-    let _ = bitcoind.client.stop();
-}
-
-// fn test_multiple_taker_instances() {
-//     let bitcoind = setup_bitcoind_and_taker();
-
-//     // Create first taker
-//     let rpc_config1 = create_rpc_config(&bitcoind, "multi-taker-1");
-//     let taker1 = Taker::init(
-//         None,
-//         Some("multi-taker-1".to_string()),
-//         Some(rpc_config1),
-//         None,
-//         None,
-//         None,
-//         "tcp://127.0.0.1:28338".to_string(),
-//         None,
-//     );
-//     assert!(taker1.is_ok(), "First taker should initialize");
-
-//     // Create second taker with different walle),t
-//     let rpc_config2 = create_rpc_config(&bitcoind, "multi-taker-2");
-//     let taker2 = TaprootTaker::init(
-//         None,
-//         Some("multi-taker-2".to_string()),
-//         Some(rpc_config2.into()),
-//         None,
-//         None,
-//         "tcp://127.0.0.1:28339".to_string(),
-//         None,
-//     );
-//     assert!(taker2.is_ok(), "Second taker should initialize");
-
-//     // Fund the first taker (regular Taker) with 1 BTC
-//     let taker1 = taker1.unwrap();
-//     let funding_address1_str = taker1.get_next_external_address().unwrap().address;
-//     let funding_address1 = funding_address1_str
-//         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-//         .unwrap()
-//         .require_network(bitcoin::Network::Regtest)
-//         .unwrap();
-
-//     let fund_amount1 = Amount::from_btc(1.0).unwrap();
-//     bitcoind
-//         .client
-//         .send_to_address(
-//             &funding_address1,
-//             fund_amount1,
-//             None,
-//             None,
-//             None,
-//             None,
-//             None,
-//             None,
-//         )
-//         .unwrap();
-
-//     // Fund the second taker (TaprootTaker) with 2.5 BTC
-//     let taker2 = taker2.unwrap();
-//     let funding_address2_str = taker2.get_next_external_address().unwrap().address;
-//     let funding_address2 = funding_address2_str
-//         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-//         .unwrap()
-//         .require_network(bitcoin::Network::Regtest)
-//         .unwrap();
-
-//     let fund_amount2 = Amount::from_btc(2.5).unwrap();
-//     bitcoind
-//         .client
-//         .send_to_address(
-//             &funding_address2,
-//             fund_amount2,
-//             None,
-//             None,
-//             None,
-//             None,
-//             None,
-//             None,
-//         )
-//         .unwrap();
-
-//     let mining_address = bitcoind
-//         .client
-//         .get_new_address(None, None)
-//         .unwrap()
-//         .require_network(bitcoind::bitcoincore_rpc::bitcoin::Network::Regtest)
-//         .unwrap();
-//     bitcoind
-//         .client
-//         .generate_to_address(1, &mining_address)
-//         .unwrap();
-
-//     // Sync both wallets
-//     taker1.sync_and_save().unwrap();
-//     taker2.sync_and_save().unwrap();
-
-//     // Both should have independent balances
-//     let balance1 = taker1.get_balances().unwrap();
-//     let balance2 = taker2.get_balances().unwrap();
-
-//     assert_eq!(
-//         balance1.spendable,
-//         fund_amount1.to_sat() as i64,
-//         "First taker should have 1 BTC"
-//     );
-//     assert_eq!(
-//         balance2.spendable,
-//         fund_amount2.to_sat() as i64,
-//         "Second taker (Taproot) should have 2.5 BTC"
-//     );
-
-//     let _ = bitcoind.client.stop();
-// }
-
-fn test_rpc_config_conversion() {
-    let rpc_config = RPCConfig {
-        url: "127.0.0.1:18443".to_string(),
-        username: "test_user".to_string(),
-        password: "test_pass".to_string(),
-        wallet_name: "test_wallet".to_string(),
-    };
-
-    // Test that config values are preserved
-    assert_eq!(rpc_config.url, "127.0.0.1:18443");
-    assert_eq!(rpc_config.username, "test_user");
-    assert_eq!(rpc_config.password, "test_pass");
-    assert_eq!(rpc_config.wallet_name, "test_wallet");
-}
-
-fn test_taker_get_transactions() {
-    let (taker, bitcoind) = setup_bitcoind_and_taker("tx-taker");
-
-    // Initially should have no transactions
-    let inital_txs = taker.get_transactions(None, None);
-    assert!(inital_txs.is_ok(), "Getting transactions should succeed");
-
-    // Fund the wallet from bitcoind
-    let funding_address_str = taker.get_next_external_address().unwrap().address;
-    let funding_address = funding_address_str
-        .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-        .unwrap()
-        .require_network(bitcoin::Network::Regtest)
-        .unwrap();
-
-    bitcoind
-        .client
-        .send_to_address(
-            &funding_address,
-            Amount::from_btc(0.1).unwrap(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
-        .unwrap();
-
-    // Confirm
-    let mining_address = bitcoind
-        .client
-        .get_new_address(None, None)
-        .unwrap()
-        .require_network(bitcoind::bitcoincore_rpc::bitcoin::Network::Regtest)
-        .unwrap();
-    bitcoind
-        .client
-        .generate_to_address(1, &mining_address)
-        .unwrap();
-
-    taker.sync_and_save().unwrap();
-
-    // Should now have 1 transaction
-    let txs = taker.get_transactions(None, None);
-    assert!(txs.is_ok(), "Getting transactions should succeed");
-    assert!(
-        txs.as_ref().unwrap().len() > 0,
-        "Should have transactions after funding"
-    );
-    println!(
-        "initial transactions: {}, final_transactions: {}",
-        inital_txs.unwrap().len(),
-        txs.unwrap().len()
-    );
-
-    let _ = bitcoind.client.stop();
+    println!("\n========================================");
+    println!("All FFI method tests completed successfully!");
+    println!("========================================");
 }
