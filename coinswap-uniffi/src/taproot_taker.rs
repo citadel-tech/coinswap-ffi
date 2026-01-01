@@ -422,7 +422,7 @@ impl TaprootTaker {
             msg: format!("Fetch offers error: {:?}", e),
         })?;
 
-        Ok(OfferBook::from(offerbook))
+        Ok(OfferBook::from(&offerbook))
     }
 
     pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
@@ -447,52 +447,12 @@ impl TaprootTaker {
         Ok(taker.get_wallet().get_name().to_string())
     }
 
-    pub fn sync_offerbook(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-        taker.sync_offerbook()?;
-        Ok(())
-    }
-
-    pub fn get_all_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-
-        let offerbook = taker.fetch_offers()?;
-        let good_makers = offerbook.all_good_makers();
-
-        let addresses = good_makers
-            .into_iter()
-            .map(|maker| maker.address.to_string())
-            .collect();
-
-        Ok(addresses)
-    }
-
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker.recover_from_swap()?;
         Ok(())
-    }
-
-    pub fn fetch_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-
-        let offerbook = taker.fetch_offers()?;
-        let all_good_makers = offerbook.all_good_makers();
-
-        let addresses = all_good_makers
-            .into_iter()
-            .map(|maker| maker.address.to_string())
-            .collect();
-
-        Ok(addresses)
     }
 
     pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {

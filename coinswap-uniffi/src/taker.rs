@@ -4,8 +4,9 @@
 
 use crate::types::{
     Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
-    ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
-    SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo, TakerBehavior
+    ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf,
+    SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
+    TakerBehavior,
 };
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
@@ -70,7 +71,7 @@ impl Taker {
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
         rpc_config: Option<RPCConfig>,
-        behavior: Option<TakerBehavior>,
+        _behavior: Option<TakerBehavior>,
         control_port: Option<u16>,
         tor_auth_password: Option<String>,
         zmq_addr: String,
@@ -84,7 +85,7 @@ impl Taker {
             wallet_file_name,
             rpc_config,
             #[cfg(feature = "integration-test")]
-            behavior.unwrap_or(TakerBehavior::Normal).into(),
+            _behavior.unwrap_or(TakerBehavior::Normal).into(),
             control_port,
             tor_auth_password,
             zmq_addr,
@@ -340,7 +341,7 @@ impl Taker {
         amount: i64,
         fee_rate: Option<f64>,
         manually_selected_outpoints: Option<Vec<OutPoint>>,
-    ) -> Result<String, TakerError> {
+    ) -> Result<Txid, TakerError> {
         let manually_selected_outpoints = manually_selected_outpoints
             .map(|outpoints| -> Result<Vec<coinswapOutPoint>, TakerError> {
                 outpoints
@@ -373,7 +374,7 @@ impl Taker {
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Send to Address error: {:?}", e),
             })?;
-        Ok(txid.to_string())
+        Ok(txid.into())
     }
 
     pub fn get_balances(&self) -> Result<Balances, TakerError> {
@@ -411,7 +412,7 @@ impl Taker {
             msg: format!("Fetch offers error: {:?}", e),
         })?;
 
-        Ok(OfferBook::from(offerbook))
+        Ok(OfferBook::from(&offerbook))
     }
 
     pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
@@ -436,52 +437,12 @@ impl Taker {
         Ok(taker.get_wallet().get_name().to_string())
     }
 
-    pub fn sync_offerbook(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-        taker.sync_offerbook()?;
-        Ok(())
-    }
-
-    pub fn get_all_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-
-        let offerbook = taker.fetch_offers()?;
-        let good_makers = offerbook.all_good_makers();
-
-        let addresses = good_makers
-            .into_iter()
-            .map(|maker| maker.address.to_string())
-            .collect();
-
-        Ok(addresses)
-    }
-
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker.recover_from_swap()?;
         Ok(())
-    }
-
-    pub fn fetch_good_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
-            msg: "Failed to acquire taker lock".to_string(),
-        })?;
-
-        let offerbook = taker.fetch_offers()?;
-        let all_good_makers = offerbook.all_good_makers();
-
-        let addresses = all_good_makers
-            .into_iter()
-            .map(|maker| maker.address.to_string())
-            .collect();
-
-        Ok(addresses)
     }
 
     pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
