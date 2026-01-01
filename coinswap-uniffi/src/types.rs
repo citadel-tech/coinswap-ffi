@@ -15,20 +15,16 @@ use coinswap::{
     taker::{
         error::TakerError as CoinswapTakerError,
         offers::{
-            MakerAddress as csMakerAddress, OfferAndAddress as csOfferAndAddress,
-            OfferBook as csOfferBook,
+            MakerAddress as csMakerAddress, MakerOfferCandidate as csMakerOfferCandidate,
+            MakerProtocol as csMakerProtocol, MakerState as csMakerState, OfferBook as csOfferBook,
         },
     },
     wallet::{
         Balances as CoinswapBalances, FidelityBond as csFidelityBond,
         RPCConfig as CoinswapRPCConfig,
-        ffi::{
-            MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport,
-            restore_wallet_gui_app as cs_restore_wallet_gui_app,
-        },
+        ffi::MakerFeeInfo as csMakerFeeInfo, ffi::SwapReport as csSwapReport,
     },
 };
-use std::path::PathBuf;
 
 #[derive(Clone, uniffi::Record)]
 pub struct RPCConfig {
@@ -375,21 +371,6 @@ impl From<csOffer> for Offer {
 }
 
 #[derive(Clone, uniffi::Record)]
-pub struct OfferAndAddress {
-    pub offer: Offer,
-    pub address: MakerAddress,
-}
-
-impl From<csOfferAndAddress> for OfferAndAddress {
-    fn from(offer_and_addr: csOfferAndAddress) -> Self {
-        Self {
-            offer: Offer::from(offer_and_addr.offer),
-            address: MakerAddress::from(offer_and_addr.address),
-        }
-    }
-}
-
-#[derive(Clone, uniffi::Record)]
 pub struct MakerAddress {
     pub address: String,
 }
@@ -403,25 +384,82 @@ impl From<csMakerAddress> for MakerAddress {
 }
 
 #[derive(Clone, uniffi::Record)]
+pub struct MakerState {
+    /// State type: "Good", "Unresponsive", or "Bad"
+    pub state_type: String,
+    /// Number of retries (only for Unresponsive state)
+    pub retries: Option<u8>,
+}
+
+impl From<csMakerState> for MakerState {
+    fn from(state: csMakerState) -> Self {
+        match state {
+            csMakerState::Good => MakerState {
+                state_type: "Good".to_string(),
+                retries: None,
+            },
+            csMakerState::Unresponsive { retries } => MakerState {
+                state_type: "Unresponsive".to_string(),
+                retries: Some(retries),
+            },
+            csMakerState::Bad => MakerState {
+                state_type: "Bad".to_string(),
+                retries: None,
+            },
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct MakerProtocol {
+    /// Protocol type: "Legacy" or "Taproot"
+    pub protocol_type: String,
+}
+
+impl From<csMakerProtocol> for MakerProtocol {
+    fn from(protocol: csMakerProtocol) -> Self {
+        match protocol {
+            csMakerProtocol::Legacy => MakerProtocol {
+                protocol_type: "Legacy".to_string(),
+            },
+            csMakerProtocol::Taproot => MakerProtocol {
+                protocol_type: "Taproot".to_string(),
+            },
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct MakerOfferCandidate {
+    pub address: MakerAddress,
+    pub offer: Option<Offer>,
+    pub state: MakerState,
+    pub protocol: Option<MakerProtocol>,
+}
+
+impl From<csMakerOfferCandidate> for MakerOfferCandidate {
+    fn from(maker: csMakerOfferCandidate) -> Self {
+        Self {
+            address: maker.address.into(),
+            offer: maker.offer.map(Offer::from),
+            state: maker.state.into(),
+            protocol: maker.protocol.map(|p| p.into()),
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
 pub struct OfferBook {
-    pub good_makers: Vec<OfferAndAddress>,
-    pub all_makers: Vec<OfferAndAddress>,
+    pub makers: Vec<MakerOfferCandidate>,
 }
 
 impl From<&csOfferBook> for OfferBook {
     fn from(offerbook: &csOfferBook) -> Self {
         Self {
-            good_makers: offerbook
-                .all_good_makers()
-                .into_iter()
-                .cloned()
-                .map(OfferAndAddress::from)
-                .collect(),
-            all_makers: offerbook
+            makers: offerbook
                 .all_makers()
                 .into_iter()
-                .cloned()
-                .map(OfferAndAddress::from)
+                .map(MakerOfferCandidate::from)
                 .collect(),
         }
     }
@@ -550,49 +588,4 @@ pub fn fetch_mempool_fees() -> Result<FeeRates, TakerError> {
         standard: *get(BlockTarget::Standard)?,
         economy: *get(BlockTarget::Economy)?,
     })
-}
-
-#[uniffi::export]
-pub fn restore_wallet_gui_app(
-    data_dir: Option<String>,
-    wallet_file_name: Option<String>,
-    rpc_config: RPCConfig,
-    backup_file_path: String,
-    password: Option<String>,
-) {
-    let data_dir = data_dir.map(PathBuf::from);
-
-    cs_restore_wallet_gui_app(
-        data_dir,
-        wallet_file_name,
-        rpc_config.into(),
-        backup_file_path.into(),
-        password,
-    );
-}
-
-#[uniffi::export]
-pub fn is_wallet_encrypted(wallet_path: String) -> Result<bool, TakerError> {
-    let path = PathBuf::from(wallet_path);
-
-    coinswap::wallet::Wallet::is_wallet_encrypted(&path).map_err(|e| TakerError::Wallet {
-        msg: format!("Failed to check wallet encryption: {:?}", e),
-    })
-}
-
-#[uniffi::export]
-pub fn create_default_rpc_config() -> RPCConfig {
-    RPCConfig {
-        url: "http://127.0.0.1:38332".to_string(),
-        username: "user".to_string(),
-        password: "password".to_string(),
-        wallet_name: "coinswap_wallet".to_string(),
-    }
-}
-
-#[uniffi::export]
-pub fn setup_logging(data_dir: Option<String>) -> Result<(), TakerError> {
-    let path = data_dir.map(PathBuf::from);
-    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
-    Ok(())
 }
