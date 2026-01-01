@@ -246,7 +246,6 @@ pub struct UtxoSpendInfo {
   pub multisig_redeemscript: Option<ScriptBuf>,
   pub input_value: Option<Amount>,
   pub index: Option<u32>,
-  pub original_multisig_redeemscript: Option<ScriptBuf>,
 }
 
 #[napi(object)]
@@ -604,6 +603,23 @@ impl From<csSwapReport> for SwapReport {
     }
   }
 }
+#[napi]
+pub enum AddressType {
+  P2WPKH,
+  P2TR,
+}
+
+impl TryFrom<AddressType> for coinswap::wallet::AddressType {
+  type Error = napi::Error;
+
+  fn try_from(addr: AddressType) -> Result<Self, Self::Error> {
+    match addr {
+      AddressType::P2TR => Ok(coinswap::wallet::AddressType::P2TR),
+      AddressType::P2WPKH => Ok(coinswap::wallet::AddressType::P2WPKH),
+    }
+  }
+}
+
 #[napi(object)]
 #[allow(unused)]
 pub struct WalletBackup {

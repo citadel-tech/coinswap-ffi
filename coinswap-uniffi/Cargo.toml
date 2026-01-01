@@ -9,7 +9,6 @@ name = "coinswap_ffi"
 
 [features]
 default = []
-integration-test = ["coinswap/integration-test"]
 
 [[bin]]
 name = "uniffi-bindgen"

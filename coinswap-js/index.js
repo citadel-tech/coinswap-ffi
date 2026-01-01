@@ -574,5 +574,6 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.Taker = nativeBinding.Taker
 module.exports.TaprootTaker = nativeBinding.TaprootTaker
+module.exports.AddressType = nativeBinding.AddressType
 module.exports.TakerBehavior = nativeBinding.TakerBehavior
 module.exports.TakerError = nativeBinding.TakerError

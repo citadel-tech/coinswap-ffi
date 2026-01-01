@@ -2,12 +2,11 @@
 //!
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
-use crate::types::{
+use crate::{AddressType, types::{
     Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
     ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf,
-    SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
-    TakerBehavior,
-};
+    SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo
+}};
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
     taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
@@ -67,11 +66,12 @@ pub struct Taker {
 #[uniffi::export]
 impl Taker {
     #[uniffi::constructor]
+    // #[allow(clippy::too_many_arguments)]
     pub fn init(
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
         rpc_config: Option<RPCConfig>,
-        _behavior: Option<TakerBehavior>,
+        // _behavior: Option<TakerBehavior>,
         control_port: Option<u16>,
         tor_auth_password: Option<String>,
         zmq_addr: String,
@@ -84,8 +84,8 @@ impl Taker {
             data_dir,
             wallet_file_name,
             rpc_config,
-            #[cfg(feature = "integration-test")]
-            _behavior.unwrap_or(TakerBehavior::Normal).into(),
+            // #[cfg(feature = "integration-test")]
+            // _behavior.unwrap_or(TakerBehavior::Normal).into(),
             control_port,
             tor_auth_password,
             zmq_addr,
@@ -95,6 +95,26 @@ impl Taker {
         Ok(Arc::new(Self {
             taker: Mutex::new(taker),
         }))
+    }
+
+    pub fn setup_logging(&self, data_dir: Option<String>) -> Result<(), TakerError> {
+        let path = data_dir.map(PathBuf::from);
+        coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+        Ok(())
+    }
+
+    pub fn setup_logging_with_level(&self, data_dir: Option<String>, log_level: String) -> Result<(), TakerError> {
+        let path = data_dir.map(PathBuf::from);
+        let level = match log_level.to_lowercase().as_str() {
+            "trace" => log::LevelFilter::Trace,
+            "debug" => log::LevelFilter::Debug,
+            "info" => log::LevelFilter::Info,
+            "warn" => log::LevelFilter::Warn,
+            "error" => log::LevelFilter::Error,
+            _ => log::LevelFilter::Info,
+        };
+        coinswap::utill::setup_taker_logger(level, true, path);
+        Ok(())
     }
 
     pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
@@ -158,7 +178,8 @@ impl Taker {
             .collect())
     }
 
-    pub fn get_next_internal_addresses(&self, count: u32) -> Result<Vec<Address>, TakerError> {
+    pub fn get_next_internal_addresses(&self, count: u32, address_type:AddressType) -> Result<Vec<Address>, TakerError> {
+                let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let internal_addresses = self
             .taker
             .lock()
@@ -166,14 +187,15 @@ impl Taker {
                 msg: "Failed to acquire taker lock".to_string(),
             })?
             .get_wallet()
-            .get_next_internal_addresses(count)
+            .get_next_internal_addresses(count, cs_address_type)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Get internal addresses error: {:?}", e),
             })?;
         Ok(internal_addresses.into_iter().map(Address::from).collect())
     }
 
-    pub fn get_next_external_address(&self) -> Result<Address, TakerError> {
+    pub fn get_next_external_address(&self, address_type: AddressType) -> Result<Address, TakerError> {
+                let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let external_address = self
             .taker
             .lock()
@@ -181,7 +203,7 @@ impl Taker {
                 msg: "Failed to acquire taker lock".to_string(),
             })?
             .get_wallet_mut()
-            .get_next_external_address()
+            .get_next_external_address(cs_address_type)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Get next external address error: {:?}", e),
             })?;
@@ -217,13 +239,12 @@ impl Taker {
                     safe: cs_utxo.safe,
                 };
                 let spend_info = match cs_info {
-                    csUtxoSpendInfo::SeedCoin { path, input_value } => UtxoSpendInfo {
+                    csUtxoSpendInfo::SeedCoin { path, input_value, address_type: _ } => UtxoSpendInfo {
                         spend_type: "SeedCoin".to_string(),
                         path: Some(path),
                         multisig_redeemscript: None,
                         input_value: Some(Amount::from(input_value)),
                         index: None,
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::IncomingSwapCoin {
                         multisig_redeemscript,
@@ -233,7 +254,6 @@ impl Taker {
                         multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
                         input_value: None,
                         index: None,
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::OutgoingSwapCoin {
                         multisig_redeemscript,
@@ -243,7 +263,6 @@ impl Taker {
                         multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
                         input_value: None,
                         index: None,
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::TimelockContract {
                         swapcoin_multisig_redeemscript,
@@ -256,7 +275,6 @@ impl Taker {
                         )),
                         input_value: Some(Amount::from(input_value)),
                         index: None,
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::HashlockContract {
                         swapcoin_multisig_redeemscript,
@@ -269,7 +287,6 @@ impl Taker {
                         )),
                         input_value: Some(Amount::from(input_value)),
                         index: None,
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
                         spend_type: "FidelityBondCoin".to_string(),
@@ -277,21 +294,17 @@ impl Taker {
                         multisig_redeemscript: None,
                         input_value: Some(Amount::from(input_value)),
                         index: Some(index),
-                        original_multisig_redeemscript: None,
                     },
                     csUtxoSpendInfo::SweptCoin {
                         path,
                         input_value,
-                        original_multisig_redeemscript,
+                        address_type: _,
                     } => UtxoSpendInfo {
                         spend_type: "SweptCoin".to_string(),
                         path: Some(path),
                         multisig_redeemscript: None,
                         input_value: Some(Amount::from(input_value)),
                         index: None,
-                        original_multisig_redeemscript: Some(ScriptBuf::from(
-                            original_multisig_redeemscript,
-                        )),
                     },
                 };
 

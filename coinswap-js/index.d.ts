@@ -8,8 +8,8 @@ export declare class Taker {
   static fetchMempoolFees(): FeeRates
   doCoinswap(swapParams: SwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
-  getNextInternalAddresses(count: number): Array<Address>
-  getNextExternalAddress(): Address
+  getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
+  getNextExternalAddress(addressType: AddressType): Address
   getName(): string
   listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
   backup(destinationPath: string, password?: string | undefined | null): void
@@ -36,8 +36,8 @@ export declare class TaprootTaker {
   /** Execute a Taproot coinswap */
   doCoinswap(swapParams: TaprootSwapParams): SwapReport | null
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
-  getNextInternalAddresses(count: number): Array<Address>
-  getNextExternalAddress(): Address
+  getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
+  getNextExternalAddress(addressType: AddressType): Address
   getName(): string
   listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
   backup(destinationPath: string, password?: string | undefined | null): void
@@ -57,6 +57,11 @@ export declare class TaprootTaker {
 
 export interface Address {
   address: string
+}
+
+export declare const enum AddressType {
+  P2WPKH = 0,
+  P2TR = 1
 }
 
 export interface Amount {
@@ -292,7 +297,6 @@ export interface UtxoSpendInfo {
   multisigRedeemscript?: ScriptBuf
   inputValue?: Amount
   index?: number
-  originalMultisigRedeemscript?: ScriptBuf
 }
 
 export interface UtxoWithAddress {
