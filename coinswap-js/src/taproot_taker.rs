@@ -3,23 +3,20 @@
 //! This module provides N-API bindings for the coinswap taproot taker functionality.
 
 use crate::types::{
-  Address, AddressType, Amount, Balances, FeeRates, GetTransactionResultDetail, ListTransactionResult,
-  ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig as RpcConfig, ScriptBuf,
-  SignedAmountSats, SwapReport, Txid, UtxoSpendInfo, WalletTxInfo
+  Address, AddressType, Amount, Balances, FeeRates, GetTransactionResultDetail,
+  ListTransactionResult, ListUnspentResultEntry, Offer, OfferBook, OutPoint,
+  RPCConfig as RpcConfig, ScriptBuf, SignedAmountSats, SwapReport, Txid, UtxoSpendInfo,
+  WalletTxInfo,
 };
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   fee_estimation::{BlockTarget, FeeEstimator},
   taker::api2::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-  wallet::{UTXOSpendInfo as csUtxoSpendInfo, ffi},
+  wallet::{ffi, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::{
-  path::PathBuf,
-  str::FromStr,
-  sync::Mutex,
-};
+use std::{path::PathBuf, str::FromStr, sync::Mutex};
 
 /// Swap parameters for Taproot (V2) protocol
 /// Note: V2 has additional parameters compared to V1
@@ -82,7 +79,7 @@ impl TaprootTaker {
     control_port: Option<u16>,
     tor_auth_password: Option<String>,
     zmq_addr: String,
-    password: Option<String>
+    password: Option<String>,
   ) -> Result<Self> {
     let data_dir = data_dir.map(PathBuf::from);
     let rpc_config = rpc_config.map(|cfg| cfg.into());
@@ -161,6 +158,15 @@ impl TaprootTaker {
   }
 
   #[napi]
+  pub fn is_offerbook_syncing(&self) -> Result<bool> {
+    let taker = self
+      .inner
+      .lock()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    Ok(taker.is_offerbook_syncing())
+  }
+
+  #[napi]
   pub fn get_transactions(
     &self,
     count: Option<u32>,
@@ -224,7 +230,11 @@ impl TaprootTaker {
   }
 
   #[napi]
-  pub fn get_next_internal_addresses(&self, count: u32, address_type: AddressType) -> Result<Vec<Address>> {
+  pub fn get_next_internal_addresses(
+    &self,
+    count: u32,
+    address_type: AddressType,
+  ) -> Result<Vec<Address>> {
     let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
     let internal_addresses = self
       .inner
@@ -291,7 +301,11 @@ impl TaprootTaker {
             safe: cs_utxo.safe,
           };
           let spend_info = match cs_info {
-            csUtxoSpendInfo::SeedCoin { path, input_value, address_type: _ } => UtxoSpendInfo {
+            csUtxoSpendInfo::SeedCoin {
+              path,
+              input_value,
+              address_type: _,
+            } => UtxoSpendInfo {
               spend_type: "SeedCoin".to_string(),
               path: Some(path),
               multisig_redeemscript: None,

@@ -148,6 +148,12 @@ impl Taker {
   }
 
   #[napi]
+  pub fn is_offerbook_syncing(&self) -> Result<bool> {
+    let taker = self.inner.lock().map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    Ok(taker.is_offerbook_syncing())
+  }
+
+  #[napi]
   pub fn get_transactions(
     &self,
     count: Option<u32>,
@@ -211,7 +217,11 @@ impl Taker {
   }
 
   #[napi]
-  pub fn get_next_internal_addresses(&self, count: u32, address_type: AddressType) -> Result<Vec<Address>> {
+  pub fn get_next_internal_addresses(
+    &self,
+    count: u32,
+    address_type: AddressType,
+  ) -> Result<Vec<Address>> {
     let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
     let internal_addresses = self
       .inner
@@ -278,7 +288,11 @@ impl Taker {
             safe: cs_utxo.safe,
           };
           let spend_info = match cs_info {
-            csUtxoSpendInfo::SeedCoin { path, input_value, address_type: _ } => UtxoSpendInfo {
+            csUtxoSpendInfo::SeedCoin {
+              path,
+              input_value,
+              address_type: _,
+            } => UtxoSpendInfo {
               spend_type: "SeedCoin".to_string(),
               path: Some(path),
               multisig_redeemscript: None,

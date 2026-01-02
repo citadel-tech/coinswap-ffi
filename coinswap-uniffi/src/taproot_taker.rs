@@ -2,11 +2,14 @@
 //!
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
-use crate::{AddressType, types::{
-    Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
-    ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
-    SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
-}};
+use crate::{
+    AddressType,
+    types::{
+        Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
+        ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
+        SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
+    },
+};
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
     taker::api2::{SwapParams as CoinswapTaprootSwapParams, Taker as CoinswapTaprootTaker},
@@ -168,7 +171,11 @@ impl TaprootTaker {
             .collect())
     }
 
-    pub fn get_next_internal_addresses(&self, count: u32, address_type: AddressType) -> Result<Vec<Address>, TakerError> {
+    pub fn get_next_internal_addresses(
+        &self,
+        count: u32,
+        address_type: AddressType,
+    ) -> Result<Vec<Address>, TakerError> {
         let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let internal_addresses = self
             .taker
@@ -184,7 +191,10 @@ impl TaprootTaker {
         Ok(internal_addresses.into_iter().map(Address::from).collect())
     }
 
-    pub fn get_next_external_address(&self, address_type: AddressType) -> Result<Address, TakerError> {
+    pub fn get_next_external_address(
+        &self,
+        address_type: AddressType,
+    ) -> Result<Address, TakerError> {
         let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let external_address = self
             .taker
@@ -340,6 +350,16 @@ impl TaprootTaker {
                 msg: format!("Lock error: {:?}", e),
             })?;
         Ok(())
+    }
+
+    pub fn is_offerbook_syncing(&self) -> Result<bool, TakerError> {
+        let taker = self.taker.lock().map_err(|e| TakerError::General {
+            msg: format!(
+                "Failed to acquire taker lock for offerbook sync check: {:?}",
+                e
+            ),
+        })?;
+        Ok(taker.is_offerbook_syncing())
     }
 
     pub fn send_to_address(
