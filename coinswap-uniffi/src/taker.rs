@@ -2,11 +2,14 @@
 //!
 //! This module provides UniFFI bindings for the coinswap taker functionality.
 
-use crate::{AddressType, types::{
-    Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
-    ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf,
-    SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo
-}};
+use crate::{
+    AddressType,
+    types::{
+        Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
+        ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
+        SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
+    },
+};
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
     taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
@@ -103,7 +106,11 @@ impl Taker {
         Ok(())
     }
 
-    pub fn setup_logging_with_level(&self, data_dir: Option<String>, log_level: String) -> Result<(), TakerError> {
+    pub fn setup_logging_with_level(
+        &self,
+        data_dir: Option<String>,
+        log_level: String,
+    ) -> Result<(), TakerError> {
         let path = data_dir.map(PathBuf::from);
         let level = match log_level.to_lowercase().as_str() {
             "trace" => log::LevelFilter::Trace,
@@ -178,8 +185,12 @@ impl Taker {
             .collect())
     }
 
-    pub fn get_next_internal_addresses(&self, count: u32, address_type:AddressType) -> Result<Vec<Address>, TakerError> {
-                let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
+    pub fn get_next_internal_addresses(
+        &self,
+        count: u32,
+        address_type: AddressType,
+    ) -> Result<Vec<Address>, TakerError> {
+        let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let internal_addresses = self
             .taker
             .lock()
@@ -194,8 +205,11 @@ impl Taker {
         Ok(internal_addresses.into_iter().map(Address::from).collect())
     }
 
-    pub fn get_next_external_address(&self, address_type: AddressType) -> Result<Address, TakerError> {
-                let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
+    pub fn get_next_external_address(
+        &self,
+        address_type: AddressType,
+    ) -> Result<Address, TakerError> {
+        let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
         let external_address = self
             .taker
             .lock()
@@ -239,7 +253,11 @@ impl Taker {
                     safe: cs_utxo.safe,
                 };
                 let spend_info = match cs_info {
-                    csUtxoSpendInfo::SeedCoin { path, input_value, address_type: _ } => UtxoSpendInfo {
+                    csUtxoSpendInfo::SeedCoin {
+                        path,
+                        input_value,
+                        address_type: _,
+                    } => UtxoSpendInfo {
                         spend_type: "SeedCoin".to_string(),
                         path: Some(path),
                         multisig_redeemscript: None,
@@ -414,6 +432,13 @@ impl Taker {
                 msg: format!("Sync wallet error: {:?}", e),
             })?;
         Ok(())
+    }
+
+    pub fn is_offerbook_syncing(&self) -> Result<bool, TakerError> {
+        let taker = self.taker.lock().map_err(|e| TakerError::General {
+            msg: format!("Failed to acquire taker lock for offerbook sync check: {:?}", e),
+        })?;
+        Ok(taker.is_offerbook_syncing())
     }
 
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {

@@ -90,6 +90,29 @@ fn test_taker_complete_flow() {
 
     let (taker, bitcoind) = setup_bitcoind_and_taker("test-taker");
 
+        use std::time::{Duration, Instant};
+
+    println!("Waiting for offerbook synchronization to complete…");
+    let sync_start = Instant::now();
+
+    loop {
+        match taker.is_offerbook_syncing() {
+            Ok(true) => {
+                println!("Offerbook sync in progress...");
+                std::thread::sleep(Duration::from_secs(2));
+            }
+            Ok(false) => {
+                println!("Offerbook synchronized in {:.2?}", sync_start.elapsed());
+                break;
+            }
+            Err(e) => {
+                println!("Error checking offerbook sync status: {:?}", e);
+                println!("Assuming sync is not complete, retrying...");
+                std::thread::sleep(Duration::from_secs(2));
+            }
+        }
+    }
+
     // Test get_name
     println!("Testing get_name...");
     let wallet_name = taker.get_wallet_name().unwrap();
@@ -98,13 +121,17 @@ fn test_taker_complete_flow() {
 
     // Test address generation (external and internal)
     println!("\nTesting address generation...");
-    let external_address1 = taker.get_next_external_address(crate::AddressType { addr_type: "P2WPKH".to_string() });
+    let external_address1 = taker.get_next_external_address(crate::AddressType {
+        addr_type: "P2WPKH".to_string(),
+    });
     assert!(
         external_address1.is_ok(),
         "Should generate external address successfully"
     );
 
-    let external_address2 = taker.get_next_external_address(crate::AddressType { addr_type: "P2WPKH".to_string() });
+    let external_address2 = taker.get_next_external_address(crate::AddressType {
+        addr_type: "P2WPKH".to_string(),
+    });
     assert!(
         external_address2.is_ok(),
         "Should generate second external address successfully"
@@ -116,7 +143,12 @@ fn test_taker_complete_flow() {
         "External addresses should be unique"
     );
 
-    let internal_addresses = taker.get_next_internal_addresses(3, crate::AddressType { addr_type: "P2WPKH".to_string() });
+    let internal_addresses = taker.get_next_internal_addresses(
+        3,
+        crate::AddressType {
+            addr_type: "P2WPKH".to_string(),
+        },
+    );
     assert!(
         internal_addresses.is_ok(),
         "Should generate internal addresses successfully"
@@ -195,9 +227,6 @@ fn test_taker_complete_flow() {
     );
     println!("Found {} transaction(s)", transactions.len());
     println!("✓ 'get_transactions' test passed");
-
-    println!("\nWaiting for watchtower discovery to complete...");
-    std::thread::sleep(std::time::Duration::from_secs(30));
 
     let fetch_offers_result = taker.fetch_offers();
     println!("Fetch offers result: {:?}", fetch_offers_result);
