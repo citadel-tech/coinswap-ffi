@@ -1498,15 +1498,15 @@ class RustBufferStream
   # The Object type Taker.
 
   def readTypeTaker
-    pointer = FFI::Pointer.new unpack_from 8, 'Q>'
-    return Taker.uniffi_allocate(pointer)
+    handle = unpack_from 8, 'Q>'
+    return Taker.uniffi_allocate(handle)
   end
 
   # The Object type TaprootTaker.
 
   def readTypeTaprootTaker
-    pointer = FFI::Pointer.new unpack_from 8, 'Q>'
-    return TaprootTaker.uniffi_allocate(pointer)
+    handle = unpack_from 8, 'Q>'
+    return TaprootTaker.uniffi_allocate(handle)
   end
 
   # The Record type Address.
@@ -2410,15 +2410,15 @@ class RustBufferBuilder
   # The Object type Taker.
 
   def write_TypeTaker(obj)
-    pointer = Taker.uniffi_lower obj
-    pack_into(8, 'Q>', pointer.address)
+    handle = Taker.uniffi_lower obj
+    pack_into(8, 'Q>', handle)
   end
 
   # The Object type TaprootTaker.
 
   def write_TypeTaprootTaker(obj)
-    pointer = TaprootTaker.uniffi_lower obj
-    pack_into(8, 'Q>', pointer.address)
+    handle = TaprootTaker.uniffi_lower obj
+    pack_into(8, 'Q>', handle)
   end
 
   # The Record type Address.
@@ -3189,124 +3189,130 @@ module UniFFILib
   
 
   attach_function :uniffi_coinswap_ffi_fn_clone_taker,
-    [:pointer, RustCallStatus.by_ref],
-    :pointer
+    [:uint64, RustCallStatus.by_ref],
+    :uint64
   attach_function :uniffi_coinswap_ffi_fn_free_taker,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_constructor_taker_init,
     [RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
-    :pointer
+    :uint64
   attach_function :uniffi_coinswap_ffi_fn_method_taker_backup,
-    [:pointer, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_display_offer,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_do_coinswap,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_fetch_offers,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_get_balances,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_get_next_external_address,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_get_next_internal_addresses,
-    [:pointer, :uint32, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, :uint32, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_get_transactions,
-    [:pointer, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_get_wallet_name,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_is_offerbook_syncing,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :int8
   attach_function :uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_recover_from_swap,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
+    :void
+  attach_function :uniffi_coinswap_ffi_fn_method_taker_run_offer_sync_now,
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_send_to_address,
-    [:pointer, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_setup_logging,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,
-    [:pointer, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_sync_and_save,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_clone_taproottaker,
-    [:pointer, RustCallStatus.by_ref],
-    :pointer
+    [:uint64, RustCallStatus.by_ref],
+    :uint64
   attach_function :uniffi_coinswap_ffi_fn_free_taproottaker,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_constructor_taproottaker_init,
     [RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
-    :pointer
+    :uint64
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_backup,
-    [:pointer, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_display_offer,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_get_balances,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address,
-    [:pointer, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses,
-    [:pointer, :uint32, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, :uint32, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions,
-    [:pointer, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_is_offerbook_syncing,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :int8
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
+    :void
+  attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_run_offer_sync_now,
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,
-    [:pointer, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    [:uint64, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,
-    [:pointer, RustCallStatus.by_ref],
+    [:uint64, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_func_create_default_rpc_config,
     [RustCallStatus.by_ref],
@@ -3392,6 +3398,9 @@ module UniFFILib
   attach_function :uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap,
     [RustCallStatus.by_ref],
     :uint16
+  attach_function :uniffi_coinswap_ffi_checksum_method_taker_run_offer_sync_now,
+    [RustCallStatus.by_ref],
+    :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taker_send_to_address,
     [RustCallStatus.by_ref],
     :uint16
@@ -3444,6 +3453,9 @@ module UniFFILib
     [RustCallStatus.by_ref],
     :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap,
+    [RustCallStatus.by_ref],
+    :uint16
+  attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now,
     [RustCallStatus.by_ref],
     :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address,
@@ -4447,29 +4459,28 @@ end
   
   class Taker
 
-  # A private helper for initializing instances of the class from a raw pointer,
+  # A private helper for initializing instances of the class from a raw handle,
   # bypassing any initialization logic and ensuring they are GC'd properly.
-  def self.uniffi_allocate(pointer)
-    pointer.autorelease = false
+  def self.uniffi_allocate(handle)
     inst = allocate
-    inst.instance_variable_set :@pointer, pointer
-    ObjectSpace.define_finalizer(inst, uniffi_define_finalizer_by_pointer(pointer, inst.object_id))
+    inst.instance_variable_set :@handle, handle
+    ObjectSpace.define_finalizer(inst, uniffi_define_finalizer_by_handle(handle, inst.object_id))
     return inst
   end
 
   # A private helper for registering an object finalizer.
   # N.B. it's important that this does not capture a reference
-  # to the actual instance, only its underlying pointer.
-  def self.uniffi_define_finalizer_by_pointer(pointer, object_id)
+  # to the actual instance, only its underlying handle.
+  def self.uniffi_define_finalizer_by_handle(handle, object_id)
     Proc.new do |_id|
       Coinswap.rust_call(
         :uniffi_coinswap_ffi_fn_free_taker,
-        pointer
+        handle
       )
     end
   end
 
-  # A private helper for lowering instances into a raw pointer.
+  # A private helper for lowering instances into a raw handle.
   # This does an explicit typecheck, because accidentally lowering a different type of
   # object in a place where this type is expected, could lead to memory unsafety.
   def self.uniffi_check_lower(inst)
@@ -4478,15 +4489,15 @@ end
     end
   end
 
-  def uniffi_clone_pointer()
+  def uniffi_clone_handle()
     return Coinswap.rust_call(
       :uniffi_coinswap_ffi_fn_clone_taker,
-      @pointer
+      @handle
     )
   end
 
   def self.uniffi_lower(inst)
-    return inst.uniffi_clone_pointer()
+    return inst.uniffi_clone_handle()
   end
 
   def self.init(data_dir, wallet_file_name, rpc_config, control_port, tor_auth_password, zmq_addr, password)
@@ -4506,7 +4517,7 @@ end
         RustBuffer.check_lower_Optionalstring(password)
     # Call the (fallible) function before creating any half-baked object instances.
     # Lightly yucky way to bypass the usual "initialize" logic
-    # and just create a new instance with the required pointer.
+    # and just create a new instance with the required handle.
     return uniffi_allocate(Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_constructor_taker_init,RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.alloc_from_Optionalstring(wallet_file_name),RustBuffer.alloc_from_OptionalTypeRpcConfig(rpc_config),RustBuffer.alloc_from_Optionalu16(control_port),RustBuffer.alloc_from_Optionalstring(tor_auth_password),RustBuffer.allocFromString(zmq_addr),RustBuffer.alloc_from_Optionalstring(password)))
   end
   
@@ -4516,37 +4527,37 @@ end
         
         password = (password ? Coinswap::uniffi_utf8(password) : nil)
         RustBuffer.check_lower_Optionalstring(password)
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_backup,uniffi_clone_pointer(),RustBuffer.allocFromString(destination_path),RustBuffer.alloc_from_Optionalstring(password))
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_backup,uniffi_clone_handle(),RustBuffer.allocFromString(destination_path),RustBuffer.alloc_from_Optionalstring(password))
   end
   
   def display_offer(maker_offer)
         maker_offer = maker_offer
         RustBuffer.check_lower_TypeOffer(maker_offer)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_display_offer,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeOffer(maker_offer))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_display_offer,uniffi_clone_handle(),RustBuffer.alloc_from_TypeOffer(maker_offer))
     return result.consumeIntoString
   end
   def do_coinswap(swap_params)
         swap_params = swap_params
         RustBuffer.check_lower_TypeSwapParams(swap_params)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_do_coinswap,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeSwapParams(swap_params))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_do_coinswap,uniffi_clone_handle(),RustBuffer.alloc_from_TypeSwapParams(swap_params))
     return result.consumeIntoOptionalTypeSwapReport
   end
   def fetch_all_makers()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers,uniffi_clone_handle(),)
     return result.consumeIntoSequencestring
   end
   def fetch_offers()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_fetch_offers,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_fetch_offers,uniffi_clone_handle(),)
     return result.consumeIntoTypeOfferBook
   end
   def get_balances()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_balances,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_balances,uniffi_clone_handle(),)
     return result.consumeIntoTypeBalances
   end
   def get_next_external_address(address_type)
         address_type = address_type
         RustBuffer.check_lower_TypeAddressType(address_type)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_next_external_address,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeAddressType(address_type))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_next_external_address,uniffi_clone_handle(),RustBuffer.alloc_from_TypeAddressType(address_type))
     return result.consumeIntoTypeAddress
   end
   def get_next_internal_addresses(count, address_type)
@@ -4554,7 +4565,7 @@ end
         
         address_type = address_type
         RustBuffer.check_lower_TypeAddressType(address_type)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_next_internal_addresses,uniffi_clone_pointer(),count,RustBuffer.alloc_from_TypeAddressType(address_type))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_next_internal_addresses,uniffi_clone_handle(),count,RustBuffer.alloc_from_TypeAddressType(address_type))
     return result.consumeIntoSequenceTypeAddress
   end
   def get_transactions(count, skip)
@@ -4562,27 +4573,31 @@ end
         RustBuffer.check_lower_Optionalu32(count)
         skip = (skip ? Coinswap::uniffi_in_range(skip, "u32", 0, 2**32) : nil)
         RustBuffer.check_lower_Optionalu32(skip)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_transactions,uniffi_clone_pointer(),RustBuffer.alloc_from_Optionalu32(count),RustBuffer.alloc_from_Optionalu32(skip))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_transactions,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalu32(count),RustBuffer.alloc_from_Optionalu32(skip))
     return result.consumeIntoSequenceTypeListTransactionResult
   end
   def get_wallet_name()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_wallet_name,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_get_wallet_name,uniffi_clone_handle(),)
     return result.consumeIntoString
   end
   def is_offerbook_syncing()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_is_offerbook_syncing,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_is_offerbook_syncing,uniffi_clone_handle(),)
     return 1 == result
   end
   def list_all_utxo_spend_info()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info,uniffi_clone_handle(),)
     return result.consumeIntoSequenceTypeTotalUtxoInfo
   end
   def lock_unspendable_utxos()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos,uniffi_clone_handle(),)
   end
   
   def recover_from_swap()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_recover_from_swap,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_recover_from_swap,uniffi_clone_handle(),)
+  end
+  
+  def run_offer_sync_now()
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_run_offer_sync_now,uniffi_clone_handle(),)
   end
   
   def send_to_address(address, amount, fee_rate, manually_selected_outpoints)
@@ -4594,13 +4609,13 @@ end
         RustBuffer.check_lower_Optionalf64(fee_rate)
         manually_selected_outpoints = (manually_selected_outpoints ? manually_selected_outpoints : nil)
         RustBuffer.check_lower_OptionalSequenceTypeOutPoint(manually_selected_outpoints)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_send_to_address,uniffi_clone_pointer(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_send_to_address,uniffi_clone_handle(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
     return result.consumeIntoTypeTxid
   end
   def setup_logging(data_dir)
         data_dir = (data_dir ? Coinswap::uniffi_utf8(data_dir) : nil)
         RustBuffer.check_lower_Optionalstring(data_dir)
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging,uniffi_clone_pointer(),RustBuffer.alloc_from_Optionalstring(data_dir))
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir))
   end
   
   def setup_logging_with_level(data_dir, log_level)
@@ -4608,11 +4623,11 @@ end
         RustBuffer.check_lower_Optionalstring(data_dir)
         log_level = Coinswap::uniffi_utf8(log_level)
         
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,uniffi_clone_pointer(),RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.allocFromString(log_level))
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.allocFromString(log_level))
   end
   
   def sync_and_save()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_sync_and_save,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_sync_and_save,uniffi_clone_handle(),)
   end
   
   
@@ -4620,29 +4635,28 @@ end
   
   class TaprootTaker
 
-  # A private helper for initializing instances of the class from a raw pointer,
+  # A private helper for initializing instances of the class from a raw handle,
   # bypassing any initialization logic and ensuring they are GC'd properly.
-  def self.uniffi_allocate(pointer)
-    pointer.autorelease = false
+  def self.uniffi_allocate(handle)
     inst = allocate
-    inst.instance_variable_set :@pointer, pointer
-    ObjectSpace.define_finalizer(inst, uniffi_define_finalizer_by_pointer(pointer, inst.object_id))
+    inst.instance_variable_set :@handle, handle
+    ObjectSpace.define_finalizer(inst, uniffi_define_finalizer_by_handle(handle, inst.object_id))
     return inst
   end
 
   # A private helper for registering an object finalizer.
   # N.B. it's important that this does not capture a reference
-  # to the actual instance, only its underlying pointer.
-  def self.uniffi_define_finalizer_by_pointer(pointer, object_id)
+  # to the actual instance, only its underlying handle.
+  def self.uniffi_define_finalizer_by_handle(handle, object_id)
     Proc.new do |_id|
       Coinswap.rust_call(
         :uniffi_coinswap_ffi_fn_free_taproottaker,
-        pointer
+        handle
       )
     end
   end
 
-  # A private helper for lowering instances into a raw pointer.
+  # A private helper for lowering instances into a raw handle.
   # This does an explicit typecheck, because accidentally lowering a different type of
   # object in a place where this type is expected, could lead to memory unsafety.
   def self.uniffi_check_lower(inst)
@@ -4651,15 +4665,15 @@ end
     end
   end
 
-  def uniffi_clone_pointer()
+  def uniffi_clone_handle()
     return Coinswap.rust_call(
       :uniffi_coinswap_ffi_fn_clone_taproottaker,
-      @pointer
+      @handle
     )
   end
 
   def self.uniffi_lower(inst)
-    return inst.uniffi_clone_pointer()
+    return inst.uniffi_clone_handle()
   end
 
   def self.init(data_dir, wallet_file_name, rpc_config, control_port, tor_auth_password, zmq_addr, password)
@@ -4679,7 +4693,7 @@ end
         RustBuffer.check_lower_Optionalstring(password)
     # Call the (fallible) function before creating any half-baked object instances.
     # Lightly yucky way to bypass the usual "initialize" logic
-    # and just create a new instance with the required pointer.
+    # and just create a new instance with the required handle.
     return uniffi_allocate(Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_constructor_taproottaker_init,RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.alloc_from_Optionalstring(wallet_file_name),RustBuffer.alloc_from_OptionalTypeRpcConfig(rpc_config),RustBuffer.alloc_from_Optionalu16(control_port),RustBuffer.alloc_from_Optionalstring(tor_auth_password),RustBuffer.allocFromString(zmq_addr),RustBuffer.alloc_from_Optionalstring(password)))
   end
   
@@ -4689,37 +4703,37 @@ end
         
         password = (password ? Coinswap::uniffi_utf8(password) : nil)
         RustBuffer.check_lower_Optionalstring(password)
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_backup,uniffi_clone_pointer(),RustBuffer.allocFromString(destination_path),RustBuffer.alloc_from_Optionalstring(password))
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_backup,uniffi_clone_handle(),RustBuffer.allocFromString(destination_path),RustBuffer.alloc_from_Optionalstring(password))
   end
   
   def display_offer(maker_offer)
         maker_offer = maker_offer
         RustBuffer.check_lower_TypeOffer(maker_offer)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_display_offer,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeOffer(maker_offer))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_display_offer,uniffi_clone_handle(),RustBuffer.alloc_from_TypeOffer(maker_offer))
     return result.consumeIntoString
   end
   def do_coinswap(swap_params)
         swap_params = swap_params
         RustBuffer.check_lower_TypeTaprootSwapParams(swap_params)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeTaprootSwapParams(swap_params))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap,uniffi_clone_handle(),RustBuffer.alloc_from_TypeTaprootSwapParams(swap_params))
     return result.consumeIntoOptionalTypeSwapReport
   end
   def fetch_all_makers()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers,uniffi_clone_handle(),)
     return result.consumeIntoSequencestring
   end
   def fetch_offers()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers,uniffi_clone_handle(),)
     return result.consumeIntoTypeOfferBook
   end
   def get_balances()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_balances,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_balances,uniffi_clone_handle(),)
     return result.consumeIntoTypeBalances
   end
   def get_next_external_address(address_type)
         address_type = address_type
         RustBuffer.check_lower_TypeAddressType(address_type)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address,uniffi_clone_pointer(),RustBuffer.alloc_from_TypeAddressType(address_type))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address,uniffi_clone_handle(),RustBuffer.alloc_from_TypeAddressType(address_type))
     return result.consumeIntoTypeAddress
   end
   def get_next_internal_addresses(count, address_type)
@@ -4727,7 +4741,7 @@ end
         
         address_type = address_type
         RustBuffer.check_lower_TypeAddressType(address_type)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses,uniffi_clone_pointer(),count,RustBuffer.alloc_from_TypeAddressType(address_type))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses,uniffi_clone_handle(),count,RustBuffer.alloc_from_TypeAddressType(address_type))
     return result.consumeIntoSequenceTypeAddress
   end
   def get_transactions(count, skip)
@@ -4735,27 +4749,31 @@ end
         RustBuffer.check_lower_Optionalu32(count)
         skip = (skip ? Coinswap::uniffi_in_range(skip, "u32", 0, 2**32) : nil)
         RustBuffer.check_lower_Optionalu32(skip)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions,uniffi_clone_pointer(),RustBuffer.alloc_from_Optionalu32(count),RustBuffer.alloc_from_Optionalu32(skip))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalu32(count),RustBuffer.alloc_from_Optionalu32(skip))
     return result.consumeIntoSequenceTypeListTransactionResult
   end
   def get_wallet_name()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name,uniffi_clone_handle(),)
     return result.consumeIntoString
   end
   def is_offerbook_syncing()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_is_offerbook_syncing,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_is_offerbook_syncing,uniffi_clone_handle(),)
     return 1 == result
   end
   def list_all_utxo_spend_info()
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info,uniffi_clone_pointer(),)
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info,uniffi_clone_handle(),)
     return result.consumeIntoSequenceTypeTotalUtxoInfo
   end
   def lock_unspendable_utxos()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos,uniffi_clone_handle(),)
   end
   
   def recover_from_swap()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap,uniffi_clone_handle(),)
+  end
+  
+  def run_offer_sync_now()
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_run_offer_sync_now,uniffi_clone_handle(),)
   end
   
   def send_to_address(address, amount, fee_rate, manually_selected_outpoints)
@@ -4767,11 +4785,11 @@ end
         RustBuffer.check_lower_Optionalf64(fee_rate)
         manually_selected_outpoints = (manually_selected_outpoints ? manually_selected_outpoints : nil)
         RustBuffer.check_lower_OptionalSequenceTypeOutPoint(manually_selected_outpoints)
-    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,uniffi_clone_pointer(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
+    result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,uniffi_clone_handle(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
     return result.consumeIntoString
   end
   def sync_and_save()
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,uniffi_clone_pointer(),)
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,uniffi_clone_handle(),)
   end
   
   

@@ -15,9 +15,9 @@ module CoinswapConfig
       data_dir: DATA_DIR.to_s,
       wallet_file_name: 'rails_wallet',
       rpc_config: Coinswap::RPCConfig.new(
-        url: ENV['BITCOIN_RPC_URL'] || 'http://localhost:18443',
-        user: ENV['BITCOIN_RPC_USER'] || 'bitcoin',
-        password: ENV['BITCOIN_RPC_PASSWORD'] || 'bitcoin',
+        url: ENV['BITCOIN_RPC_URL'] || 'http://localhost:18442',
+        user: ENV['BITCOIN_RPC_USER'] || 'user',
+        password: ENV['BITCOIN_RPC_PASSWORD'] || 'password',
         wallet_name: 'taker_wallet'
       ),
       control_port: ENV['TOR_CONTROL_PORT']&.to_i || 9051,

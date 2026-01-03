@@ -90,9 +90,11 @@ fn test_taker_complete_flow() {
 
     let (taker, bitcoind) = setup_bitcoind_and_taker("test-taker");
 
-        use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant};
+    println!("Waiting for offerbook synchronization to complete…{:?}", taker.is_offerbook_syncing());
+    println!("sync now {:?}", taker.run_offer_sync_now());
+    println!("Waiting for offerbook synchronization to complete…{:?}", taker.is_offerbook_syncing());
 
-    println!("Waiting for offerbook synchronization to complete…");
     let sync_start = Instant::now();
 
     loop {
