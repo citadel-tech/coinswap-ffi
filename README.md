@@ -8,10 +8,18 @@
 
 ## Overview
 
-Coinswap FFI provides Foreign Function Interface (FFI) bindings for the [Coinswap](https://github.com/citadel-tech/coinswap) Bitcoin privacy protocol, enabling integration with multiple programming languages and platforms. This repository contains two binding implementations:
+Coinswap FFI provides Foreign Function Interface (FFI) bindings for the [Coinswap](https://github.com/citadel-tech/coinswap) Bitcoin privacy protocol, enabling integration with multiple programming languages and platforms. This repository contains binding implementations for:
 
+### JavaScript/TypeScript
 - **[coinswap-js](./coinswap-js)** - Node.js bindings via NAPI-RS for JavaScript/TypeScript applications
-- **[coinswap-uniffi](./coinswap-uniffi)** - Multi-language bindings via UniFFI for Kotlin, Swift, Python, and Ruby
+
+### Multi-Language Bindings (via UniFFI)
+Generated from **[ffi-commons](./ffi-commons)** - the core UniFFI binding generator:
+
+- **[coinswap-kotlin](./coinswap-kotlin)** - Kotlin bindings for Android and JVM applications
+- **[coinswap-swift](./coinswap-swift)** - Swift bindings for iOS and macOS applications
+- **[coinswap-python](./coinswap-python)** - Python bindings for cross-platform applications
+- **[coinswap-ruby](./coinswap-ruby)** - Ruby bindings for Ruby applications
 
 ## Quick Start
 
@@ -25,23 +33,26 @@ yarn build
 
 See [coinswap-napi/README.md](./coinswap-napi/README.md) for detailed usage.
 
-### Kotlin/Swift/Python (UniFFI)
+### Multi-Language Bindings (Kotlin/Swift/Python/Ruby)
 
 ```bash
-cd coinswap-ffi/coinswap-uniffi
+cd coinswap-ffi/ffi-commons
 chmod +x create_bindings.sh
 ./create_bindings.sh
 ```
 
-See [coinswap-uniffi/README.md](./coinswap-uniffi/README.md) for language-specific instructions.
+This generates bindings for all supported languages. See individual language README files for usage:
+- [Kotlin README](./coinswap-kotlin/README.md)
+- [Swift README](./coinswap-swift/README.md)
+- [Python README](./coinswap-python/README.md)
+- [Ruby README](./coinswap-ruby/README.md)
+- [UniFFI Core README](./ffi-commons/README.md) - Build and binding generation
 
 ## Use Cases
 
 - **Desktop Wallets** - Build privacy-focused Bitcoin wallets with Node.js (Electron/Tauri)
 - **Mobile Applications** - Native iOS and Android apps with coinswap support
 - **Web Applications** - Browser-based wallets via WebAssembly
-- **Backend Services** - Server-side coinswap integration for exchanges and services
-- **CLI Tools** - Command-line utilities for automated swap operations
 
 ### Reference Implementation
 
