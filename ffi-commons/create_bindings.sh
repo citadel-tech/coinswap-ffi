@@ -35,23 +35,89 @@ fi
 
 echo "Using library: $LIBRARY_PATH"
 
-languages=("kotlin" "swift" "python" "ruby")
+# Define output directories for each language
+KOTLIN_DIR="../coinswap-kotlin/uniffi/coinswap"
+SWIFT_DIR="../coinswap-swift"
+PYTHON_DIR="../coinswap-python"
+RUBY_DIR="../coinswap-ruby"
 
-for lang in "${languages[@]}"; do
-    echo "Generating $lang bindings..."
-    cargo run --bin uniffi-bindgen generate \
-        --library "$LIBRARY_PATH" \
-        --language "$lang" \
-        --out-dir "./bindings/$lang" \
-        --no-format
-    
-    if [ $? -eq 0 ]; then
-        echo "✓ $lang bindings generated successfully"
-    else
-        echo "✗ Failed to generate $lang bindings"
-        exit 1
-    fi
-done
+# Create directories if they don't exist
+mkdir -p "$KOTLIN_DIR"
+mkdir -p "$SWIFT_DIR"
+mkdir -p "$PYTHON_DIR"
+mkdir -p "$RUBY_DIR"
+
+echo ""
+echo "Generating Kotlin bindings..."
+cargo run --bin uniffi-bindgen generate \
+    --library "$LIBRARY_PATH" \
+    --language "kotlin" \
+    --out-dir "$KOTLIN_DIR" \
+    --no-format
+
+if [ $? -eq 0 ]; then
+    echo "✓ Kotlin bindings generated at $KOTLIN_DIR"
+else
+    echo "✗ Failed to generate Kotlin bindings"
+    exit 1
+fi
+
+echo ""
+echo "Generating Swift bindings..."
+cargo run --bin uniffi-bindgen generate \
+    --library "$LIBRARY_PATH" \
+    --language "swift" \
+    --out-dir "$SWIFT_DIR" \
+    --no-format
+
+if [ $? -eq 0 ]; then
+    echo "✓ Swift bindings generated at $SWIFT_DIR"
+else
+    echo "✗ Failed to generate Swift bindings"
+    exit 1
+fi
+
+echo ""
+echo "Generating Python bindings..."
+cargo run --bin uniffi-bindgen generate \
+    --library "$LIBRARY_PATH" \
+    --language "python" \
+    --out-dir "$PYTHON_DIR" \
+    --no-format
+
+if [ $? -eq 0 ]; then
+    echo "✓ Python bindings generated at $PYTHON_DIR"
+else
+    echo "✗ Failed to generate Python bindings"
+    exit 1
+fi
+
+echo ""
+echo "Generating Ruby bindings..."
+cargo run --bin uniffi-bindgen generate \
+    --library "$LIBRARY_PATH" \
+    --language "ruby" \
+    --out-dir "$RUBY_DIR" \
+    --no-format
+
+if [ $? -eq 0 ]; then
+    echo "✓ Ruby bindings generated at $RUBY_DIR"
+else
+    echo "✗ Failed to generate Ruby bindings"
+    exit 1
+fi
 
 echo ""
 echo "All bindings generated successfully!"
+echo ""
+echo "Generated bindings:"
+echo "  Kotlin:  $KOTLIN_DIR"
+echo "  Swift:   $SWIFT_DIR"
+echo "  Python:  $PYTHON_DIR"
+echo "  Ruby:    $RUBY_DIR"
+echo ""
+echo "See language-specific README files for usage:"
+echo "  - ../coinswap-kotlin/README.md"
+echo "  - ../coinswap-swift/README.md"
+echo "  - ../coinswap-python/README.md"
+echo "  - ../coinswap-ruby/README.md"

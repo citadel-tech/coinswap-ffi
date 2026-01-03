@@ -1,8 +1,8 @@
 <div align="center">
 
-# Coinswap UniFFI
+# Coinswap FFI Commons
 
-**Multi-language bindings for the Coinswap Bitcoin privacy protocol**
+**Core UniFFI binding generator for multi-language Coinswap bindings**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Rust 1.75+](https://img.shields.io/badge/rustc-1.75%2B-lightgrey.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
@@ -11,32 +11,52 @@
 
 ## Overview
 
-Coinswap UniFFI provides multi-language bindings for the [Coinswap protocol](https://github.com/citadel-tech/coinswap) using [Mozilla's UniFFI](https://mozilla.github.io/uniffi-rs/). Build native mobile and desktop applications with full coinswap functionality in Kotlin, Swift, Python, and Ruby.
+This is the core UniFFI binding generator for the [Coinswap protocol](https://github.com/citadel-tech/coinswap). It uses [Mozilla's UniFFI](https://mozilla.github.io/uniffi-rs/) to generate Foreign Function Interface (FFI) bindings for multiple programming languages from a single Rust codebase.
+
+**Generated Language Bindings:**
+- **[coinswap-kotlin](../coinswap-kotlin)** - Android & JVM
+- **[coinswap-swift](../coinswap-swift)** - iOS & macOS
+- **[coinswap-python](../coinswap-python)** - Cross-platform Python
+- **[coinswap-ruby](../coinswap-ruby)** - Ruby applications
 
 ## Supported Languages
 
-| Language | Platform |
-|----------|----------|
-| **Kotlin** | Android, JVM | ✅ Production Ready |
-| **Swift** | iOS, macOS | ✅ Production Ready |
-| **Python** | Linux, macOS, Windows | ✅ Production Ready |
-| **Ruby** | Linux, macOS | ✅ Production Ready |
+Language bindings are generated and placed in their respective directories:
 
-## Installation
+| Language | Directory | Platform | Status |
+|----------|-----------|----------|--------|
+| **Kotlin** | [coinswap-kotlin](../coinswap-kotlin) | Android, JVM | ✅ Production Ready |
+| **Swift** | [coinswap-swift](../coinswap-swift) | iOS, macOS | ✅ Production Ready |
+| **Python** | [coinswap-python](../coinswap-python) | Linux, macOS, Windows | ✅ Production Ready |
+| **Ruby** | [coinswap-ruby](../coinswap-ruby) | Linux, macOS | ✅ Production Ready |
 
-### Build Core Library
+## Building Bindings
+
+### Generate All Language Bindings
 
 ```bash
 git clone https://github.com/citadel-tech/coinswap-ffi.git
-cd coinswap-ffi/coinswap-uniffi
+cd coinswap-ffi/ffi-commons
 chmod +x create_bindings.sh
 ./create_bindings.sh
 ```
 
-The compiled library will be at:
-- Linux: `target/release/libcoinswap_ffi.so`
-- macOS: `target/release/libcoinswap_ffi.dylib`
-- Windows: `target/release/coinswap_ffi.dll`
+This will:
+1. Build the core Rust library (`libcoinswap_ffi`)
+2. Generate bindings for all supported languages
+3. Place generated files in their respective language directories:
+   - Kotlin: `../coinswap-kotlin/uniffi/coinswap/`
+   - Swift: `../coinswap-swift/`
+   - Python: `../coinswap-python/`
+   - Ruby: `../coinswap-ruby/`
+
+### Using Generated Bindings
+
+After generation, refer to each language's README for usage instructions:
+- [Kotlin Quick Start](../coinswap-kotlin/README.md)
+- [Swift Quick Start](../coinswap-swift/README.md)
+- [Python Quick Start](../coinswap-python/README.md)
+- [Ruby Quick Start](../coinswap-ruby/README.md)
 
 ## Development
 
