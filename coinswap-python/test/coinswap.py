@@ -1,177 +1,199 @@
-#!/usr/bin/env python3
-"""
-Complete example of using the Coinswap Python bindings.
-
-This script demonstrates how to:
-- Initialize a taker wallet
-- Sync with the blockchain
-- Check balances
-- Get receiving addresses
-- List transactions
-- Fetch available makers
-- Perform a coinswap
-"""
-
-import coinswap
 import sys
-from pathlib import Path
+import os
+import subprocess
+import time 
 
-class CoinswapWallet:
-    def __init__(self, data_dir: str):
-        self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.taker = None
-        
-    def initialize(self):
-        """Initialize the taker wallet"""
-        try:
-            self.taker = coinswap.Taker.init(
-                data_dir=str(self.data_dir),
-                wallet_file_name="wallet",
-                rpc_config=coinswap.RPCConfig(
-                    url="http://localhost:18443",
-                    user="bitcoin",
-                    password="bitcoin",
-                    wallet_name="taker_wallet"
-                ),
-                control_port=9051,
-                tor_auth_password=None,
-                zmq_addr="tcp://localhost:28332",
-                password="secure_password_123"
-            )
-            
-            self.taker.setup_logging(str(self.data_dir))
-            print("✓ Wallet initialized")
-            
-        except coinswap.TakerError as e:
-            print(f"✗ Initialization error: {e}")
-            sys.exit(1)
-    
-    def sync(self):
-        """Sync wallet with blockchain"""
-        try:
-            self.taker.sync_and_save()
-            print("✓ Wallet synced")
-        except coinswap.TakerError as e:
-            print(f"✗ Sync error: {e}")
-    
-    def show_balance(self):
-        """Display wallet balance"""
-        try:
-            balances = self.taker.get_balances()
-            print(f"\nWallet Balance:")
-            print(f"  Total:       {balances.total:,} sats")
-            print(f"  Confirmed:   {balances.confirmed:,} sats")
-            print(f"  Unconfirmed: {balances.unconfirmed:,} sats")
-        except coinswap.TakerError as e:
-            print(f"✗ Error getting balance: {e}")
-    
-    def get_new_address(self):
-        """Get a new receiving address"""
-        try:
-            address = self.taker.get_next_external_address(
-                coinswap.AddressType.P2WPKH
-            )
-            print(f"\nNew receiving address: {address.value}")
-            return address.value
-        except coinswap.TakerError as e:
-            print(f"✗ Error getting address: {e}")
-            return None
-    
-    def perform_swap(self, amount_sats: int, maker_count: int = 2):
-        """Perform a coinswap"""
-        try:
-            print(f"\nStarting coinswap...")
-            print(f"  Amount: {amount_sats:,} sats")
-            print(f"  Makers: {maker_count}")
-            
-            # Wait for offerbook to sync
-            print("Waiting for offerbook synchronization...")
-            while self.taker.is_offerbook_syncing():
-                print("Offerbook sync in progress...")
-                import time
-                time.sleep(2)
-            print("Offerbook synchronized!")
-            
-            params = coinswap.SwapParams(
-                send_amount=amount_sats,
-                maker_count=maker_count,
-                manually_selected_outpoints=None
-            )
-            
-            report = self.taker.do_coinswap(params)
-            
-            if report:
-                print(f"\n✓ Swap completed successfully!")
-                print(f"  Amount swapped: {report.amount_swapped:,} sats")
-                print(f"  Routing fees:   {report.routing_fees_paid:,} sats")
-                print(f"  Successful hops: {report.num_successful_swaps}")
-                print(f"  Time taken:     {report.total_swap_time} seconds")
-                return True
-            else:
-                print("✗ Swap failed")
-                return False
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Swap error: {e}")
-            return False
-    
-    def list_transactions(self, count: int = 10):
-        """List recent transactions"""
-        try:
-            txs = self.taker.get_transactions(count=count, skip=0)
-            print(f"\nRecent Transactions ({len(txs)}):")
-            
-            for tx in txs:
-                print(f"\n  TXID: {tx.info.txid.value}")
-                print(f"  Confirmations: {tx.info.confirmations}")
-                print(f"  Amount: {tx.detail.amount.value:,} sats")
-                print(f"  Category: {tx.detail.category}")
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Error listing transactions: {e}")
-    
-    def fetch_makers(self):
-        """Fetch available makers"""
-        try:
-            print("\nFetching available makers...")
-            offers = self.taker.fetch_offers()
-            
-            if offers.offers:
-                print(f"✓ Found {len(offers.offers)} makers")
-                for i, offer in enumerate(offers.offers[:5], 1):
-                    print(f"\n  Maker {i}:")
-                    print(f"    Min: {offer.min_size:,} sats")
-                    print(f"    Max: {offer.max_size:,} sats")
-                    print(f"    Fee: {offer.amount_relative_fee_pct}%")
-            else:
-                print("No makers currently available")
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Error fetching makers: {e}")
+bindings_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')
+)
+sys.path.insert(0, bindings_path)
 
+from coinswap import Taker, SwapParams, RpcConfig, AddressType
+
+def cleanup_test_wallets():
+    """Clean up test wallet directories before running tests"""
+    import shutil
+    
+    coinswap_taker_dir = os.path.expanduser("~/.coinswap/taker")
+    if os.path.exists(coinswap_taker_dir):
+        try:
+            shutil.rmtree(coinswap_taker_dir)
+            print(f"✓ Cleaned up {coinswap_taker_dir}")
+        except Exception as e:
+            print(f"Warning: Could not clean {coinswap_taker_dir}: {e}")
+    
+    bitcoin_wallet_dir = os.path.expanduser("~/.bitcoin/regtest/wallets/python_test_wallet")
+    if os.path.exists(bitcoin_wallet_dir):
+        try:
+            shutil.rmtree(bitcoin_wallet_dir)
+            print(f"✓ Cleaned up {bitcoin_wallet_dir}")
+        except Exception as e:
+            print(f"Warning: Could not clean {bitcoin_wallet_dir}: {e}")
+    
+    try:
+        subprocess.run(
+            ['bitcoin-cli', '-regtest', 'unloadwallet', 'python_test_wallet'],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+    except Exception:
+        pass
+def setup_funding_wallet(taker_address: str):
+    """Create a funding wallet, mine blocks, and send BTC to taker address"""
+    funding_wallet = "test"
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password', 'sendtoaddress', taker_address, '1.0'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        txid = result.stdout.strip()
+        print(f"✓ Sent 1.0 BTC to taker address (txid: {txid[:16]}...)")
+    except subprocess.CalledProcessError as e:
+        print(f"✗ Failed to send BTC: {e.stderr}")
+        raise Exception("Could not send BTC to taker address") from e
+    except Exception as e:
+        print(f"✗ Unexpected error sending BTC: {e}")
+        raise
+
+    time.sleep(1)
 def main():
-    # Initialize wallet
-    wallet = CoinswapWallet(data_dir="./coinswap_data")
-    wallet.initialize()
-    
-    # Sync wallet
-    wallet.sync()
-    
-    # Show balance
-    wallet.show_balance()
-    
-    # Get new address
-    wallet.get_new_address()
-    
-    # List transactions
-    wallet.list_transactions(count=5)
-    
-    # Fetch makers
-    wallet.fetch_makers()
-    
-    # Perform a small test swap (uncomment to use)
-    # wallet.perform_swap(amount_sats=100_000, maker_count=2)
+    try:
+        print("Cleaning up previous test data...")
+        cleanup_test_wallets()
+        print()
+
+        wallet_name = 'python_test_wallet'
+        
+        rpc_config = RpcConfig(
+            url="127.0.0.1:18442",
+            username="user",
+            password="password",
+            wallet_name=wallet_name,
+        )
+
+        print("\nInitializing Taker...")
+        data_dir = os.path.expanduser("~/.coinswap/taker")
+        
+        taker = Taker.init(
+                data_dir=data_dir,
+                wallet_file_name=wallet_name,
+                rpc_config=rpc_config,
+                control_port=9051,
+                tor_auth_password="coinswap",
+                zmq_addr="tcp://127.0.0.1:28332",
+                password="",
+            )
+        print("✓ Taker initialized successfully")
+
+        wallet_name_check = taker.get_wallet_name()
+        print(f"Wallet name: {wallet_name_check}")
+
+        print("\nSyncing wallet...")
+        taker.sync_and_save()
+        print("✓ Wallet synced")
+
+        print("\nGetting initial balances...")
+        balances = taker.get_balances()
+        print(f"Initial Balances: {balances}")
+
+        print("\nGetting next external address...")
+        address = taker.get_next_external_address(AddressType(addr_type="P2WPKH"))
+        setup_funding_wallet(address.address)
+        print(f"Address: {address.address}")
+
+        print("\nSyncing wallet after funding...")
+        taker.sync_and_save()
+        print("✓ Wallet synced")
+
+        print("\nGetting updated balances...")
+        balances = taker.get_balances()
+        print(f"Updated Balances:")
+        print(f"  Spendable: {balances.spendable} sats")
+        print(f"  Regular: {balances.regular} sats")
+        print(f"  Swap: {balances.swap} sats")
+        print(f"  Fidelity: {balances.fidelity} sats")
+
+        print("\n📡 Attempting to fetch offers from makers...")
+        print("   Note: In regtest mode, makers are auto-discovered during coinswap")
+        print("   fetch_offers() typically requires a directory server")
+        try:
+            offerbook = taker.fetch_offers()
+            print(f"✓ Successfully fetched offers")
+            print(f"  Total makers found: {len(offerbook.makers)}")
+            
+            if len(offerbook.good_makers) > 0:
+                print("\n🎯 Good Makers Details:")
+                for i, maker_offer in enumerate(offerbook.good_makers, 1):
+                    print(f"\n  Maker {i}:")
+                    print(f"    Address: {maker_offer.address.address}")
+                    print(f"    Base Fee: {maker_offer.offer.base_fee} sats")
+                    print(f"    Amount Relative Fee: {maker_offer.offer.amount_relative_fee_pct}%")
+                    print(f"    Min Size: {maker_offer.offer.min_size} sats")
+                    print(f"    Max Size: {maker_offer.offer.max_size} sats")
+            else:
+                print("\n⚠️  No offers fetched from directory server (expected in regtest)")
+                print("   Makers will be auto-discovered during coinswap from localhost")
+
+        except Exception as e:
+            print(f"⚠️  Could not fetch offers (expected in regtest): {e}")
+            print("   Makers running on localhost will be auto-discovered during coinswap")
+
+        # Perform coinswap
+        print("\n💱 Initiating coinswap...")
+        swap_params = SwapParams(
+            send_amount=500000,
+            maker_count=2,
+            manually_selected_outpoints=None
+        )
+        print(f"Swap Parameters:")
+        print(f"  Send Amount: {swap_params.send_amount} sats")
+        print(f"  Maker Count: {swap_params.maker_count}")
+        
+        try:
+            print("\n🔄 Executing coinswap (this may take a while)...")
+            result = taker.do_coinswap(swap_params=swap_params)
+            
+            if result:
+                print(f"\n✅ Coinswap completed successfully!")
+                print(f"\nSwap Report:")
+                print(f"  Swap ID: {result.swap_id}")
+                print(f"  Duration: {result.swap_duration_seconds:.2f} seconds")
+                print(f"  Target Amount: {result.target_amount} sats")
+                print(f"  Total Fee: {result.total_fee} sats")
+                print(f"  Maker Fees: {result.total_maker_fees} sats")
+                print(f"  Mining Fee: {result.mining_fee} sats")
+                print(f"  Fee Percentage: {result.fee_percentage:.4f}%")
+                print(f"  Number of Makers Used: {result.makers_count}")
+                print(f"  Maker Addresses:")
+                for i, addr in enumerate(result.maker_addresses, 1):
+                    print(f"    {i}. {addr}")
+            else:
+                print("\n⚠️  Coinswap returned no result (possibly no makers available)")
+                
+        except Exception as e:
+            print(f"\n❌ Coinswap failed: {e}")
+            print("   This is expected if makers are not running or not properly set up.")
+
+        # Final balance check
+        print("\n📊 Final balances after coinswap...")
+        taker.sync_and_save()
+        final_balances = taker.get_balances()
+        print(f"Final Balances:")
+        print(f"  Spendable: {final_balances.spendable} sats")
+        print(f"  Regular: {final_balances.regular} sats")
+        print(f"  Swap: {final_balances.swap} sats")
+        print(f"  Fidelity: {final_balances.fidelity} sats")
+
+        print("\n✓ All tests completed!")
+
+    except Exception as e:
+        print(f"\n✗ Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

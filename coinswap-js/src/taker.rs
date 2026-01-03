@@ -154,6 +154,12 @@ impl Taker {
   }
 
   #[napi]
+  pub fn run_offer_sync_now(&self) -> Result<()> {
+    let taker = self.inner.lock().map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    Ok(taker.run_offer_sync_now())
+  }
+
+  #[napi]
   pub fn get_transactions(
     &self,
     count: Option<u32>,

@@ -84,7 +84,7 @@ class WalletViewModel: ObservableObject {
     
     private func getRpcConfig() -> RPCConfig {
         RPCConfig(
-            url: "http://localhost:18443",
+            url: "http://localhost:18442",
             user: "bitcoin",
             password: "bitcoin",
             walletName: "taker_wallet"

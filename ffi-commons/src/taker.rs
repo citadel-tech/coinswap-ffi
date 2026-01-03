@@ -441,6 +441,13 @@ impl Taker {
         Ok(taker.is_offerbook_syncing())
     }
 
+    pub fn run_offer_sync_now(&self) -> Result<(), TakerError> {
+    let taker = self.taker.lock().map_err(|e| TakerError::General {
+        msg: format!("Failed to acquire taker lock for offerbook sync check: {:?}", e),
+        })?;
+        Ok(taker.run_offer_sync_now())
+    }
+
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
