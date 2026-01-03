@@ -10,41 +10,8 @@
 
 Coinswap FFI provides Foreign Function Interface (FFI) bindings for the [Coinswap](https://github.com/citadel-tech/coinswap) Bitcoin privacy protocol, enabling integration with multiple programming languages and platforms. This repository contains two binding implementations:
 
-- **[coinswap-napi](./coinswap-napi)** - Node.js bindings via NAPI-RS for JavaScript/TypeScript applications
+- **[coinswap-js](./coinswap-js)** - Node.js bindings via NAPI-RS for JavaScript/TypeScript applications
 - **[coinswap-uniffi](./coinswap-uniffi)** - Multi-language bindings via UniFFI for Kotlin, Swift, Python, and Ruby
-
-## Features
-
-- ✅ **Wallet Management** - Create, restore, and manage Bitcoin wallets with encryption support
-- ✅ **Coinswap Operations** - Execute privacy-preserving atomic swaps with multiple makers
-- ✅ **UTXO Control** - Advanced UTXO selection and management
-- ✅ **Fee Estimation** - Dynamic fee rate calculation
-- ✅ **Maker Discovery** - Query and filter available swap service providers
-- ✅ **Swap Reporting** - Detailed swap analytics and transaction information
-- ✅ **Cross-Platform** - Support for Linux, macOS, Windows, Android, and iOS
-
-## Architecture
-
-```
-coinswap-ffi/
-├── coinswap-napi/          # Node.js/JavaScript bindings
-│   ├── Cargo.toml
-│   ├── package.json
-│   └── src/
-│       ├── taker.rs        # Swap execution and maker coordination
-│       ├── types.rs        # Type definitions and conversions
-│       └── lib.rs
-│
-├── coinswap-uniffi/        # Multi-language bindings
-│   ├── Cargo.toml
-│   ├── coinswap.udl        # UniFFI interface definition
-│   └── src/
-│       ├── taker.rs        
-│       └── lib.rs
-
-taker-app/              # Reference GUI application (Node.js/Electron)
-    └── Uses coinswap-napi bindings
-```
 
 ## Quick Start
 
