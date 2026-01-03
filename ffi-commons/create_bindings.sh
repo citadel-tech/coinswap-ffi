@@ -36,7 +36,7 @@ fi
 echo "Using library: $LIBRARY_PATH"
 
 # Define output directories for each language
-KOTLIN_DIR="../coinswap-kotlin/uniffi/coinswap"
+KOTLIN_DIR="../coinswap-kotlin"
 SWIFT_DIR="../coinswap-swift"
 PYTHON_DIR="../coinswap-python"
 RUBY_DIR="../coinswap-ruby"
@@ -108,6 +108,32 @@ else
 fi
 
 echo ""
+echo "Copying library files to language directories..."
+
+for DIR in "$KOTLIN_DIR" "$SWIFT_DIR" "$PYTHON_DIR" "$RUBY_DIR"; do
+    echo "Copying files to $DIR..."
+    
+    # Copy the main library
+    cp "$LIBRARY_PATH" "$DIR/"
+    
+    if [[ "$OS_TYPE" == MINGW* ]] || [[ "$OS_TYPE" == MSYS* ]] || [[ "$OS_TYPE" == CYGWIN* ]]; then
+        cp "./target/release/coinswap_ffi.d" "$DIR/" 2>/dev/null || echo "  ⚠ coinswap_ffi.d not found (optional)"
+    else
+        cp "./target/release/libcoinswap_ffi.d" "$DIR/" 2>/dev/null || echo "  ⚠ libcoinswap_ffi.d not found (optional)"
+    fi
+    
+    if [[ "$OS_TYPE" == MINGW* ]] || [[ "$OS_TYPE" == MSYS* ]] || [[ "$OS_TYPE" == CYGWIN* ]]; then
+        cp "./target/release/uniffi-bindgen.exe" "$DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen.exe not found (optional)"
+    else
+        cp "./target/release/uniffi-bindgen" "$DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen not found (optional)"
+    fi
+    
+    cp "./target/release/uniffi-bindgen.d" "$DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen.d not found (optional)"
+    
+    echo "  ✓ Files copied to $DIR"
+done
+
+echo ""
 echo "All bindings generated successfully!"
 echo ""
 echo "Generated bindings:"
@@ -115,6 +141,12 @@ echo "  Kotlin:  $KOTLIN_DIR"
 echo "  Swift:   $SWIFT_DIR"
 echo "  Python:  $PYTHON_DIR"
 echo "  Ruby:    $RUBY_DIR"
+echo ""
+echo "Copied files to each directory:"
+echo "  - libcoinswap_ffi.$LIB_EXTENSION (main library)"
+echo "  - libcoinswap_ffi.d (debug symbols)"
+echo "  - uniffi-bindgen (binary)"
+echo "  - uniffi-bindgen.d (debug symbols)"
 echo ""
 echo "See language-specific README files for usage:"
 echo "  - ../coinswap-kotlin/README.md"

@@ -352,19 +352,29 @@ private func uniffiTraitInterfaceCallWithError<T, E>(
         callStatus.pointee.errorBuf = FfiConverterString.lower(String(describing: error))
     }
 }
+// Initial value and increment amount for handles. 
+// These ensure that SWIFT handles always have the lowest bit set
+fileprivate let UNIFFI_HANDLEMAP_INITIAL: UInt64 = 1
+fileprivate let UNIFFI_HANDLEMAP_DELTA: UInt64 = 2
+
 fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
     // All mutation happens with this lock held, which is why we implement @unchecked Sendable.
     private let lock = NSLock()
     private var map: [UInt64: T] = [:]
-    private var currentHandle: UInt64 = 1
+    private var currentHandle: UInt64 = UNIFFI_HANDLEMAP_INITIAL
 
     func insert(obj: T) -> UInt64 {
         lock.withLock {
-            let handle = currentHandle
-            currentHandle += 1
-            map[handle] = obj
-            return handle
+            return doInsert(obj)
         }
+    }
+
+    // Low-level insert function, this assumes `lock` is held.
+    private func doInsert(_ obj: T) -> UInt64 {
+        let handle = currentHandle
+        currentHandle += UNIFFI_HANDLEMAP_DELTA
+        map[handle] = obj
+        return handle
     }
 
      func get(handle: UInt64) throws -> T {
@@ -373,6 +383,15 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
                 throw UniffiInternalError.unexpectedStaleHandle
             }
             return obj
+        }
+    }
+
+     func clone(handle: UInt64) throws -> UInt64 {
+        try lock.withLock {
+            guard let obj = map[handle] else {
+                throw UniffiInternalError.unexpectedStaleHandle
+            }
+            return doInsert(obj)
         }
     }
 
@@ -625,6 +644,8 @@ public protocol TakerProtocol: AnyObject, Sendable {
     
     func recoverFromSwap() throws 
     
+    func runOfferSyncNow() throws 
+    
     func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?) throws  -> Txid
     
     func setupLogging(dataDir: String?) throws 
@@ -635,13 +656,13 @@ public protocol TakerProtocol: AnyObject, Sendable {
     
 }
 open class Taker: TakerProtocol, @unchecked Sendable {
-    fileprivate let pointer: UnsafeMutableRawPointer!
+    fileprivate let handle: UInt64
 
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public struct NoPointer {
+    public struct NoHandle {
         public init() {}
     }
 
@@ -651,36 +672,32 @@ open class Taker: TakerProtocol, @unchecked Sendable {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
     }
 
     // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
     //
     // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
+    public init(noHandle: NoHandle) {
+        self.handle = 0
     }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_coinswap_ffi_fn_clone_taker(self.pointer, $0) }
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_coinswap_ffi_fn_clone_taker(self.handle, $0) }
     }
     // No primary constructor declared for this class.
 
     deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_coinswap_ffi_fn_free_taker(pointer, $0) }
+        try! rustCall { uniffi_coinswap_ffi_fn_free_taker(handle, $0) }
     }
 
     
@@ -701,7 +718,8 @@ public static func `init`(dataDir: String?, walletFileName: String?, rpcConfig: 
 
     
 open func backup(destinationPath: String, password: String?)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_backup(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_backup(
+            self.uniffiCloneHandle(),
         FfiConverterString.lower(destinationPath),
         FfiConverterOptionString.lower(password),$0
     )
@@ -710,7 +728,8 @@ open func backup(destinationPath: String, password: String?)throws   {try rustCa
     
 open func displayOffer(makerOffer: Offer)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_display_offer(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_display_offer(
+            self.uniffiCloneHandle(),
         FfiConverterTypeOffer_lower(makerOffer),$0
     )
 })
@@ -718,7 +737,8 @@ open func displayOffer(makerOffer: Offer)throws  -> String  {
     
 open func doCoinswap(swapParams: SwapParams)throws  -> SwapReport?  {
     return try  FfiConverterOptionTypeSwapReport.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_do_coinswap(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_do_coinswap(
+            self.uniffiCloneHandle(),
         FfiConverterTypeSwapParams_lower(swapParams),$0
     )
 })
@@ -726,28 +746,32 @@ open func doCoinswap(swapParams: SwapParams)throws  -> SwapReport?  {
     
 open func fetchAllMakers()throws  -> [String]  {
     return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_fetch_all_makers(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func fetchOffers()throws  -> OfferBook  {
     return try  FfiConverterTypeOfferBook_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_fetch_offers(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_fetch_offers(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func getBalances()throws  -> Balances  {
     return try  FfiConverterTypeBalances_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_get_balances(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_get_balances(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func getNextExternalAddress(addressType: AddressType)throws  -> Address  {
     return try  FfiConverterTypeAddress_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_get_next_external_address(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_get_next_external_address(
+            self.uniffiCloneHandle(),
         FfiConverterTypeAddressType_lower(addressType),$0
     )
 })
@@ -755,7 +779,8 @@ open func getNextExternalAddress(addressType: AddressType)throws  -> Address  {
     
 open func getNextInternalAddresses(count: UInt32, addressType: AddressType)throws  -> [Address]  {
     return try  FfiConverterSequenceTypeAddress.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_get_next_internal_addresses(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_get_next_internal_addresses(
+            self.uniffiCloneHandle(),
         FfiConverterUInt32.lower(count),
         FfiConverterTypeAddressType_lower(addressType),$0
     )
@@ -764,7 +789,8 @@ open func getNextInternalAddresses(count: UInt32, addressType: AddressType)throw
     
 open func getTransactions(count: UInt32?, skip: UInt32?)throws  -> [ListTransactionResult]  {
     return try  FfiConverterSequenceTypeListTransactionResult.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_get_transactions(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_get_transactions(
+            self.uniffiCloneHandle(),
         FfiConverterOptionUInt32.lower(count),
         FfiConverterOptionUInt32.lower(skip),$0
     )
@@ -773,40 +799,53 @@ open func getTransactions(count: UInt32?, skip: UInt32?)throws  -> [ListTransact
     
 open func getWalletName()throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_get_wallet_name(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_get_wallet_name(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func isOfferbookSyncing()throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_is_offerbook_syncing(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_is_offerbook_syncing(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func listAllUtxoSpendInfo()throws  -> [TotalUtxoInfo]  {
     return try  FfiConverterSequenceTypeTotalUtxoInfo.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_list_all_utxo_spend_info(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func lockUnspendableUtxos()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_lock_unspendable_utxos(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 open func recoverFromSwap()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_recover_from_swap(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_recover_from_swap(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func runOfferSyncNow()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taker_run_offer_sync_now(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?)throws  -> Txid  {
     return try  FfiConverterTypeTxid_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_send_to_address(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_send_to_address(
+            self.uniffiCloneHandle(),
         FfiConverterString.lower(address),
         FfiConverterInt64.lower(amount),
         FfiConverterOptionDouble.lower(feeRate),
@@ -816,14 +855,16 @@ open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manual
 }
     
 open func setupLogging(dataDir: String?)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_setup_logging(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_setup_logging(
+            self.uniffiCloneHandle(),
         FfiConverterOptionString.lower(dataDir),$0
     )
 }
 }
     
 open func setupLoggingWithLevel(dataDir: String?, logLevel: String)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(
+            self.uniffiCloneHandle(),
         FfiConverterOptionString.lower(dataDir),
         FfiConverterString.lower(logLevel),$0
     )
@@ -831,12 +872,14 @@ open func setupLoggingWithLevel(dataDir: String?, logLevel: String)throws   {try
 }
     
 open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_sync_and_save(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taker_sync_and_save(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 
+    
 }
 
 
@@ -844,33 +887,24 @@ open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerErro
 @_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeTaker: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
+    typealias FfiType = UInt64
     typealias SwiftType = Taker
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Taker {
-        return Taker(unsafeFromRawPointer: pointer)
+    public static func lift(_ handle: UInt64) throws -> Taker {
+        return Taker(unsafeFromHandle: handle)
     }
 
-    public static func lower(_ value: Taker) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
+    public static func lower(_ value: Taker) -> UInt64 {
+        return value.uniffiCloneHandle()
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Taker {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
     }
 
     public static func write(_ value: Taker, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+        writeInt(&buf, lower(value))
     }
 }
 
@@ -878,14 +912,14 @@ public struct FfiConverterTypeTaker: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTaker_lift(_ pointer: UnsafeMutableRawPointer) throws -> Taker {
-    return try FfiConverterTypeTaker.lift(pointer)
+public func FfiConverterTypeTaker_lift(_ handle: UInt64) throws -> Taker {
+    return try FfiConverterTypeTaker.lift(handle)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTaker_lower(_ value: Taker) -> UnsafeMutableRawPointer {
+public func FfiConverterTypeTaker_lower(_ value: Taker) -> UInt64 {
     return FfiConverterTypeTaker.lower(value)
 }
 
@@ -924,19 +958,21 @@ public protocol TaprootTakerProtocol: AnyObject, Sendable {
     
     func recoverFromSwap() throws 
     
+    func runOfferSyncNow() throws 
+    
     func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?) throws  -> String
     
     func syncAndSave() throws 
     
 }
 open class TaprootTaker: TaprootTakerProtocol, @unchecked Sendable {
-    fileprivate let pointer: UnsafeMutableRawPointer!
+    fileprivate let handle: UInt64
 
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public struct NoPointer {
+    public struct NoHandle {
         public init() {}
     }
 
@@ -946,36 +982,32 @@ open class TaprootTaker: TaprootTakerProtocol, @unchecked Sendable {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
     }
 
     // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
     //
     // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
+    public init(noHandle: NoHandle) {
+        self.handle = 0
     }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_coinswap_ffi_fn_clone_taproottaker(self.pointer, $0) }
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_coinswap_ffi_fn_clone_taproottaker(self.handle, $0) }
     }
     // No primary constructor declared for this class.
 
     deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_coinswap_ffi_fn_free_taproottaker(pointer, $0) }
+        try! rustCall { uniffi_coinswap_ffi_fn_free_taproottaker(handle, $0) }
     }
 
     
@@ -996,7 +1028,8 @@ public static func `init`(dataDir: String?, walletFileName: String?, rpcConfig: 
 
     
 open func backup(destinationPath: String, password: String?)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_backup(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_backup(
+            self.uniffiCloneHandle(),
         FfiConverterString.lower(destinationPath),
         FfiConverterOptionString.lower(password),$0
     )
@@ -1005,7 +1038,8 @@ open func backup(destinationPath: String, password: String?)throws   {try rustCa
     
 open func displayOffer(makerOffer: Offer)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_display_offer(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_display_offer(
+            self.uniffiCloneHandle(),
         FfiConverterTypeOffer_lower(makerOffer),$0
     )
 })
@@ -1013,7 +1047,8 @@ open func displayOffer(makerOffer: Offer)throws  -> String  {
     
 open func doCoinswap(swapParams: TaprootSwapParams)throws  -> SwapReport?  {
     return try  FfiConverterOptionTypeSwapReport.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_do_coinswap(
+            self.uniffiCloneHandle(),
         FfiConverterTypeTaprootSwapParams_lower(swapParams),$0
     )
 })
@@ -1021,28 +1056,32 @@ open func doCoinswap(swapParams: TaprootSwapParams)throws  -> SwapReport?  {
     
 open func fetchAllMakers()throws  -> [String]  {
     return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_all_makers(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func fetchOffers()throws  -> OfferBook  {
     return try  FfiConverterTypeOfferBook_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_fetch_offers(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func getBalances()throws  -> Balances  {
     return try  FfiConverterTypeBalances_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_get_balances(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_balances(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func getNextExternalAddress(addressType: AddressType)throws  -> Address  {
     return try  FfiConverterTypeAddress_lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_external_address(
+            self.uniffiCloneHandle(),
         FfiConverterTypeAddressType_lower(addressType),$0
     )
 })
@@ -1050,7 +1089,8 @@ open func getNextExternalAddress(addressType: AddressType)throws  -> Address  {
     
 open func getNextInternalAddresses(count: UInt32, addressType: AddressType)throws  -> [Address]  {
     return try  FfiConverterSequenceTypeAddress.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_next_internal_addresses(
+            self.uniffiCloneHandle(),
         FfiConverterUInt32.lower(count),
         FfiConverterTypeAddressType_lower(addressType),$0
     )
@@ -1059,7 +1099,8 @@ open func getNextInternalAddresses(count: UInt32, addressType: AddressType)throw
     
 open func getTransactions(count: UInt32?, skip: UInt32?)throws  -> [ListTransactionResult]  {
     return try  FfiConverterSequenceTypeListTransactionResult.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_transactions(
+            self.uniffiCloneHandle(),
         FfiConverterOptionUInt32.lower(count),
         FfiConverterOptionUInt32.lower(skip),$0
     )
@@ -1068,40 +1109,53 @@ open func getTransactions(count: UInt32?, skip: UInt32?)throws  -> [ListTransact
     
 open func getWalletName()throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_get_wallet_name(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func isOfferbookSyncing()throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_is_offerbook_syncing(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_is_offerbook_syncing(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func listAllUtxoSpendInfo()throws  -> [TotalUtxoInfo]  {
     return try  FfiConverterSequenceTypeTotalUtxoInfo.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_list_all_utxo_spend_info(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
     
 open func lockUnspendableUtxos()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_lock_unspendable_utxos(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 open func recoverFromSwap()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_recover_from_swap(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func runOfferSyncNow()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_run_offer_sync_now(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(self.uniffiClonePointer(),
+    uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(
+            self.uniffiCloneHandle(),
         FfiConverterString.lower(address),
         FfiConverterInt64.lower(amount),
         FfiConverterOptionDouble.lower(feeRate),
@@ -1111,12 +1165,14 @@ open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manual
 }
     
 open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(self.uniffiClonePointer(),$0
+    uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(
+            self.uniffiCloneHandle(),$0
     )
 }
 }
     
 
+    
 }
 
 
@@ -1124,33 +1180,24 @@ open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerErro
 @_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeTaprootTaker: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
+    typealias FfiType = UInt64
     typealias SwiftType = TaprootTaker
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> TaprootTaker {
-        return TaprootTaker(unsafeFromRawPointer: pointer)
+    public static func lift(_ handle: UInt64) throws -> TaprootTaker {
+        return TaprootTaker(unsafeFromHandle: handle)
     }
 
-    public static func lower(_ value: TaprootTaker) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
+    public static func lower(_ value: TaprootTaker) -> UInt64 {
+        return value.uniffiCloneHandle()
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaprootTaker {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
     }
 
     public static func write(_ value: TaprootTaker, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+        writeInt(&buf, lower(value))
     }
 }
 
@@ -1158,21 +1205,21 @@ public struct FfiConverterTypeTaprootTaker: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTaprootTaker_lift(_ pointer: UnsafeMutableRawPointer) throws -> TaprootTaker {
-    return try FfiConverterTypeTaprootTaker.lift(pointer)
+public func FfiConverterTypeTaprootTaker_lift(_ handle: UInt64) throws -> TaprootTaker {
+    return try FfiConverterTypeTaprootTaker.lift(handle)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTaprootTaker_lower(_ value: TaprootTaker) -> UnsafeMutableRawPointer {
+public func FfiConverterTypeTaprootTaker_lower(_ value: TaprootTaker) -> UInt64 {
     return FfiConverterTypeTaprootTaker.lower(value)
 }
 
 
 
 
-public struct Address {
+public struct Address: Equatable, Hashable {
     public var address: String
 
     // Default memberwise initializers are never public by default, so we
@@ -1180,27 +1227,13 @@ public struct Address {
     public init(address: String) {
         self.address = address
     }
+
+    
 }
 
 #if compiler(>=6)
 extension Address: Sendable {}
 #endif
-
-
-extension Address: Equatable, Hashable {
-    public static func ==(lhs: Address, rhs: Address) -> Bool {
-        if lhs.address != rhs.address {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(address)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1234,7 +1267,7 @@ public func FfiConverterTypeAddress_lower(_ value: Address) -> RustBuffer {
 }
 
 
-public struct AddressType {
+public struct AddressType: Equatable, Hashable {
     /**
      * P2WPKH or P2TR
      */
@@ -1248,27 +1281,13 @@ public struct AddressType {
          */addrType: String) {
         self.addrType = addrType
     }
+
+    
 }
 
 #if compiler(>=6)
 extension AddressType: Sendable {}
 #endif
-
-
-extension AddressType: Equatable, Hashable {
-    public static func ==(lhs: AddressType, rhs: AddressType) -> Bool {
-        if lhs.addrType != rhs.addrType {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(addrType)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1302,7 +1321,7 @@ public func FfiConverterTypeAddressType_lower(_ value: AddressType) -> RustBuffe
 }
 
 
-public struct Amount {
+public struct Amount: Equatable, Hashable {
     public var sats: Int64
 
     // Default memberwise initializers are never public by default, so we
@@ -1310,27 +1329,13 @@ public struct Amount {
     public init(sats: Int64) {
         self.sats = sats
     }
+
+    
 }
 
 #if compiler(>=6)
 extension Amount: Sendable {}
 #endif
-
-
-extension Amount: Equatable, Hashable {
-    public static func ==(lhs: Amount, rhs: Amount) -> Bool {
-        if lhs.sats != rhs.sats {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(sats)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1364,7 +1369,7 @@ public func FfiConverterTypeAmount_lower(_ value: Amount) -> RustBuffer {
 }
 
 
-public struct Balances {
+public struct Balances: Equatable, Hashable {
     public var regular: Int64
     public var swap: Int64
     public var contract: Int64
@@ -1380,43 +1385,13 @@ public struct Balances {
         self.fidelity = fidelity
         self.spendable = spendable
     }
+
+    
 }
 
 #if compiler(>=6)
 extension Balances: Sendable {}
 #endif
-
-
-extension Balances: Equatable, Hashable {
-    public static func ==(lhs: Balances, rhs: Balances) -> Bool {
-        if lhs.regular != rhs.regular {
-            return false
-        }
-        if lhs.swap != rhs.swap {
-            return false
-        }
-        if lhs.contract != rhs.contract {
-            return false
-        }
-        if lhs.fidelity != rhs.fidelity {
-            return false
-        }
-        if lhs.spendable != rhs.spendable {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(regular)
-        hasher.combine(swap)
-        hasher.combine(contract)
-        hasher.combine(fidelity)
-        hasher.combine(spendable)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1458,7 +1433,7 @@ public func FfiConverterTypeBalances_lower(_ value: Balances) -> RustBuffer {
 }
 
 
-public struct FeeRates {
+public struct FeeRates: Equatable, Hashable {
     public var fastest: Double
     public var standard: Double
     public var economy: Double
@@ -1470,35 +1445,13 @@ public struct FeeRates {
         self.standard = standard
         self.economy = economy
     }
+
+    
 }
 
 #if compiler(>=6)
 extension FeeRates: Sendable {}
 #endif
-
-
-extension FeeRates: Equatable, Hashable {
-    public static func ==(lhs: FeeRates, rhs: FeeRates) -> Bool {
-        if lhs.fastest != rhs.fastest {
-            return false
-        }
-        if lhs.standard != rhs.standard {
-            return false
-        }
-        if lhs.economy != rhs.economy {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(fastest)
-        hasher.combine(standard)
-        hasher.combine(economy)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1536,7 +1489,7 @@ public func FfiConverterTypeFeeRates_lower(_ value: FeeRates) -> RustBuffer {
 }
 
 
-public struct FidelityBond {
+public struct FidelityBond: Equatable, Hashable {
     public var amount: Amount
     public var lockTime: LockTime
     public var pubkey: PublicKey
@@ -1548,35 +1501,13 @@ public struct FidelityBond {
         self.lockTime = lockTime
         self.pubkey = pubkey
     }
+
+    
 }
 
 #if compiler(>=6)
 extension FidelityBond: Sendable {}
 #endif
-
-
-extension FidelityBond: Equatable, Hashable {
-    public static func ==(lhs: FidelityBond, rhs: FidelityBond) -> Bool {
-        if lhs.amount != rhs.amount {
-            return false
-        }
-        if lhs.lockTime != rhs.lockTime {
-            return false
-        }
-        if lhs.pubkey != rhs.pubkey {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(amount)
-        hasher.combine(lockTime)
-        hasher.combine(pubkey)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1614,7 +1545,7 @@ public func FfiConverterTypeFidelityBond_lower(_ value: FidelityBond) -> RustBuf
 }
 
 
-public struct FidelityProof {
+public struct FidelityProof: Equatable, Hashable {
     public var bond: FidelityBond
     public var certHash: Data
     public var certSig: Data
@@ -1626,35 +1557,13 @@ public struct FidelityProof {
         self.certHash = certHash
         self.certSig = certSig
     }
+
+    
 }
 
 #if compiler(>=6)
 extension FidelityProof: Sendable {}
 #endif
-
-
-extension FidelityProof: Equatable, Hashable {
-    public static func ==(lhs: FidelityProof, rhs: FidelityProof) -> Bool {
-        if lhs.bond != rhs.bond {
-            return false
-        }
-        if lhs.certHash != rhs.certHash {
-            return false
-        }
-        if lhs.certSig != rhs.certSig {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(bond)
-        hasher.combine(certHash)
-        hasher.combine(certSig)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1692,7 +1601,7 @@ public func FfiConverterTypeFidelityProof_lower(_ value: FidelityProof) -> RustB
 }
 
 
-public struct GetTransactionResultDetail {
+public struct GetTransactionResultDetail: Equatable, Hashable {
     public var address: Address?
     public var category: String
     public var amount: SignedAmountSats
@@ -1712,51 +1621,13 @@ public struct GetTransactionResultDetail {
         self.fee = fee
         self.abandoned = abandoned
     }
+
+    
 }
 
 #if compiler(>=6)
 extension GetTransactionResultDetail: Sendable {}
 #endif
-
-
-extension GetTransactionResultDetail: Equatable, Hashable {
-    public static func ==(lhs: GetTransactionResultDetail, rhs: GetTransactionResultDetail) -> Bool {
-        if lhs.address != rhs.address {
-            return false
-        }
-        if lhs.category != rhs.category {
-            return false
-        }
-        if lhs.amount != rhs.amount {
-            return false
-        }
-        if lhs.label != rhs.label {
-            return false
-        }
-        if lhs.vout != rhs.vout {
-            return false
-        }
-        if lhs.fee != rhs.fee {
-            return false
-        }
-        if lhs.abandoned != rhs.abandoned {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(address)
-        hasher.combine(category)
-        hasher.combine(amount)
-        hasher.combine(label)
-        hasher.combine(vout)
-        hasher.combine(fee)
-        hasher.combine(abandoned)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1802,7 +1673,7 @@ public func FfiConverterTypeGetTransactionResultDetail_lower(_ value: GetTransac
 }
 
 
-public struct ListTransactionResult {
+public struct ListTransactionResult: Equatable, Hashable {
     public var info: WalletTxInfo
     public var detail: GetTransactionResultDetail
     public var trusted: Bool?
@@ -1816,39 +1687,13 @@ public struct ListTransactionResult {
         self.trusted = trusted
         self.comment = comment
     }
+
+    
 }
 
 #if compiler(>=6)
 extension ListTransactionResult: Sendable {}
 #endif
-
-
-extension ListTransactionResult: Equatable, Hashable {
-    public static func ==(lhs: ListTransactionResult, rhs: ListTransactionResult) -> Bool {
-        if lhs.info != rhs.info {
-            return false
-        }
-        if lhs.detail != rhs.detail {
-            return false
-        }
-        if lhs.trusted != rhs.trusted {
-            return false
-        }
-        if lhs.comment != rhs.comment {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(info)
-        hasher.combine(detail)
-        hasher.combine(trusted)
-        hasher.combine(comment)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1888,7 +1733,7 @@ public func FfiConverterTypeListTransactionResult_lower(_ value: ListTransaction
 }
 
 
-public struct ListUnspentResultEntry {
+public struct ListUnspentResultEntry: Equatable, Hashable {
     public var txid: Txid
     public var vout: UInt32
     public var address: String?
@@ -1920,75 +1765,13 @@ public struct ListUnspentResultEntry {
         self.desc = desc
         self.safe = safe
     }
+
+    
 }
 
 #if compiler(>=6)
 extension ListUnspentResultEntry: Sendable {}
 #endif
-
-
-extension ListUnspentResultEntry: Equatable, Hashable {
-    public static func ==(lhs: ListUnspentResultEntry, rhs: ListUnspentResultEntry) -> Bool {
-        if lhs.txid != rhs.txid {
-            return false
-        }
-        if lhs.vout != rhs.vout {
-            return false
-        }
-        if lhs.address != rhs.address {
-            return false
-        }
-        if lhs.label != rhs.label {
-            return false
-        }
-        if lhs.scriptPubKey != rhs.scriptPubKey {
-            return false
-        }
-        if lhs.amount != rhs.amount {
-            return false
-        }
-        if lhs.confirmations != rhs.confirmations {
-            return false
-        }
-        if lhs.redeemScript != rhs.redeemScript {
-            return false
-        }
-        if lhs.witnessScript != rhs.witnessScript {
-            return false
-        }
-        if lhs.spendable != rhs.spendable {
-            return false
-        }
-        if lhs.solvable != rhs.solvable {
-            return false
-        }
-        if lhs.desc != rhs.desc {
-            return false
-        }
-        if lhs.safe != rhs.safe {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(txid)
-        hasher.combine(vout)
-        hasher.combine(address)
-        hasher.combine(label)
-        hasher.combine(scriptPubKey)
-        hasher.combine(amount)
-        hasher.combine(confirmations)
-        hasher.combine(redeemScript)
-        hasher.combine(witnessScript)
-        hasher.combine(spendable)
-        hasher.combine(solvable)
-        hasher.combine(desc)
-        hasher.combine(safe)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2046,7 +1829,7 @@ public func FfiConverterTypeListUnspentResultEntry_lower(_ value: ListUnspentRes
 }
 
 
-public struct LockTime {
+public struct LockTime: Equatable, Hashable {
     public var lockType: String
     public var value: UInt32
 
@@ -2056,31 +1839,13 @@ public struct LockTime {
         self.lockType = lockType
         self.value = value
     }
+
+    
 }
 
 #if compiler(>=6)
 extension LockTime: Sendable {}
 #endif
-
-
-extension LockTime: Equatable, Hashable {
-    public static func ==(lhs: LockTime, rhs: LockTime) -> Bool {
-        if lhs.lockType != rhs.lockType {
-            return false
-        }
-        if lhs.value != rhs.value {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(lockType)
-        hasher.combine(value)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2116,7 +1881,7 @@ public func FfiConverterTypeLockTime_lower(_ value: LockTime) -> RustBuffer {
 }
 
 
-public struct MakerAddress {
+public struct MakerAddress: Equatable, Hashable {
     public var address: String
 
     // Default memberwise initializers are never public by default, so we
@@ -2124,27 +1889,13 @@ public struct MakerAddress {
     public init(address: String) {
         self.address = address
     }
+
+    
 }
 
 #if compiler(>=6)
 extension MakerAddress: Sendable {}
 #endif
-
-
-extension MakerAddress: Equatable, Hashable {
-    public static func ==(lhs: MakerAddress, rhs: MakerAddress) -> Bool {
-        if lhs.address != rhs.address {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(address)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2178,7 +1929,7 @@ public func FfiConverterTypeMakerAddress_lower(_ value: MakerAddress) -> RustBuf
 }
 
 
-public struct MakerFeeInfo {
+public struct MakerFeeInfo: Equatable, Hashable {
     public var makerIndex: UInt32
     public var makerAddress: String
     public var baseFee: Double
@@ -2196,47 +1947,13 @@ public struct MakerFeeInfo {
         self.timeRelativeFee = timeRelativeFee
         self.totalFee = totalFee
     }
+
+    
 }
 
 #if compiler(>=6)
 extension MakerFeeInfo: Sendable {}
 #endif
-
-
-extension MakerFeeInfo: Equatable, Hashable {
-    public static func ==(lhs: MakerFeeInfo, rhs: MakerFeeInfo) -> Bool {
-        if lhs.makerIndex != rhs.makerIndex {
-            return false
-        }
-        if lhs.makerAddress != rhs.makerAddress {
-            return false
-        }
-        if lhs.baseFee != rhs.baseFee {
-            return false
-        }
-        if lhs.amountRelativeFee != rhs.amountRelativeFee {
-            return false
-        }
-        if lhs.timeRelativeFee != rhs.timeRelativeFee {
-            return false
-        }
-        if lhs.totalFee != rhs.totalFee {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(makerIndex)
-        hasher.combine(makerAddress)
-        hasher.combine(baseFee)
-        hasher.combine(amountRelativeFee)
-        hasher.combine(timeRelativeFee)
-        hasher.combine(totalFee)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2280,7 +1997,7 @@ public func FfiConverterTypeMakerFeeInfo_lower(_ value: MakerFeeInfo) -> RustBuf
 }
 
 
-public struct MakerOfferCandidate {
+public struct MakerOfferCandidate: Equatable, Hashable {
     public var address: MakerAddress
     public var offer: Offer?
     public var state: MakerState
@@ -2294,39 +2011,13 @@ public struct MakerOfferCandidate {
         self.state = state
         self.`protocol` = `protocol`
     }
+
+    
 }
 
 #if compiler(>=6)
 extension MakerOfferCandidate: Sendable {}
 #endif
-
-
-extension MakerOfferCandidate: Equatable, Hashable {
-    public static func ==(lhs: MakerOfferCandidate, rhs: MakerOfferCandidate) -> Bool {
-        if lhs.address != rhs.address {
-            return false
-        }
-        if lhs.offer != rhs.offer {
-            return false
-        }
-        if lhs.state != rhs.state {
-            return false
-        }
-        if lhs.`protocol` != rhs.`protocol` {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(address)
-        hasher.combine(offer)
-        hasher.combine(state)
-        hasher.combine(`protocol`)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2366,7 +2057,7 @@ public func FfiConverterTypeMakerOfferCandidate_lower(_ value: MakerOfferCandida
 }
 
 
-public struct MakerProtocol {
+public struct MakerProtocol: Equatable, Hashable {
     /**
      * Protocol type: "Legacy" or "Taproot"
      */
@@ -2380,27 +2071,13 @@ public struct MakerProtocol {
          */protocolType: String) {
         self.protocolType = protocolType
     }
+
+    
 }
 
 #if compiler(>=6)
 extension MakerProtocol: Sendable {}
 #endif
-
-
-extension MakerProtocol: Equatable, Hashable {
-    public static func ==(lhs: MakerProtocol, rhs: MakerProtocol) -> Bool {
-        if lhs.protocolType != rhs.protocolType {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(protocolType)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2434,7 +2111,7 @@ public func FfiConverterTypeMakerProtocol_lower(_ value: MakerProtocol) -> RustB
 }
 
 
-public struct MakerState {
+public struct MakerState: Equatable, Hashable {
     /**
      * State type: "Good", "Unresponsive", or "Bad"
      */
@@ -2456,31 +2133,13 @@ public struct MakerState {
         self.stateType = stateType
         self.retries = retries
     }
+
+    
 }
 
 #if compiler(>=6)
 extension MakerState: Sendable {}
 #endif
-
-
-extension MakerState: Equatable, Hashable {
-    public static func ==(lhs: MakerState, rhs: MakerState) -> Bool {
-        if lhs.stateType != rhs.stateType {
-            return false
-        }
-        if lhs.retries != rhs.retries {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(stateType)
-        hasher.combine(retries)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2516,7 +2175,7 @@ public func FfiConverterTypeMakerState_lower(_ value: MakerState) -> RustBuffer 
 }
 
 
-public struct Offer {
+public struct Offer: Equatable, Hashable {
     public var baseFee: Int64
     public var amountRelativeFeePct: Double
     public var timeRelativeFeePct: Double
@@ -2540,59 +2199,13 @@ public struct Offer {
         self.tweakablePoint = tweakablePoint
         self.fidelity = fidelity
     }
+
+    
 }
 
 #if compiler(>=6)
 extension Offer: Sendable {}
 #endif
-
-
-extension Offer: Equatable, Hashable {
-    public static func ==(lhs: Offer, rhs: Offer) -> Bool {
-        if lhs.baseFee != rhs.baseFee {
-            return false
-        }
-        if lhs.amountRelativeFeePct != rhs.amountRelativeFeePct {
-            return false
-        }
-        if lhs.timeRelativeFeePct != rhs.timeRelativeFeePct {
-            return false
-        }
-        if lhs.requiredConfirms != rhs.requiredConfirms {
-            return false
-        }
-        if lhs.minimumLocktime != rhs.minimumLocktime {
-            return false
-        }
-        if lhs.maxSize != rhs.maxSize {
-            return false
-        }
-        if lhs.minSize != rhs.minSize {
-            return false
-        }
-        if lhs.tweakablePoint != rhs.tweakablePoint {
-            return false
-        }
-        if lhs.fidelity != rhs.fidelity {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(baseFee)
-        hasher.combine(amountRelativeFeePct)
-        hasher.combine(timeRelativeFeePct)
-        hasher.combine(requiredConfirms)
-        hasher.combine(minimumLocktime)
-        hasher.combine(maxSize)
-        hasher.combine(minSize)
-        hasher.combine(tweakablePoint)
-        hasher.combine(fidelity)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2642,7 +2255,7 @@ public func FfiConverterTypeOffer_lower(_ value: Offer) -> RustBuffer {
 }
 
 
-public struct OfferBook {
+public struct OfferBook: Equatable, Hashable {
     public var makers: [MakerOfferCandidate]
 
     // Default memberwise initializers are never public by default, so we
@@ -2650,27 +2263,13 @@ public struct OfferBook {
     public init(makers: [MakerOfferCandidate]) {
         self.makers = makers
     }
+
+    
 }
 
 #if compiler(>=6)
 extension OfferBook: Sendable {}
 #endif
-
-
-extension OfferBook: Equatable, Hashable {
-    public static func ==(lhs: OfferBook, rhs: OfferBook) -> Bool {
-        if lhs.makers != rhs.makers {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(makers)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2704,7 +2303,7 @@ public func FfiConverterTypeOfferBook_lower(_ value: OfferBook) -> RustBuffer {
 }
 
 
-public struct OutPoint {
+public struct OutPoint: Equatable, Hashable {
     public var txid: Txid
     public var vout: UInt32
 
@@ -2714,31 +2313,13 @@ public struct OutPoint {
         self.txid = txid
         self.vout = vout
     }
+
+    
 }
 
 #if compiler(>=6)
 extension OutPoint: Sendable {}
 #endif
-
-
-extension OutPoint: Equatable, Hashable {
-    public static func ==(lhs: OutPoint, rhs: OutPoint) -> Bool {
-        if lhs.txid != rhs.txid {
-            return false
-        }
-        if lhs.vout != rhs.vout {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(txid)
-        hasher.combine(vout)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2774,7 +2355,7 @@ public func FfiConverterTypeOutPoint_lower(_ value: OutPoint) -> RustBuffer {
 }
 
 
-public struct PublicKey {
+public struct PublicKey: Equatable, Hashable {
     public var compressed: Bool
     public var inner: Data
 
@@ -2784,31 +2365,13 @@ public struct PublicKey {
         self.compressed = compressed
         self.inner = inner
     }
+
+    
 }
 
 #if compiler(>=6)
 extension PublicKey: Sendable {}
 #endif
-
-
-extension PublicKey: Equatable, Hashable {
-    public static func ==(lhs: PublicKey, rhs: PublicKey) -> Bool {
-        if lhs.compressed != rhs.compressed {
-            return false
-        }
-        if lhs.inner != rhs.inner {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(compressed)
-        hasher.combine(inner)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2844,7 +2407,7 @@ public func FfiConverterTypePublicKey_lower(_ value: PublicKey) -> RustBuffer {
 }
 
 
-public struct RpcConfig {
+public struct RpcConfig: Equatable, Hashable {
     public var url: String
     public var username: String
     public var password: String
@@ -2858,39 +2421,13 @@ public struct RpcConfig {
         self.password = password
         self.walletName = walletName
     }
+
+    
 }
 
 #if compiler(>=6)
 extension RpcConfig: Sendable {}
 #endif
-
-
-extension RpcConfig: Equatable, Hashable {
-    public static func ==(lhs: RpcConfig, rhs: RpcConfig) -> Bool {
-        if lhs.url != rhs.url {
-            return false
-        }
-        if lhs.username != rhs.username {
-            return false
-        }
-        if lhs.password != rhs.password {
-            return false
-        }
-        if lhs.walletName != rhs.walletName {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(url)
-        hasher.combine(username)
-        hasher.combine(password)
-        hasher.combine(walletName)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2930,7 +2467,7 @@ public func FfiConverterTypeRPCConfig_lower(_ value: RpcConfig) -> RustBuffer {
 }
 
 
-public struct ScriptBuf {
+public struct ScriptBuf: Equatable, Hashable {
     public var hex: String
 
     // Default memberwise initializers are never public by default, so we
@@ -2938,27 +2475,13 @@ public struct ScriptBuf {
     public init(hex: String) {
         self.hex = hex
     }
+
+    
 }
 
 #if compiler(>=6)
 extension ScriptBuf: Sendable {}
 #endif
-
-
-extension ScriptBuf: Equatable, Hashable {
-    public static func ==(lhs: ScriptBuf, rhs: ScriptBuf) -> Bool {
-        if lhs.hex != rhs.hex {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(hex)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -2992,7 +2515,7 @@ public func FfiConverterTypeScriptBuf_lower(_ value: ScriptBuf) -> RustBuffer {
 }
 
 
-public struct SignedAmountSats {
+public struct SignedAmountSats: Equatable, Hashable {
     public var sats: Int64
 
     // Default memberwise initializers are never public by default, so we
@@ -3000,27 +2523,13 @@ public struct SignedAmountSats {
     public init(sats: Int64) {
         self.sats = sats
     }
+
+    
 }
 
 #if compiler(>=6)
 extension SignedAmountSats: Sendable {}
 #endif
-
-
-extension SignedAmountSats: Equatable, Hashable {
-    public static func ==(lhs: SignedAmountSats, rhs: SignedAmountSats) -> Bool {
-        if lhs.sats != rhs.sats {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(sats)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3054,7 +2563,7 @@ public func FfiConverterTypeSignedAmountSats_lower(_ value: SignedAmountSats) ->
 }
 
 
-public struct SwapParams {
+public struct SwapParams: Equatable, Hashable {
     /**
      * Total Amount
      */
@@ -3084,35 +2593,13 @@ public struct SwapParams {
         self.makerCount = makerCount
         self.manuallySelectedOutpoints = manuallySelectedOutpoints
     }
+
+    
 }
 
 #if compiler(>=6)
 extension SwapParams: Sendable {}
 #endif
-
-
-extension SwapParams: Equatable, Hashable {
-    public static func ==(lhs: SwapParams, rhs: SwapParams) -> Bool {
-        if lhs.sendAmount != rhs.sendAmount {
-            return false
-        }
-        if lhs.makerCount != rhs.makerCount {
-            return false
-        }
-        if lhs.manuallySelectedOutpoints != rhs.manuallySelectedOutpoints {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(sendAmount)
-        hasher.combine(makerCount)
-        hasher.combine(manuallySelectedOutpoints)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3150,7 +2637,7 @@ public func FfiConverterTypeSwapParams_lower(_ value: SwapParams) -> RustBuffer 
 }
 
 
-public struct SwapReport {
+public struct SwapReport: Equatable, Hashable {
     public var swapId: String
     public var swapDurationSeconds: Double
     public var targetAmount: Int64
@@ -3194,99 +2681,13 @@ public struct SwapReport {
         self.outputChangeUtxos = outputChangeUtxos
         self.outputSwapUtxos = outputSwapUtxos
     }
+
+    
 }
 
 #if compiler(>=6)
 extension SwapReport: Sendable {}
 #endif
-
-
-extension SwapReport: Equatable, Hashable {
-    public static func ==(lhs: SwapReport, rhs: SwapReport) -> Bool {
-        if lhs.swapId != rhs.swapId {
-            return false
-        }
-        if lhs.swapDurationSeconds != rhs.swapDurationSeconds {
-            return false
-        }
-        if lhs.targetAmount != rhs.targetAmount {
-            return false
-        }
-        if lhs.totalInputAmount != rhs.totalInputAmount {
-            return false
-        }
-        if lhs.totalOutputAmount != rhs.totalOutputAmount {
-            return false
-        }
-        if lhs.makersCount != rhs.makersCount {
-            return false
-        }
-        if lhs.makerAddresses != rhs.makerAddresses {
-            return false
-        }
-        if lhs.totalFundingTxs != rhs.totalFundingTxs {
-            return false
-        }
-        if lhs.fundingTxidsByHop != rhs.fundingTxidsByHop {
-            return false
-        }
-        if lhs.totalFee != rhs.totalFee {
-            return false
-        }
-        if lhs.totalMakerFees != rhs.totalMakerFees {
-            return false
-        }
-        if lhs.miningFee != rhs.miningFee {
-            return false
-        }
-        if lhs.feePercentage != rhs.feePercentage {
-            return false
-        }
-        if lhs.makerFeeInfo != rhs.makerFeeInfo {
-            return false
-        }
-        if lhs.inputUtxos != rhs.inputUtxos {
-            return false
-        }
-        if lhs.outputChangeAmounts != rhs.outputChangeAmounts {
-            return false
-        }
-        if lhs.outputSwapAmounts != rhs.outputSwapAmounts {
-            return false
-        }
-        if lhs.outputChangeUtxos != rhs.outputChangeUtxos {
-            return false
-        }
-        if lhs.outputSwapUtxos != rhs.outputSwapUtxos {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(swapId)
-        hasher.combine(swapDurationSeconds)
-        hasher.combine(targetAmount)
-        hasher.combine(totalInputAmount)
-        hasher.combine(totalOutputAmount)
-        hasher.combine(makersCount)
-        hasher.combine(makerAddresses)
-        hasher.combine(totalFundingTxs)
-        hasher.combine(fundingTxidsByHop)
-        hasher.combine(totalFee)
-        hasher.combine(totalMakerFees)
-        hasher.combine(miningFee)
-        hasher.combine(feePercentage)
-        hasher.combine(makerFeeInfo)
-        hasher.combine(inputUtxos)
-        hasher.combine(outputChangeAmounts)
-        hasher.combine(outputSwapAmounts)
-        hasher.combine(outputChangeUtxos)
-        hasher.combine(outputSwapUtxos)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3360,7 +2761,7 @@ public func FfiConverterTypeSwapReport_lower(_ value: SwapReport) -> RustBuffer 
  * Swap parameters for Taproot (V2) protocol
  * Note: V2 has additional parameters compared to V1
  */
-public struct TaprootSwapParams {
+public struct TaprootSwapParams: Equatable, Hashable {
     /**
      * Amount to send in satoshis
      */
@@ -3406,43 +2807,13 @@ public struct TaprootSwapParams {
         self.requiredConfirms = requiredConfirms
         self.manuallySelectedOutpoints = manuallySelectedOutpoints
     }
+
+    
 }
 
 #if compiler(>=6)
 extension TaprootSwapParams: Sendable {}
 #endif
-
-
-extension TaprootSwapParams: Equatable, Hashable {
-    public static func ==(lhs: TaprootSwapParams, rhs: TaprootSwapParams) -> Bool {
-        if lhs.sendAmount != rhs.sendAmount {
-            return false
-        }
-        if lhs.makerCount != rhs.makerCount {
-            return false
-        }
-        if lhs.txCount != rhs.txCount {
-            return false
-        }
-        if lhs.requiredConfirms != rhs.requiredConfirms {
-            return false
-        }
-        if lhs.manuallySelectedOutpoints != rhs.manuallySelectedOutpoints {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(sendAmount)
-        hasher.combine(makerCount)
-        hasher.combine(txCount)
-        hasher.combine(requiredConfirms)
-        hasher.combine(manuallySelectedOutpoints)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3484,7 +2855,7 @@ public func FfiConverterTypeTaprootSwapParams_lower(_ value: TaprootSwapParams) 
 }
 
 
-public struct TotalUtxoInfo {
+public struct TotalUtxoInfo: Equatable, Hashable {
     public var listUnspentResultEntry: ListUnspentResultEntry
     public var utxoSpendInfo: UtxoSpendInfo
 
@@ -3494,31 +2865,13 @@ public struct TotalUtxoInfo {
         self.listUnspentResultEntry = listUnspentResultEntry
         self.utxoSpendInfo = utxoSpendInfo
     }
+
+    
 }
 
 #if compiler(>=6)
 extension TotalUtxoInfo: Sendable {}
 #endif
-
-
-extension TotalUtxoInfo: Equatable, Hashable {
-    public static func ==(lhs: TotalUtxoInfo, rhs: TotalUtxoInfo) -> Bool {
-        if lhs.listUnspentResultEntry != rhs.listUnspentResultEntry {
-            return false
-        }
-        if lhs.utxoSpendInfo != rhs.utxoSpendInfo {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(listUnspentResultEntry)
-        hasher.combine(utxoSpendInfo)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3554,7 +2907,7 @@ public func FfiConverterTypeTotalUtxoInfo_lower(_ value: TotalUtxoInfo) -> RustB
 }
 
 
-public struct Txid {
+public struct Txid: Equatable, Hashable {
     public var value: String
 
     // Default memberwise initializers are never public by default, so we
@@ -3562,27 +2915,13 @@ public struct Txid {
     public init(value: String) {
         self.value = value
     }
+
+    
 }
 
 #if compiler(>=6)
 extension Txid: Sendable {}
 #endif
-
-
-extension Txid: Equatable, Hashable {
-    public static func ==(lhs: Txid, rhs: Txid) -> Bool {
-        if lhs.value != rhs.value {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3616,7 +2955,7 @@ public func FfiConverterTypeTxid_lower(_ value: Txid) -> RustBuffer {
 }
 
 
-public struct UtxoSpendInfo {
+public struct UtxoSpendInfo: Equatable, Hashable {
     public var spendType: String
     public var path: String?
     public var multisigRedeemscript: ScriptBuf?
@@ -3632,43 +2971,13 @@ public struct UtxoSpendInfo {
         self.inputValue = inputValue
         self.index = index
     }
+
+    
 }
 
 #if compiler(>=6)
 extension UtxoSpendInfo: Sendable {}
 #endif
-
-
-extension UtxoSpendInfo: Equatable, Hashable {
-    public static func ==(lhs: UtxoSpendInfo, rhs: UtxoSpendInfo) -> Bool {
-        if lhs.spendType != rhs.spendType {
-            return false
-        }
-        if lhs.path != rhs.path {
-            return false
-        }
-        if lhs.multisigRedeemscript != rhs.multisigRedeemscript {
-            return false
-        }
-        if lhs.inputValue != rhs.inputValue {
-            return false
-        }
-        if lhs.index != rhs.index {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(spendType)
-        hasher.combine(path)
-        hasher.combine(multisigRedeemscript)
-        hasher.combine(inputValue)
-        hasher.combine(index)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3710,7 +3019,7 @@ public func FfiConverterTypeUtxoSpendInfo_lower(_ value: UtxoSpendInfo) -> RustB
 }
 
 
-public struct UtxoWithAddress {
+public struct UtxoWithAddress: Equatable, Hashable {
     public var amount: Int64
     public var address: String
 
@@ -3720,31 +3029,13 @@ public struct UtxoWithAddress {
         self.amount = amount
         self.address = address
     }
+
+    
 }
 
 #if compiler(>=6)
 extension UtxoWithAddress: Sendable {}
 #endif
-
-
-extension UtxoWithAddress: Equatable, Hashable {
-    public static func ==(lhs: UtxoWithAddress, rhs: UtxoWithAddress) -> Bool {
-        if lhs.amount != rhs.amount {
-            return false
-        }
-        if lhs.address != rhs.address {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(amount)
-        hasher.combine(address)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3780,7 +3071,7 @@ public func FfiConverterTypeUtxoWithAddress_lower(_ value: UtxoWithAddress) -> R
 }
 
 
-public struct WalletTxInfo {
+public struct WalletTxInfo: Equatable, Hashable {
     public var confirmations: Int32
     public var blockhash: String?
     public var blockindex: UInt32?
@@ -3806,63 +3097,13 @@ public struct WalletTxInfo {
         self.bip125Replaceable = bip125Replaceable
         self.walletConflicts = walletConflicts
     }
+
+    
 }
 
 #if compiler(>=6)
 extension WalletTxInfo: Sendable {}
 #endif
-
-
-extension WalletTxInfo: Equatable, Hashable {
-    public static func ==(lhs: WalletTxInfo, rhs: WalletTxInfo) -> Bool {
-        if lhs.confirmations != rhs.confirmations {
-            return false
-        }
-        if lhs.blockhash != rhs.blockhash {
-            return false
-        }
-        if lhs.blockindex != rhs.blockindex {
-            return false
-        }
-        if lhs.blocktime != rhs.blocktime {
-            return false
-        }
-        if lhs.blockheight != rhs.blockheight {
-            return false
-        }
-        if lhs.txid != rhs.txid {
-            return false
-        }
-        if lhs.time != rhs.time {
-            return false
-        }
-        if lhs.timereceived != rhs.timereceived {
-            return false
-        }
-        if lhs.bip125Replaceable != rhs.bip125Replaceable {
-            return false
-        }
-        if lhs.walletConflicts != rhs.walletConflicts {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(confirmations)
-        hasher.combine(blockhash)
-        hasher.combine(blockindex)
-        hasher.combine(blocktime)
-        hasher.combine(blockheight)
-        hasher.combine(txid)
-        hasher.combine(time)
-        hasher.combine(timereceived)
-        hasher.combine(bip125Replaceable)
-        hasher.combine(walletConflicts)
-    }
-}
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -3916,13 +3157,15 @@ public func FfiConverterTypeWalletTxInfo_lower(_ value: WalletTxInfo) -> RustBuf
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
-public enum TakerBehavior {
+public enum TakerBehavior: Equatable, Hashable {
     
     case normal
     case dropConnectionAfterFullSetup
     case broadcastContractAfterFullSetup
-}
 
+
+
+}
 
 #if compiler(>=6)
 extension TakerBehavior: Sendable {}
@@ -3983,15 +3226,8 @@ public func FfiConverterTypeTakerBehavior_lower(_ value: TakerBehavior) -> RustB
 }
 
 
-extension TakerBehavior: Equatable, Hashable {}
 
-
-
-
-
-
-
-public enum TakerError: Swift.Error {
+public enum TakerError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
     
@@ -4005,8 +3241,19 @@ public enum TakerError: Swift.Error {
     )
     case Io(msg: String
     )
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
 }
 
+#if compiler(>=6)
+extension TakerError: Sendable {}
+#endif
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -4090,21 +3337,6 @@ public func FfiConverterTypeTakerError_lift(_ buf: RustBuffer) throws -> TakerEr
 public func FfiConverterTypeTakerError_lower(_ value: TakerError) -> RustBuffer {
     return FfiConverterTypeTakerError.lower(value)
 }
-
-
-extension TakerError: Equatable, Hashable {}
-
-
-
-
-extension TakerError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
-
-
-
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -4809,7 +4041,7 @@ private enum InitializationResult {
 // the code inside is only computed once.
 private let initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
-    let bindings_contract_version = 29
+    let bindings_contract_version = 30
     // Get the scaffolding contract version by calling the into the dylib
     let scaffolding_contract_version = ffi_coinswap_ffi_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
@@ -4872,6 +4104,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_coinswap_ffi_checksum_method_taker_recover_from_swap() != 45555) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_coinswap_ffi_checksum_method_taker_run_offer_sync_now() != 62130) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_coinswap_ffi_checksum_method_taker_send_to_address() != 17485) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4924,6 +4159,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taproottaker_recover_from_swap() != 32296) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now() != 9519) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184) {

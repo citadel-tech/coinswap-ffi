@@ -277,7 +277,7 @@ stop_stack() {
     if [ -f "docker-compose.generated.yml" ]; then
         # Clean up wallet directories in containers before stopping them
         print_info "Cleaning wallet directories in containers..."
-        docker exec coinswap-bitcoind sh -c "rm -rf /home/bitcoin/.bitcoin/regtest/wallets/*" 2>/dev/null || true
+        docker exec coinswap-bitcoind sh -c "rm -rf /home/*" 2>/dev/null || true
         docker exec coinswap-makerd1 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
         docker exec coinswap-makerd2 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
         
