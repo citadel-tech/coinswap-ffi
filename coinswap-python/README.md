@@ -72,13 +72,13 @@ taker = coinswap.Taker.init(
     data_dir="/path/to/data",
     wallet_file_name="taker_wallet",
     rpc_config=coinswap.RPCConfig(
-        url="http://localhost:18443",
-        user="bitcoin",
-        password="bitcoin",
+        url="http://localhost:18442",
+        user="user",
+        password="password",
         wallet_name="taker_wallet"
     ),
     control_port=9051,
-    tor_auth_password=None,
+    tor_auth_password="your_tor_auth_pass",
     zmq_addr="tcp://localhost:28332",
     password="your_secure_password"
 )
@@ -98,6 +98,14 @@ address = taker.get_next_external_address(
     address_type=coinswap.AddressType.P2WPKH
 )
 print(f"Receive to: {address.value}")
+
+# Wait for offerbook to sync
+print("Waiting for offerbook synchronization...")
+while taker.is_offerbook_syncing():
+    print("Offerbook sync in progress...")
+    import time
+    time.sleep(2)
+print("Offerbook synchronized!")
 
 # Perform a coinswap
 swap_params = coinswap.SwapParams(
@@ -168,182 +176,42 @@ class SwapParams:
 
 @dataclass
 class Balances:
-    total: int                    # Total balance in sats
-    confirmed: int                # Confirmed balance
-    unconfirmed: int              # Unconfirmed balance
+    regular: int                  # Regular wallet balance in sats
+    swap: int                     # Swap balance in sats
+    contract: int                 # Contract balance in sats
+    spendable: int                # Spendable balance in sats
 
 @dataclass
 class SwapReport:
-    amount_swapped: int           # Amount successfully swapped
-    routing_fees_paid: int        # Total routing fees
-    num_successful_swaps: int     # Number of successful hops
-    total_swap_time: int          # Time taken in seconds
+    swap_id: str                  # Unique swap identifier
+    swap_duration_seconds: float  # Duration of swap in seconds
+    target_amount: int            # Target swap amount in sats
+    total_input_amount: int       # Total input amount in sats
+    total_output_amount: int      # Total output amount in sats
+    makers_count: int             # Number of makers in swap
+    maker_addresses: list[str]    # List of maker addresses
+    total_funding_txs: int        # Total number of funding transactions
+    funding_txids_by_hop: list[list[str]]  # Funding TXIDs grouped by hop
+    total_fee: int                # Total fees paid in sats
+    total_maker_fees: int         # Total maker fees in sats
+    mining_fee: int               # Mining fees in sats
+    fee_percentage: float         # Fee as percentage of amount
+    maker_fee_info: list[MakerFeeInfo]  # Detailed fee info per maker
+    input_utxos: list[int]        # Input UTXO amounts
+    output_change_amounts: list[int]    # Change output amounts
+    output_swap_amounts: list[int]      # Swap output amounts
+    output_change_utxos: list[UtxoWithAddress]  # Change UTXOs with addresses
+    output_swap_utxos: list[UtxoWithAddress]    # Swap UTXOs with addresses
 
 class AddressType(Enum):
     P2WPKH = "P2WPKH"            # Native SegWit (bech32)
     P2TR = "P2TR"                # Taproot (bech32m)
 ```
 
-## Complete Example
+## Examples
 
-```python
-#!/usr/bin/env python3
-import coinswap
-import sys
-from pathlib import Path
-
-class CoinswapWallet:
-    def __init__(self, data_dir: str):
-        self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.taker = None
-        
-    def initialize(self):
-        """Initialize the taker wallet"""
-        try:
-            self.taker = coinswap.Taker.init(
-                data_dir=str(self.data_dir),
-                wallet_file_name="wallet",
-                rpc_config=coinswap.RPCConfig(
-                    url="http://localhost:18443",
-                    user="bitcoin",
-                    password="bitcoin",
-                    wallet_name="taker_wallet"
-                ),
-                control_port=9051,
-                tor_auth_password=None,
-                zmq_addr="tcp://localhost:28332",
-                password="secure_password_123"
-            )
-            
-            self.taker.setup_logging(str(self.data_dir))
-            print("✓ Wallet initialized")
-            
-        except coinswap.TakerError as e:
-            print(f"✗ Initialization error: {e}")
-            sys.exit(1)
-    
-    def sync(self):
-        """Sync wallet with blockchain"""
-        try:
-            self.taker.sync_and_save()
-            print("✓ Wallet synced")
-        except coinswap.TakerError as e:
-            print(f"✗ Sync error: {e}")
-    
-    def show_balance(self):
-        """Display wallet balance"""
-        try:
-            balances = self.taker.get_balances()
-            print(f"\nWallet Balance:")
-            print(f"  Total:       {balances.total:,} sats")
-            print(f"  Confirmed:   {balances.confirmed:,} sats")
-            print(f"  Unconfirmed: {balances.unconfirmed:,} sats")
-        except coinswap.TakerError as e:
-            print(f"✗ Error getting balance: {e}")
-    
-    def get_new_address(self):
-        """Get a new receiving address"""
-        try:
-            address = self.taker.get_next_external_address(
-                coinswap.AddressType.P2WPKH
-            )
-            print(f"\nNew receiving address: {address.value}")
-            return address.value
-        except coinswap.TakerError as e:
-            print(f"✗ Error getting address: {e}")
-            return None
-    
-    def perform_swap(self, amount_sats: int, maker_count: int = 2):
-        """Perform a coinswap"""
-        try:
-            print(f"\nStarting coinswap...")
-            print(f"  Amount: {amount_sats:,} sats")
-            print(f"  Makers: {maker_count}")
-            
-            params = coinswap.SwapParams(
-                send_amount=amount_sats,
-                maker_count=maker_count,
-                manually_selected_outpoints=None
-            )
-            
-            report = self.taker.do_coinswap(params)
-            
-            if report:
-                print(f"\n✓ Swap completed successfully!")
-                print(f"  Amount swapped: {report.amount_swapped:,} sats")
-                print(f"  Routing fees:   {report.routing_fees_paid:,} sats")
-                print(f"  Successful hops: {report.num_successful_swaps}")
-                print(f"  Time taken:     {report.total_swap_time} seconds")
-                return True
-            else:
-                print("✗ Swap failed")
-                return False
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Swap error: {e}")
-            return False
-    
-    def list_transactions(self, count: int = 10):
-        """List recent transactions"""
-        try:
-            txs = self.taker.get_transactions(count=count, skip=0)
-            print(f"\nRecent Transactions ({len(txs)}):")
-            
-            for tx in txs:
-                print(f"\n  TXID: {tx.info.txid.value}")
-                print(f"  Confirmations: {tx.info.confirmations}")
-                print(f"  Amount: {tx.detail.amount.value:,} sats")
-                print(f"  Category: {tx.detail.category}")
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Error listing transactions: {e}")
-    
-    def fetch_makers(self):
-        """Fetch available makers"""
-        try:
-            print("\nFetching available makers...")
-            offers = self.taker.fetch_offers()
-            
-            if offers.offers:
-                print(f"✓ Found {len(offers.offers)} makers")
-                for i, offer in enumerate(offers.offers[:5], 1):
-                    print(f"\n  Maker {i}:")
-                    print(f"    Min: {offer.min_size:,} sats")
-                    print(f"    Max: {offer.max_size:,} sats")
-                    print(f"    Fee: {offer.amount_relative_fee_pct}%")
-            else:
-                print("No makers currently available")
-                
-        except coinswap.TakerError as e:
-            print(f"✗ Error fetching makers: {e}")
-
-def main():
-    # Initialize wallet
-    wallet = CoinswapWallet(data_dir="./coinswap_data")
-    wallet.initialize()
-    
-    # Sync wallet
-    wallet.sync()
-    
-    # Show balance
-    wallet.show_balance()
-    
-    # Get new address
-    wallet.get_new_address()
-    
-    # List transactions
-    wallet.list_transactions(count=5)
-    
-    # Fetch makers
-    wallet.fetch_makers()
-    
-    # Perform a small test swap (uncomment to use)
-    # wallet.perform_swap(amount_sats=100_000, maker_count=2)
-
-if __name__ == "__main__":
-    main()
-```
+Complete example are available in the [`test/`](test/) directory:
+- [`coinswap.py`](test/coinswap.py) - Full wallet implementation
 
 ## Error Handling
 
@@ -361,78 +229,6 @@ except coinswap.TakerError as e:
 except Exception as e:
     # Handle unexpected errors
     print(f"Unexpected error: {e}")
-```
-
-## Async/Await Support
-
-For async applications, wrap blocking calls in an executor:
-
-```python
-import asyncio
-import coinswap
-from concurrent.futures import ThreadPoolExecutor
-
-class AsyncCoinswapWallet:
-    def __init__(self):
-        self.taker = None
-        self.executor = ThreadPoolExecutor(max_workers=4)
-    
-    async def initialize(self, data_dir: str):
-        """Async initialization"""
-        loop = asyncio.get_event_loop()
-        self.taker = await loop.run_in_executor(
-            self.executor,
-            lambda: coinswap.Taker.init(
-                data_dir=data_dir,
-                wallet_file_name="wallet",
-                rpc_config=coinswap.RPCConfig(
-                    url="http://localhost:18443",
-                    user="bitcoin",
-                    password="bitcoin",
-                    wallet_name="taker_wallet"
-                ),
-                control_port=9051,
-                tor_auth_password=None,
-                zmq_addr="tcp://localhost:28332",
-                password="secure_password"
-            )
-        )
-    
-    async def get_balances(self):
-        """Async get balances"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self.executor,
-            self.taker.get_balances
-        )
-    
-    async def perform_swap(self, amount: int, maker_count: int):
-        """Async coinswap"""
-        params = coinswap.SwapParams(
-            send_amount=amount,
-            maker_count=maker_count,
-            manually_selected_outpoints=None
-        )
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self.executor,
-            self.taker.do_coinswap,
-            params
-        )
-
-# Usage
-async def main():
-    wallet = AsyncCoinswapWallet()
-    await wallet.initialize("/path/to/data")
-    
-    balances = await wallet.get_balances()
-    print(f"Balance: {balances.total} sats")
-    
-    report = await wallet.perform_swap(1_000_000, 2)
-    if report:
-        print(f"Swap completed: {report.amount_swapped} sats")
-
-asyncio.run(main())
 ```
 
 ## Requirements

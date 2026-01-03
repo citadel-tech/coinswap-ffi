@@ -77,14 +77,16 @@ val taker = Taker.init(
     dataDir = "/path/to/data",
     walletFileName = "taker_wallet",
     rpcConfig = RPCConfig(
-        url = "http://localhost:18443",
-        user = "bitcoin",
-        password = "bitcoin",
+        // regtest
+        url = "http://localhost:18442",
+        user = "user",
+        password = "password",
         walletName = "taker_wallet"
     ),
     controlPort = 9051,
-    torAuthPassword = null,
+    torAuthPassword = "your_tor_password",
     zmqAddr = "tcp://localhost:28332",
+    // backup and restore
     password = "your_secure_password"
 )
 
@@ -101,6 +103,14 @@ println("Total Balance: ${balances.total} sats")
 // Get a new receiving address
 val address = taker.getNextExternalAddress(AddressType.P2WPKH)
 println("Receive to: ${address.value}")
+
+// Wait for offerbook to sync
+println("Waiting for offerbook synchronization...")
+while (taker.isOfferbookSyncing()) {
+    println("Offerbook sync in progress...")
+    Thread.sleep(2000) // Wait 2 seconds before checking again
+}
+println("Offerbook synchronized!")
 
 // Perform a coinswap
 val swapParams = SwapParams(
@@ -164,16 +174,32 @@ data class SwapParams(
 )
 
 data class Balances(
-    val total: ULong,              // Total balance in sats
-    val confirmed: ULong,          // Confirmed balance
-    val unconfirmed: ULong         // Unconfirmed balance
+    val regular: Long,             // Regular wallet balance in sats
+    val swap: Long,                // Swap balance in sats
+    val contract: Long,            // Contract balance in sats
+    val spendable: Long            // Spendable balance in sats
 )
 
 data class SwapReport(
-    val amountSwapped: ULong,      // Amount successfully swapped
-    val routingFeesPaid: ULong,    // Total routing fees
-    val numSuccessfulSwaps: UInt,  // Number of successful hops
-    val totalSwapTime: ULong       // Time taken in seconds
+    val swapId: String,            // Unique swap identifier
+    val swapDurationSeconds: Double, // Duration of swap in seconds
+    val targetAmount: Long,        // Target swap amount in sats
+    val totalInputAmount: Long,    // Total input amount in sats
+    val totalOutputAmount: Long,   // Total output amount in sats
+    val makersCount: UInt,         // Number of makers in swap
+    val makerAddresses: List<String>, // List of maker addresses
+    val totalFundingTxs: Long,     // Total number of funding transactions
+    val fundingTxidsByHop: List<List<String>>, // Funding TXIDs grouped by hop
+    val totalFee: Long,            // Total fees paid in sats
+    val totalMakerFees: Long,      // Total maker fees in sats
+    val miningFee: Long,           // Mining fees in sats
+    val feePercentage: Double,     // Fee as percentage of amount
+    val makerFeeInfo: List<MakerFeeInfo>, // Detailed fee info per maker
+    val inputUtxos: List<Long>,    // Input UTXO amounts
+    val outputChangeAmounts: List<Long>,    // Change output amounts
+    val outputSwapAmounts: List<Long>,      // Swap output amounts
+    val outputChangeUtxos: List<UtxoWithAddress>, // Change UTXOs with addresses
+    val outputSwapUtxos: List<UtxoWithAddress>    // Swap UTXOs with addresses
 )
 
 enum class AddressType {
@@ -182,60 +208,10 @@ enum class AddressType {
 }
 ```
 
-## Android Example
+## Examples
 
-```kotlin
-class WalletActivity : AppCompatActivity() {
-    private lateinit var taker: Taker
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // Initialize in background thread
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                taker = Taker.init(
-                    dataDir = filesDir.absolutePath,
-                    walletFileName = "wallet",
-                    rpcConfig = getRpcConfig(),
-                    controlPort = 9051u,
-                    torAuthPassword = null,
-                    zmqAddr = "tcp://localhost:28332",
-                    password = getUserPassword()
-                )
-                
-                taker.setupLogging(filesDir.absolutePath)
-                taker.syncAndSave()
-                
-                withContext(Dispatchers.Main) {
-                    updateUI()
-                }
-            } catch (e: TakerError) {
-                Log.e("Wallet", "Error: ${e.message}")
-            }
-        }
-    }
-    
-    private fun performSwap(amount: Long) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val params = SwapParams(
-                    sendAmount = amount.toULong(),
-                    makerCount = 2u,
-                    manuallySelectedOutpoints = null
-                )
-                
-                val report = taker.doCoinswap(params)
-                withContext(Dispatchers.Main) {
-                    showSwapResult(report)
-                }
-            } catch (e: TakerError) {
-                Log.e("Swap", "Swap failed: ${e.message}")
-            }
-        }
-    }
-}
-```
+Complete examples are available in the [`test/`](test/) directory:
+- [`AndroidExample.kt`](test/AndroidExample.kt) - Android integration with coroutines
 
 ## Requirements
 
