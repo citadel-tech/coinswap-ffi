@@ -32,7 +32,7 @@ class CoinswapWallet
         data_dir: @data_dir,
         wallet_file_name: 'wallet',
         rpc_config: Coinswap::RPCConfig.new(
-          url: 'http://localhost:18443',
+          url: 'http://localhost:18442',
           user: 'bitcoin',
           password: 'bitcoin',
           wallet_name: 'taker_wallet'

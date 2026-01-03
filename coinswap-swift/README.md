@@ -81,7 +81,7 @@ let taker = try Taker(
     dataDir: "/path/to/data",
     walletFileName: "taker_wallet",
     rpcConfig: RPCConfig(
-        url: "http://localhost:18443",
+        url: "http://localhost:18442",
         user: "user",
         password: "password",
         walletName: "taker_wallet"

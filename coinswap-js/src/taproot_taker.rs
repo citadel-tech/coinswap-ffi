@@ -157,6 +157,13 @@ impl TaprootTaker {
     Ok(swap_report.map(SwapReport::from))
   }
 
+
+  #[napi]
+  pub fn run_offer_sync_now(&self) -> Result<()> {
+    let taker = self.inner.lock().map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    Ok(taker.run_offer_sync_now())
+  }
+  
   #[napi]
   pub fn is_offerbook_syncing(&self) -> Result<bool> {
     let taker = self
