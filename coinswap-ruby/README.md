@@ -118,8 +118,6 @@ swap_params = Coinswap::SwapParams.new(
 report = taker.do_coinswap(swap_params: swap_params)
 if report
   puts "Swap completed!"
-  puts "Amount swapped: #{report.amount_swapped} sats"
-  puts "Routing fee paid: #{report.routing_fees_paid} sats"
 end
 ```
 
