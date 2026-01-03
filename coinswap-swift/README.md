@@ -82,8 +82,8 @@ let taker = try Taker(
     walletFileName: "taker_wallet",
     rpcConfig: RPCConfig(
         url: "http://localhost:18443",
-        user: "bitcoin",
-        password: "bitcoin",
+        user: "user",
+        password: "password",
         walletName: "taker_wallet"
     ),
     controlPort: 9051,
@@ -105,6 +105,14 @@ print("Total Balance: \(balances.total) sats")
 // Get a new receiving address
 let address = try taker.getNextExternalAddress(addressType: .p2wpkh)
 print("Receive to: \(address.value)")
+
+// Wait for offerbook to sync
+print("Waiting for offerbook synchronization...")
+while try taker.isOfferbookSyncing() {
+    print("Offerbook sync in progress...")
+    Thread.sleep(forTimeInterval: 2.0) 
+}
+print("Offerbook synchronized!")
 
 // Perform a coinswap
 let swapParams = SwapParams(
@@ -171,16 +179,32 @@ struct SwapParams {
 }
 
 struct Balances {
-    let total: UInt64              // Total balance in sats
-    let confirmed: UInt64          // Confirmed balance
-    let unconfirmed: UInt64        // Unconfirmed balance
+    let regular: Int64             // Regular wallet balance in sats
+    let swap: Int64                // Swap balance in sats
+    let contract: Int64            // Contract balance in sats
+    let spendable: Int64           // Spendable balance in sats
 }
 
 struct SwapReport {
-    let amountSwapped: UInt64      // Amount successfully swapped
-    let routingFeesPaid: UInt64    // Total routing fees
-    let numSuccessfulSwaps: UInt32 // Number of successful hops
-    let totalSwapTime: UInt64      // Time taken in seconds
+    let swapId: String             // Unique swap identifier
+    let swapDurationSeconds: Double // Duration of swap in seconds
+    let targetAmount: Int64        // Target swap amount in sats
+    let totalInputAmount: Int64    // Total input amount in sats
+    let totalOutputAmount: Int64   // Total output amount in sats
+    let makersCount: UInt32        // Number of makers in swap
+    let makerAddresses: [String]   // List of maker addresses
+    let totalFundingTxs: Int64     // Total number of funding transactions
+    let fundingTxidsByHop: [[String]] // Funding TXIDs grouped by hop
+    let totalFee: Int64            // Total fees paid in sats
+    let totalMakerFees: Int64      // Total maker fees in sats
+    let miningFee: Int64           // Mining fees in sats
+    let feePercentage: Double      // Fee as percentage of amount
+    let makerFeeInfo: [MakerFeeInfo] // Detailed fee info per maker
+    let inputUtxos: [Int64]        // Input UTXO amounts
+    let outputChangeAmounts: [Int64]    // Change output amounts
+    let outputSwapAmounts: [Int64]      // Swap output amounts
+    let outputChangeUtxos: [UtxoWithAddress] // Change UTXOs with addresses
+    let outputSwapUtxos: [UtxoWithAddress]   // Swap UTXOs with addresses
 }
 
 enum AddressType {
@@ -189,171 +213,11 @@ enum AddressType {
 }
 ```
 
-## iOS Example
+## Examples
 
-```swift
-import UIKit
-import Combine
-
-class WalletViewController: UIViewController {
-    private var taker: Taker?
-    private var cancellables = Set<AnyCancellable>()
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Initialize in background
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                let documentsPath = FileManager.default.urls(
-                    for: .documentDirectory, 
-                    in: .userDomainMask
-                )[0].path
-                
-                self?.taker = try Taker(
-                    dataDir: documentsPath,
-                    walletFileName: "wallet",
-                    rpcConfig: self?.getRpcConfig(),
-                    controlPort: 9051,
-                    torAuthPassword: nil,
-                    zmqAddr: "tcp://localhost:28332",
-                    password: self?.getUserPassword()
-                )
-                
-                try self?.taker?.setupLogging(dataDir: documentsPath)
-                try self?.taker?.syncAndSave()
-                
-                DispatchQueue.main.async {
-                    self?.updateUI()
-                }
-            } catch {
-                print("Error initializing: \(error)")
-            }
-        }
-    }
-    
-    func performSwap(amount: UInt64) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                let params = SwapParams(
-                    sendAmount: amount,
-                    makerCount: 2,
-                    manuallySelectedOutpoints: nil
-                )
-                
-                let report = try self?.taker?.doCoinswap(swapParams: params)
-                
-                DispatchQueue.main.async {
-                    self?.showSwapResult(report)
-                }
-            } catch {
-                print("Swap failed: \(error)")
-            }
-        }
-    }
-    
-    private func getRpcConfig() -> RPCConfig {
-        RPCConfig(
-            url: "http://localhost:18443",
-            user: "bitcoin",
-            password: "bitcoin",
-            walletName: "taker_wallet"
-        )
-    }
-}
-```
-
-## SwiftUI Example
-
-```swift
-import SwiftUI
-
-class WalletViewModel: ObservableObject {
-    @Published var balance: UInt64 = 0
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private var taker: Taker?
-    
-    func initialize() async {
-        isLoading = true
-        do {
-            let documentsPath = FileManager.default.urls(
-                for: .documentDirectory,
-                in: .userDomainMask
-            )[0].path
-            
-            taker = try Taker(
-                dataDir: documentsPath,
-                walletFileName: "wallet",
-                rpcConfig: getRpcConfig(),
-                controlPort: 9051,
-                torAuthPassword: nil,
-                zmqAddr: "tcp://localhost:28332",
-                password: getUserPassword()
-            )
-            
-            try taker?.setupLogging(dataDir: documentsPath)
-            try taker?.syncAndSave()
-            
-            let balances = try taker?.getBalances()
-            await MainActor.run {
-                self.balance = balances?.total ?? 0
-                self.isLoading = false
-            }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
-            }
-        }
-    }
-    
-    func performSwap(amount: UInt64) async {
-        isLoading = true
-        do {
-            let params = SwapParams(
-                sendAmount: amount,
-                makerCount: 2,
-                manuallySelectedOutpoints: nil
-            )
-            
-            let report = try taker?.doCoinswap(swapParams: params)
-            await MainActor.run {
-                self.isLoading = false
-                // Handle report
-            }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
-            }
-        }
-    }
-}
-
-struct WalletView: View {
-    @StateObject private var viewModel = WalletViewModel()
-    
-    var body: some View {
-        VStack {
-            if viewModel.isLoading {
-                ProgressView()
-            } else {
-                Text("Balance: \(viewModel.balance) sats")
-                Button("Perform Swap") {
-                    Task {
-                        await viewModel.performSwap(amount: 1_000_000)
-                    }
-                }
-            }
-        }
-        .task {
-            await viewModel.initialize()
-        }
-    }
-}
-```
+Complete examples are available in the [`test/`](test/) directory:
+- [`iOSExample.swift`](test/iOSExample.swift) - iOS integration with UIKit
+- [`SwiftUIExample.swift`](test/SwiftUIExample.swift) - SwiftUI integration with async/await
 
 ## Requirements
 

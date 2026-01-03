@@ -74,12 +74,12 @@ taker = Coinswap::Taker.init(
   wallet_file_name: 'taker_wallet',
   rpc_config: Coinswap::RPCConfig.new(
     url: 'http://localhost:18443',
-    user: 'bitcoin',
-    password: 'bitcoin',
+    user: 'user',
+    password: 'password',
     wallet_name: 'taker_wallet'
   ),
   control_port: 9051,
-  tor_auth_password: nil,
+  tor_auth_password: "your_tor_password",
   zmq_addr: 'tcp://localhost:28332',
   password: 'your_secure_password'
 )
@@ -99,6 +99,14 @@ address = taker.get_next_external_address(
   address_type: Coinswap::AddressType::P2WPKH
 )
 puts "Receive to: #{address.value}"
+
+# Wait for offerbook to sync
+puts "Waiting for offerbook synchronization..."
+while taker.is_offerbook_syncing
+  puts "Offerbook sync in progress..."
+  sleep 2
+end
+puts "Offerbook synchronized!"
 
 # Perform a coinswap
 swap_params = Coinswap::SwapParams.new(
@@ -169,17 +177,33 @@ module Coinswap
   
   # Balance information
   Balances = Struct.new(
-    :total,                          # Total balance in sats
-    :confirmed,                      # Confirmed balance
-    :unconfirmed                     # Unconfirmed balance
+    :regular,                        # Regular wallet balance in sats
+    :swap,                           # Swap balance in sats
+    :contract,                       # Contract balance in sats
+    :spendable                       # Spendable balance in sats
   )
   
   # Swap report
   SwapReport = Struct.new(
-    :amount_swapped,                 # Amount successfully swapped
-    :routing_fees_paid,              # Total routing fees
-    :num_successful_swaps,           # Number of successful hops
-    :total_swap_time                 # Time taken in seconds
+    :swap_id,                        # Unique swap identifier
+    :swap_duration_seconds,          # Duration of swap in seconds
+    :target_amount,                  # Target swap amount in sats
+    :total_input_amount,             # Total input amount in sats
+    :total_output_amount,            # Total output amount in sats
+    :makers_count,                   # Number of makers in swap
+    :maker_addresses,                # Array of maker addresses
+    :total_funding_txs,              # Total number of funding transactions
+    :funding_txids_by_hop,           # Funding TXIDs grouped by hop
+    :total_fee,                      # Total fees paid in sats
+    :total_maker_fees,               # Total maker fees in sats
+    :mining_fee,                     # Mining fees in sats
+    :fee_percentage,                 # Fee as percentage of amount
+    :maker_fee_info,                 # Detailed fee info per maker
+    :input_utxos,                    # Input UTXO amounts
+    :output_change_amounts,          # Change output amounts
+    :output_swap_amounts,            # Swap output amounts
+    :output_change_utxos,            # Change UTXOs with addresses
+    :output_swap_utxos               # Swap UTXOs with addresses
   )
   
   # Address types
@@ -190,15 +214,45 @@ module Coinswap
 end
 ```
 
-## Complete Example
+## Examples
+
+Complete examples are available in the [`test/`](test/) directory:
+- [`complete_example.rb`](test/complete_example.rb) - Full wallet implementation
+- [`rails_integration_example.rb`](test/rails_integration_example.rb) - Rails integration
+
+## Error Handling
+
+All operations that can fail raise `Coinswap::TakerError`:
 
 ```ruby
-#!/usr/bin/env ruby
-require 'coinswap'
-require 'fileutils'
+begin
+  balances = taker.get_balances
+  puts "Balance: #{balances.total}"
+rescue Coinswap::TakerError => e
+  puts "Taker error: #{e.message}"
+rescue StandardError => e
+  puts "Unexpected error: #{e.message}"
+end
+```
 
-class CoinswapWallet
-  attr_reader :taker
+## Requirements
+
+- Ruby 2.7 or higher
+- FFI gem (automatically installed)
+- Bitcoin Core with RPC enabled
+- Synced, non-pruned node with `-txindex`
+- Tor daemon for privacy
+
+## Support
+
+- [Main Coinswap Repository](https://github.com/citadel-tech/coinswap)
+- [FFI Commons](../ffi-commons) - Build and binding generation
+- [Coinswap Documentation](https://github.com/citadel-tech/coinswap/docs)
+
+## License
+
+MIT License - see [LICENSE](../LICENSE) for details
+
   
   def initialize(data_dir)
     @data_dir = data_dir
@@ -215,8 +269,8 @@ class CoinswapWallet
         wallet_file_name: 'wallet',
         rpc_config: Coinswap::RPCConfig.new(
           url: 'http://localhost:18443',
-          user: 'bitcoin',
-          password: 'bitcoin',
+          user: 'user',
+          password: 'password',
           wallet_name: 'taker_wallet'
         ),
         control_port: 9051,
@@ -506,59 +560,6 @@ threads.each(&:join)
 - Bitcoin Core with RPC enabled
 - Synced, non-pruned node with `-txindex`
 - Tor daemon for privacy
-
-## Testing
-
-Create a test file:
-
-```ruby
-# test_coinswap.rb
-require 'minitest/autorun'
-require 'coinswap'
-
-class TestCoinswap < Minitest::Test
-  def setup
-    @taker = Coinswap::Taker.init(
-      data_dir: './test_data',
-      wallet_file_name: 'test_wallet',
-      rpc_config: test_rpc_config,
-      control_port: 9051,
-      tor_auth_password: nil,
-      zmq_addr: 'tcp://localhost:28332',
-      password: 'test_password'
-    )
-  end
-  
-  def test_get_balances
-    balances = @taker.get_balances
-    assert balances.total >= 0
-    assert balances.confirmed >= 0
-  end
-  
-  def test_get_address
-    address = @taker.get_next_external_address(
-      address_type: Coinswap::AddressType::P2WPKH
-    )
-    assert address.value.start_with?('bcrt1')
-  end
-  
-  private
-  
-  def test_rpc_config
-    Coinswap::RPCConfig.new(
-      url: 'http://localhost:18443',
-      user: 'bitcoin',
-      password: 'bitcoin',
-      wallet_name: 'test_wallet'
-    )
-  end
-end
-```
-
-Run tests:
-```bash
-ruby test_coinswap.rb
-```
 
 ## Support
 
