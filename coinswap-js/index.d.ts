@@ -2,7 +2,7 @@
 /* eslint-disable */
 export declare class Taker {
   constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string, password?: string | undefined | null)
-  static setupLogging(dataDir?: string | undefined | null): void
+  static setupLogging(dataDir: string | undefined | null, level: string): void
   static initNativeLogging(): void
   /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates
@@ -31,7 +31,7 @@ export declare class Taker {
 
 export declare class TaprootTaker {
   constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string, password?: string | undefined | null)
-  static setupLogging(dataDir?: string | undefined | null): void
+  static setupLogging(dataDir: string | undefined | null, level: string): void
   static initNativeLogging(): void
   /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates

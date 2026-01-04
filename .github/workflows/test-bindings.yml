@@ -1,0 +1,257 @@
+name: Test FFI Bindings
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/*.gitignore'
+      - '.editorconfig'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-and-test:
+    name: Build Bindings and Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libssl-dev \
+            pkg-config \
+            python3 \
+            python3-pip \
+            ruby \
+            ruby-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: coinswap-js/yarn.lock
+
+      - name: Install Ruby FFI gem
+        run: |
+          gem install ffi --user-install
+
+      - name: Check Docker
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Build FFI bindings
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x create_bindings.sh
+          ./create_bindings.sh
+
+      - name: Build Node.js bindings
+        working-directory: ./coinswap-js
+        run: |
+          yarn install
+          yarn build
+
+      - name: Verify bindings were created
+        run: |
+          echo "Checking Python bindings..."
+          ls -lh coinswap-python/coinswap.py
+          ls -lh coinswap-python/libcoinswap_ffi.so
+          
+          echo "Checking Ruby bindings..."
+          ls -lh coinswap-ruby/coinswap.rb
+          ls -lh coinswap-ruby/libcoinswap_ffi.so
+          
+          echo "Checking Kotlin bindings..."
+          ls -lh coinswap-kotlin/uniffi/coinswap/coinswap.kt
+          ls -lh coinswap-kotlin/libcoinswap_ffi.so
+          
+          echo "Checking Swift bindings..."
+          ls -lh coinswap-swift/coinswap.swift
+          ls -lh coinswap-swift/libcoinswap_ffi.so
+          
+          echo "Checking Node.js bindings..."
+          ls -lh coinswap-js/index.js
+          ls -lh coinswap-js/index.d.ts
+
+      - name: Setup Docker environment
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          ./ffi-docker-setup setup
+          ./ffi-docker-setup start
+
+      - name: Wait for Docker services to be ready
+        run: |
+          echo "Waiting for Bitcoin Core to be ready..."
+          sleep 30
+          
+          # Check if bitcoind is responding
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=18442 -rpcuser=user -rpcpassword=password getblockchaininfo > /dev/null 2>&1; then
+              echo "Bitcoin Core is ready!"
+              break
+            fi
+            echo "Waiting for Bitcoin Core... (attempt $((attempt + 1))/$max_attempts)"
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Bitcoin Core failed to start!"
+            exit 1
+          fi
+          
+          echo "Waiting for Tor to be ready..."
+          sleep 10
+          
+          echo "Waiting for Makers to be ready..."
+          sleep 20
+
+      - name: Check Docker containers status
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a
+          
+          echo -e "\n=== Bitcoin Core Logs ==="
+          docker logs coinswap-bitcoind --tail 50 || true
+          
+          echo -e "\n=== Tor Logs ==="
+          docker logs tor --tail 30 || true
+          
+          echo -e "\n=== Maker1 Logs ==="
+          docker logs coinswap-makerd1 --tail 30 || true
+          
+          echo -e "\n=== Maker2 Logs ==="
+          docker logs coinswap-makerd2 --tail 30 || true
+
+      - name: Run Rust tests (taker_methods)
+        working-directory: ./ffi-commons
+        run: |
+          echo "Running Rust FFI tests..."
+          cargo test -- --nocapture
+        continue-on-error: false
+
+      - name: Run Python test (standard_swap.py)
+        working-directory: ./coinswap-python
+        run: |
+          echo "Running Python coinswap test..."
+          python3 test/standard_swap.py
+        continue-on-error: false
+
+      - name: Commit binding changes (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add coinswap-js/index.d.ts coinswap-js/index.js
+          git add coinswap-python/coinswap.py
+          git add coinswap-ruby/coinswap.rb
+          git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
+          git add coinswap-swift/coinswap.swift
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update FFI bindings [skip ci]"
+            git push
+            echo "✓ Committed and pushed binding changes"
+          else
+            echo "ℹ No binding changes to commit"
+          fi
+
+      - name: Cleanup Docker environment
+        if: always()
+        working-directory: ./ffi-commons
+        run: |
+          ./ffi-docker-setup stop || true
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            ~/.coinswap/taker/debug.log
+            ffi-commons/.coinswap-docker-stack/logs/
+          retention-days: 7
+
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check Rust formatting
+        working-directory: ./ffi-commons
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        working-directory: ./ffi-commons
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check Ruby syntax
+        working-directory: ./coinswap-ruby
+        run: |
+          ruby -c test/standard_swap.rb

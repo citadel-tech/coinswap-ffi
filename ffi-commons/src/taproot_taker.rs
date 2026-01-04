@@ -107,6 +107,24 @@ impl TaprootTaker {
         }))
     }
 
+    pub fn setup_logging(
+        &self,
+        data_dir: Option<String>,
+        log_level: String,
+    ) -> Result<(), TakerError> {
+        let path = data_dir.map(PathBuf::from);
+        let level = match log_level.to_lowercase().as_str() {
+            "trace" => log::LevelFilter::Trace,
+            "debug" => log::LevelFilter::Debug,
+            "info" => log::LevelFilter::Info,
+            "warn" => log::LevelFilter::Warn,
+            "error" => log::LevelFilter::Error,
+            _ => log::LevelFilter::Info,
+        };
+        coinswap::utill::setup_taker_logger(level, true, path);
+        Ok(())
+    }
+
     pub fn do_coinswap(
         &self,
         swap_params: TaprootSwapParams,
@@ -364,9 +382,13 @@ impl TaprootTaker {
 
     pub fn run_offer_sync_now(&self) -> Result<(), TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
-            msg: format!("Failed to acquire taker lock for offerbook sync check: {:?}", e),
+            msg: format!(
+                "Failed to acquire taker lock for offerbook sync check: {:?}",
+                e
+            ),
         })?;
-        Ok(taker.run_offer_sync_now())
+        taker.run_offer_sync_now();
+        Ok(())
     }
 
     pub fn send_to_address(

@@ -20,8 +20,8 @@ use coinswap::{
         },
     },
     wallet::{
-        Balances as CoinswapBalances, FidelityBond as csFidelityBond,
-        RPCConfig as CoinswapRPCConfig, AddressType as csAddressType,
+        AddressType as csAddressType, Balances as CoinswapBalances, FidelityBond as csFidelityBond,
+        RPCConfig as CoinswapRPCConfig,
         ffi::{
             MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport,
             restore_wallet_gui_app as cs_restore_wallet_gui_app,
@@ -98,7 +98,7 @@ impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
     }
 }
 
-#[derive(uniffi::Record)]
+#[derive(Debug, uniffi::Record)]
 pub struct Balances {
     pub regular: i64,
     pub swap: i64,
@@ -437,7 +437,6 @@ pub struct AddressType {
     /// P2WPKH or P2TR
     pub addr_type: String,
 }
-
 
 impl TryFrom<AddressType> for csAddressType {
     type Error = TakerError;

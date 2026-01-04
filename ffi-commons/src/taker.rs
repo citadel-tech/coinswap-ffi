@@ -100,13 +100,7 @@ impl Taker {
         }))
     }
 
-    pub fn setup_logging(&self, data_dir: Option<String>) -> Result<(), TakerError> {
-        let path = data_dir.map(PathBuf::from);
-        coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
-        Ok(())
-    }
-
-    pub fn setup_logging_with_level(
+    pub fn setup_logging(
         &self,
         data_dir: Option<String>,
         log_level: String,
@@ -436,16 +430,23 @@ impl Taker {
 
     pub fn is_offerbook_syncing(&self) -> Result<bool, TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
-            msg: format!("Failed to acquire taker lock for offerbook sync check: {:?}", e),
+            msg: format!(
+                "Failed to acquire taker lock for offerbook sync check: {:?}",
+                e
+            ),
         })?;
         Ok(taker.is_offerbook_syncing())
     }
 
     pub fn run_offer_sync_now(&self) -> Result<(), TakerError> {
-    let taker = self.taker.lock().map_err(|e| TakerError::General {
-        msg: format!("Failed to acquire taker lock for offerbook sync check: {:?}", e),
+        let taker = self.taker.lock().map_err(|e| TakerError::General {
+            msg: format!(
+                "Failed to acquire taker lock for offerbook sync check: {:?}",
+                e
+            ),
         })?;
-        Ok(taker.run_offer_sync_now())
+        taker.run_offer_sync_now();
+        Ok(())
     }
 
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
