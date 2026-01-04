@@ -18,11 +18,11 @@ Coinswap NAPI provides high-performance Node.js bindings for the [Coinswap proto
 ## Installation
 
 ```bash
-npm install coinswap-napi
+npm install coinswap-js
 # or
-yarn add coinswap-napi
+yarn add coinswap-js
 # or
-pnpm add coinswap-napi
+pnpm add coinswap-js
 ```
 
 ## Quick Start
@@ -30,7 +30,7 @@ pnpm add coinswap-napi
 ### Create a New Wallet
 
 ```typescript
-import { Taker } from 'coinswap-napi';
+import { Taker } from 'coinswap-js';
 
 // Configure RPC connection to Bitcoin Core
 const rpcConfig = {
@@ -57,7 +57,7 @@ console.log('Wallet created successfully!');
 ### Restore from Backup
 
 ```typescript
-import { Taker } from 'coinswap-napi';
+import { Taker } from 'coinswap-js';
 
 const backupPath = './backups/wallet_backup.json';
 const password = 'secure_password';
@@ -147,7 +147,7 @@ Pre-built binaries are available for:
 ```bash
 # Clone repository
 git clone https://github.com/citadel-tech/coinswap-ffi.git
-cd coinswap-ffi/coinswap-napi
+cd coinswap-ffi/coinswap-js
 
 # Install dependencies
 yarn install

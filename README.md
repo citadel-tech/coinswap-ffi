@@ -26,12 +26,12 @@ Generated from **[ffi-commons](./ffi-commons)** - the core UniFFI binding genera
 ### Node.js (NAPI)
 
 ```bash
-cd coinswap-napi
+cd coinswap-js
 yarn install
 yarn build
 ```
 
-See [coinswap-napi/README.md](./coinswap-napi/README.md) for detailed usage.
+See [coinswap-js/README.md](./coinswap-js/README.md) for detailed usage.
 
 ### Multi-Language Bindings (Kotlin/Swift/Python/Ruby)
 
