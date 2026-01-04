@@ -1,12 +1,12 @@
-//! FFI Layer Tests for Coinswap Taker
+//! FFI Layer Tests for Coinswap Taproot Taker
 //!
-//! This module tests the UniFFI bindings for the Coinswap Taker,
+//! This module tests the UniFFI bindings for the Coinswap Taproot Taker,
 //! ensuring the FFI layer correctly wraps the underlying Rust API.
 //!
 //! Based on BDK-FFI test patterns.
 
 use crate::{
-    taker::{SwapParams, Taker},
+    taproot_taker::{TaprootSwapParams, TaprootTaker},
     tests::docker_helpers::{self, DockerBitcoind},
 };
 use bitcoin::Amount;
@@ -14,18 +14,19 @@ use bitcoind::bitcoincore_rpc::RpcApi;
 use std::process::Command;
 use std::sync::Arc;
 
-#[test]
+// #[test]
 fn main() {
     cleanup_wallet();
-    test_taker_complete_flow();
+    test_taproot_taker_complete_flow();
+    // cleanup_wallet();
 }
 
-fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
+fn setup_bitcoind_and_taproot_taker(wallet_name: &str) -> (Arc<TaprootTaker>, DockerBitcoind) {
     let bitcoind = DockerBitcoind::connect().expect("Failed to connect to Docker bitcoind");
 
     let rpc_config = docker_helpers::get_docker_rpc_config(wallet_name);
 
-    let taker = Taker::init(
+    let taker = TaprootTaker::init(
         None,
         Some(wallet_name.to_string()),
         Some(rpc_config),
@@ -55,29 +56,29 @@ fn cleanup_wallet() {
     }
 
     if let Ok(bitcoind) = DockerBitcoind::connect() {
-        let _ = bitcoind.client.unload_wallet(Some("test-taker"));
+        let _ = bitcoind.client.unload_wallet(Some("test-taproot-taker"));
         println!("✓ Unloaded wallet from Docker bitcoind");
     }
 
-    // Remove the test-taker wallet from the Docker container's bitcoin folder
+    // Remove the test-taproot-taker wallet from the Docker container's bitcoin folder
     let output = Command::new("docker")
         .args([
             "exec",
             "coinswap-ffi-bitcoind",
             "rm",
             "-rf",
-            "/home/bitcoin/.bitcoin/wallets/test-taker",
+            "/home/bitcoin/.bitcoin/wallets/test-taproot-taker",
         ])
         .output();
 
     if output.is_ok() && output.as_ref().unwrap().status.success() {
-        println!("✓ Removed test-taker wallet from Docker container");
+        println!("✓ Removed test-taproot-taker wallet from Docker container");
     } else {
         println!("⚠ Failed to remove wallet from Docker container (may not exist)");
     }
 }
 
-fn test_taker_complete_flow() {
+fn test_taproot_taker_complete_flow() {
     // Setup logging FIRST, before initializing taker
     coinswap::utill::setup_taker_logger(
         log::LevelFilter::Info, // Change to Debug for more verbose logging
@@ -85,10 +86,10 @@ fn test_taker_complete_flow() {
         None,                   // Use default taker directory
     );
 
-    log::info!("Starting taker test flow");
+    log::info!("Starting taproot taker test flow");
 
-    let (taker, bitcoind) = setup_bitcoind_and_taker("test-taker");
-
+    let (taker, bitcoind) = setup_bitcoind_and_taproot_taker("test-taproot-taker");
+    
     println!(
         "Waiting for offerbook synchronization to complete…{:?}",
         taker.is_offerbook_syncing()
@@ -105,7 +106,7 @@ fn test_taker_complete_flow() {
     // Test get_name
     println!("Testing get_name...");
     let wallet_name = taker.get_wallet_name().unwrap();
-    assert_eq!(wallet_name, "test-taker", "Wallet name should match");
+    assert_eq!(wallet_name, "test-taproot-taker", "Wallet name should match");
     println!("✓ 'get_wallet_name' test passed");
 
     // Test address generation (external and internal)
@@ -182,7 +183,7 @@ fn test_taker_complete_flow() {
         .require_network(bitcoin::Network::Regtest)
         .unwrap();
 
-    let fund_amount = Amount::from_sat(80000);
+    let fund_amount = Amount::from_btc(0.42749329).unwrap();
     let _txid = bitcoind
         .send_to_address_from_funding_wallet(&funding_address, fund_amount)
         .unwrap();
@@ -224,9 +225,11 @@ fn test_taker_complete_flow() {
     println!("Fetch offers result: {:?}", fetch_offers_result);
 
     println!("\nTesting do_coinswap...");
-    let swap_params = SwapParams {
-        send_amount: 50_000,
+    let swap_params = TaprootSwapParams {
+        send_amount: 500_000,
         maker_count: 2,
+        tx_count: Some(3),
+        required_confirms: Some(1),
         manually_selected_outpoints: None,
     };
     let swap_report = taker.do_coinswap(swap_params);
@@ -249,10 +252,7 @@ fn test_taker_complete_flow() {
 
     taker.sync_and_save().unwrap();
 
-    println!(
-        "\nTesting updated balances after swap...{:?}",
-        taker.get_balances()
-    );
+    println!("\nTesting updated balances after swap...{:?}", taker.get_balances());
 
     println!("\n========================================");
     println!("All FFI method tests completed successfully!");

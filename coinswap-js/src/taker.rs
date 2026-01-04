@@ -90,11 +90,22 @@ impl Taker {
       inner: Mutex::new(taker),
     })
   }
-
+    
   #[napi]
-  pub fn setup_logging(data_dir: Option<String>) -> Result<()> {
+  pub fn setup_logging(data_dir: Option<String>, level: String) -> Result<()> {
     let path = data_dir.map(PathBuf::from);
-    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    
+    let log_level = match level.to_lowercase().as_str() {
+      "trace" => log::LevelFilter::Trace,
+      "debug" => log::LevelFilter::Debug,
+      "info" => log::LevelFilter::Info,
+      "warn" => log::LevelFilter::Warn,
+      "error" => log::LevelFilter::Error,
+      "off" => log::LevelFilter::Off,
+      _ => log::LevelFilter::Info,
+    };
+    
+    coinswap::utill::setup_taker_logger(log_level, false, path);
     Ok(())
   }
 
