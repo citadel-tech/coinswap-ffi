@@ -678,8 +678,6 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_coinswap_ffi_checksum_method_taker_setup_logging(
     ): Short
-    external fun uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level(
-    ): Short
     external fun uniffi_coinswap_ffi_checksum_method_taker_sync_and_save(
     ): Short
     external fun uniffi_coinswap_ffi_checksum_method_taproottaker_backup(
@@ -713,6 +711,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now(
     ): Short
     external fun uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address(
+    ): Short
+    external fun uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging(
     ): Short
     external fun uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save(
     ): Short
@@ -776,9 +776,7 @@ external fun uniffi_coinswap_ffi_fn_method_taker_run_offer_sync_now(`ptr`: Long,
 ): Unit
 external fun uniffi_coinswap_ffi_fn_method_taker_send_to_address(`ptr`: Long,`address`: RustBuffer.ByValue,`amount`: Long,`feeRate`: RustBuffer.ByValue,`manuallySelectedOutpoints`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
-external fun uniffi_coinswap_ffi_fn_method_taker_setup_logging(`ptr`: Long,`dataDir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-): Unit
-external fun uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(`ptr`: Long,`dataDir`: RustBuffer.ByValue,`logLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+external fun uniffi_coinswap_ffi_fn_method_taker_setup_logging(`ptr`: Long,`dataDir`: RustBuffer.ByValue,`logLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_coinswap_ffi_fn_method_taker_sync_and_save(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
@@ -820,6 +818,8 @@ external fun uniffi_coinswap_ffi_fn_method_taproottaker_run_offer_sync_now(`ptr`
 ): Unit
 external fun uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(`ptr`: Long,`address`: RustBuffer.ByValue,`amount`: Long,`feeRate`: RustBuffer.ByValue,`manuallySelectedOutpoints`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+external fun uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging(`ptr`: Long,`dataDir`: RustBuffer.ByValue,`logLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 external fun uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_coinswap_ffi_fn_func_create_default_rpc_config(uniffi_out_err: UniffiRustCallStatus, 
@@ -1014,10 +1014,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_coinswap_ffi_checksum_method_taker_send_to_address() != 17485.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 55849.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level() != 21624.toShort()) {
+    if (lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 11119.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_coinswap_ffi_checksum_method_taker_sync_and_save() != 9097.toShort()) {
@@ -1069,6 +1066,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging() != 45279.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360.toShort()) {
@@ -1628,9 +1628,7 @@ public interface TakerInterface {
     
     fun `sendToAddress`(`address`: kotlin.String, `amount`: kotlin.Long, `feeRate`: kotlin.Double?, `manuallySelectedOutpoints`: List<OutPoint>?): Txid
     
-    fun `setupLogging`(`dataDir`: kotlin.String?)
-    
-    fun `setupLoggingWithLevel`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
+    fun `setupLogging`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
     
     fun `syncAndSave`()
     
@@ -1954,24 +1952,11 @@ open class Taker: Disposable, AutoCloseable, TakerInterface
     
 
     
-    @Throws(TakerException::class)override fun `setupLogging`(`dataDir`: kotlin.String?)
+    @Throws(TakerException::class)override fun `setupLogging`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
         = 
     callWithHandle {
     uniffiRustCallWithError(TakerException) { _status ->
     UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging(
-        it,
-        FfiConverterOptionalString.lower(`dataDir`),_status)
-}
-    }
-    
-    
-
-    
-    @Throws(TakerException::class)override fun `setupLoggingWithLevel`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
-        = 
-    callWithHandle {
-    uniffiRustCallWithError(TakerException) { _status ->
-    UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(
         it,
         FfiConverterOptionalString.lower(`dataDir`),FfiConverterString.lower(`logLevel`),_status)
 }
@@ -2170,6 +2155,8 @@ public interface TaprootTakerInterface {
     fun `runOfferSyncNow`()
     
     fun `sendToAddress`(`address`: kotlin.String, `amount`: kotlin.Long, `feeRate`: kotlin.Double?, `manuallySelectedOutpoints`: List<OutPoint>?): kotlin.String
+    
+    fun `setupLogging`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
     
     fun `syncAndSave`()
     
@@ -2490,6 +2477,19 @@ open class TaprootTaker: Disposable, AutoCloseable, TaprootTakerInterface
     }
     )
     }
+    
+
+    
+    @Throws(TakerException::class)override fun `setupLogging`(`dataDir`: kotlin.String?, `logLevel`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(TakerException) { _status ->
+    UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging(
+        it,
+        FfiConverterOptionalString.lower(`dataDir`),FfiConverterString.lower(`logLevel`),_status)
+}
+    }
+    
     
 
     

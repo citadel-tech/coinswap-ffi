@@ -522,9 +522,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_send_to_address() != 17485:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 55849:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level() != 21624:
+    if lib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 11119:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taker_sync_and_save() != 9097:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -561,6 +559,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now() != 9519:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging() != 45279:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -981,16 +981,10 @@ _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_send_to_address.restype = _Uniffi
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging.argtypes = (
     ctypes.c_uint64,
     _UniffiRustBuffer,
+    _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging.restype = None
-_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level.argtypes = (
-    ctypes.c_uint64,
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_sync_and_save.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1100,6 +1094,13 @@ _UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address.argtypes =
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging.argtypes = (
+    ctypes.c_uint64,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging.restype = None
 _UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1177,9 +1178,6 @@ _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_send_to_address.restype = c
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging.restype = ctypes.c_uint16
-_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level.argtypes = (
-)
-_UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_and_save.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taker_sync_and_save.restype = ctypes.c_uint16
@@ -1234,6 +1232,9 @@ _UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now.r
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address.restype = ctypes.c_uint16
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging.argtypes = (
+)
+_UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging.restype = ctypes.c_uint16
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save.argtypes = (
 )
 _UniffiLib.uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save.restype = ctypes.c_uint16
@@ -3721,9 +3722,7 @@ class TakerProtocol(typing.Protocol):
         raise NotImplementedError
     def send_to_address(self, address: str,amount: int,fee_rate: typing.Optional[float],manually_selected_outpoints: typing.Optional[typing.List[OutPoint]]) -> Txid:
         raise NotImplementedError
-    def setup_logging(self, data_dir: typing.Optional[str]) -> None:
-        raise NotImplementedError
-    def setup_logging_with_level(self, data_dir: typing.Optional[str],log_level: str) -> None:
+    def setup_logging(self, data_dir: typing.Optional[str],log_level: str) -> None:
         raise NotImplementedError
     def sync_and_save(self, ) -> None:
         raise NotImplementedError
@@ -4016,22 +4015,7 @@ class Taker(TakerProtocol):
             *_uniffi_lowered_args,
         )
         return _uniffi_lift_return(_uniffi_ffi_result)
-    def setup_logging(self, data_dir: typing.Optional[str]) -> None:
-        
-        _UniffiFfiConverterOptionalString.check_lower(data_dir)
-        _uniffi_lowered_args = (
-            self._uniffi_clone_handle(),
-            _UniffiFfiConverterOptionalString.lower(data_dir),
-        )
-        _uniffi_lift_return = lambda val: None
-        _uniffi_error_converter = _UniffiFfiConverterTypeTakerError
-        _uniffi_ffi_result = _uniffi_rust_call_with_error(
-            _uniffi_error_converter,
-            _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging,
-            *_uniffi_lowered_args,
-        )
-        return _uniffi_lift_return(_uniffi_ffi_result)
-    def setup_logging_with_level(self, data_dir: typing.Optional[str],log_level: str) -> None:
+    def setup_logging(self, data_dir: typing.Optional[str],log_level: str) -> None:
         
         _UniffiFfiConverterOptionalString.check_lower(data_dir)
         
@@ -4045,7 +4029,7 @@ class Taker(TakerProtocol):
         _uniffi_error_converter = _UniffiFfiConverterTypeTakerError
         _uniffi_ffi_result = _uniffi_rust_call_with_error(
             _uniffi_error_converter,
-            _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,
+            _UniffiLib.uniffi_coinswap_ffi_fn_method_taker_setup_logging,
             *_uniffi_lowered_args,
         )
         return _uniffi_lift_return(_uniffi_ffi_result)
@@ -4125,6 +4109,8 @@ class TaprootTakerProtocol(typing.Protocol):
     def run_offer_sync_now(self, ) -> None:
         raise NotImplementedError
     def send_to_address(self, address: str,amount: int,fee_rate: typing.Optional[float],manually_selected_outpoints: typing.Optional[typing.List[OutPoint]]) -> str:
+        raise NotImplementedError
+    def setup_logging(self, data_dir: typing.Optional[str],log_level: str) -> None:
         raise NotImplementedError
     def sync_and_save(self, ) -> None:
         raise NotImplementedError
@@ -4414,6 +4400,24 @@ class TaprootTaker(TaprootTakerProtocol):
         _uniffi_ffi_result = _uniffi_rust_call_with_error(
             _uniffi_error_converter,
             _UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,
+            *_uniffi_lowered_args,
+        )
+        return _uniffi_lift_return(_uniffi_ffi_result)
+    def setup_logging(self, data_dir: typing.Optional[str],log_level: str) -> None:
+        
+        _UniffiFfiConverterOptionalString.check_lower(data_dir)
+        
+        _UniffiFfiConverterString.check_lower(log_level)
+        _uniffi_lowered_args = (
+            self._uniffi_clone_handle(),
+            _UniffiFfiConverterOptionalString.lower(data_dir),
+            _UniffiFfiConverterString.lower(log_level),
+        )
+        _uniffi_lift_return = lambda val: None
+        _uniffi_error_converter = _UniffiFfiConverterTypeTakerError
+        _uniffi_ffi_result = _uniffi_rust_call_with_error(
+            _uniffi_error_converter,
+            _UniffiLib.uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging,
             *_uniffi_lowered_args,
         )
         return _uniffi_lift_return(_uniffi_ffi_result)

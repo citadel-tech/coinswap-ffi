@@ -648,9 +648,7 @@ public protocol TakerProtocol: AnyObject, Sendable {
     
     func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?) throws  -> Txid
     
-    func setupLogging(dataDir: String?) throws 
-    
-    func setupLoggingWithLevel(dataDir: String?, logLevel: String) throws 
+    func setupLogging(dataDir: String?, logLevel: String) throws 
     
     func syncAndSave() throws 
     
@@ -854,16 +852,8 @@ open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manual
 })
 }
     
-open func setupLogging(dataDir: String?)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+open func setupLogging(dataDir: String?, logLevel: String)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
     uniffi_coinswap_ffi_fn_method_taker_setup_logging(
-            self.uniffiCloneHandle(),
-        FfiConverterOptionString.lower(dataDir),$0
-    )
-}
-}
-    
-open func setupLoggingWithLevel(dataDir: String?, logLevel: String)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
-    uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(
             self.uniffiCloneHandle(),
         FfiConverterOptionString.lower(dataDir),
         FfiConverterString.lower(logLevel),$0
@@ -961,6 +951,8 @@ public protocol TaprootTakerProtocol: AnyObject, Sendable {
     func runOfferSyncNow() throws 
     
     func sendToAddress(address: String, amount: Int64, feeRate: Double?, manuallySelectedOutpoints: [OutPoint]?) throws  -> String
+    
+    func setupLogging(dataDir: String?, logLevel: String) throws 
     
     func syncAndSave() throws 
     
@@ -1162,6 +1154,15 @@ open func sendToAddress(address: String, amount: Int64, feeRate: Double?, manual
         FfiConverterOptionSequenceTypeOutPoint.lower(manuallySelectedOutpoints),$0
     )
 })
+}
+    
+open func setupLogging(dataDir: String?, logLevel: String)throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
+    uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging(
+            self.uniffiCloneHandle(),
+        FfiConverterOptionString.lower(dataDir),
+        FfiConverterString.lower(logLevel),$0
+    )
+}
 }
     
 open func syncAndSave()throws   {try rustCallWithError(FfiConverterTypeTakerError_lift) {
@@ -4110,10 +4111,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_coinswap_ffi_checksum_method_taker_send_to_address() != 17485) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 55849) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level() != 21624) {
+    if (uniffi_coinswap_ffi_checksum_method_taker_setup_logging() != 11119) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taker_sync_and_save() != 9097) {
@@ -4165,6 +4163,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address() != 36184) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging() != 45279) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save() != 24360) {
