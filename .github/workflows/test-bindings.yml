@@ -185,23 +185,52 @@ jobs:
           python3 test/standard_swap.py
         continue-on-error: false
 
-      - name: Commit binding changes (main branch only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add coinswap-js/index.d.ts coinswap-js/index.js
-          git add coinswap-python/coinswap.py
-          git add coinswap-ruby/coinswap.rb
-          git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
-          git add coinswap-swift/coinswap.swift
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: update FFI bindings [skip ci]"
-            git push
-            echo "✓ Committed and pushed binding changes"
-          else
-            echo "ℹ No binding changes to commit"
-          fi
+      # - name: Commit binding changes (main branch only)
+      #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      #   run: |
+      #     git config --local user.email "github-actions[bot]@users.noreply.github.com"
+      #     git config --local user.name "github-actions[bot]"
+          
+      #     # Add Node.js bindings
+      #     git add coinswap-js/index.d.ts coinswap-js/index.js
+          
+      #     # Add Python bindings and library files
+      #     git add coinswap-python/coinswap.py
+      #     git add coinswap-python/libcoinswap_ffi.so
+      #     git add coinswap-python/libcoinswap_ffi.d
+      #     git add coinswap-python/uniffi-bindgen
+      #     git add coinswap-python/uniffi-bindgen.d
+          
+      #     # Add Ruby bindings and library files
+      #     git add coinswap-ruby/coinswap.rb
+      #     git add coinswap-ruby/libcoinswap_ffi.so
+      #     git add coinswap-ruby/libcoinswap_ffi.d
+      #     git add coinswap-ruby/uniffi-bindgen
+      #     git add coinswap-ruby/uniffi-bindgen.d
+          
+      #     # Add Kotlin bindings and library files
+      #     git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
+      #     git add coinswap-kotlin/libcoinswap_ffi.so
+      #     git add coinswap-kotlin/libcoinswap_ffi.d
+      #     git add coinswap-kotlin/uniffi-bindgen
+      #     git add coinswap-kotlin/uniffi-bindgen.d
+          
+      #     # Add Swift bindings and library files
+      #     git add coinswap-swift/coinswap.swift
+      #     git add coinswap-swift/coinswapFFI.h
+      #     git add coinswap-swift/coinswapFFI.modulemap
+      #     git add coinswap-swift/libcoinswap_ffi.so
+      #     git add coinswap-swift/libcoinswap_ffi.d
+      #     git add coinswap-swift/uniffi-bindgen
+      #     git add coinswap-swift/uniffi-bindgen.d
+          
+      #     if ! git diff --staged --quiet; then
+      #       git commit -m "chore: update FFI bindings and library files"
+      #       git push
+      #       echo "✓ Committed and pushed binding changes"
+      #     else
+      #       echo "ℹ No binding changes to commit"
+      #     fi
 
       - name: Cleanup Docker environment
         if: always()

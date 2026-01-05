@@ -3246,9 +3246,6 @@ module UniFFILib
     [:uint64, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
   attach_function :uniffi_coinswap_ffi_fn_method_taker_setup_logging,
-    [:uint64, RustBuffer.by_value, RustCallStatus.by_ref],
-    :void
-  attach_function :uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,
     [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_coinswap_ffi_fn_method_taker_sync_and_save,
@@ -3311,6 +3308,9 @@ module UniFFILib
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,
     [:uint64, RustBuffer.by_value, :int64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     RustBuffer.by_value
+  attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging,
+    [:uint64, RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
+    :void
   attach_function :uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,
     [:uint64, RustCallStatus.by_ref],
     :void
@@ -3407,9 +3407,6 @@ module UniFFILib
   attach_function :uniffi_coinswap_ffi_checksum_method_taker_setup_logging,
     [RustCallStatus.by_ref],
     :uint16
-  attach_function :uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level,
-    [RustCallStatus.by_ref],
-    :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taker_sync_and_save,
     [RustCallStatus.by_ref],
     :uint16
@@ -3459,6 +3456,9 @@ module UniFFILib
     [RustCallStatus.by_ref],
     :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address,
+    [RustCallStatus.by_ref],
+    :uint16
+  attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging,
     [RustCallStatus.by_ref],
     :uint16
   attach_function :uniffi_coinswap_ffi_checksum_method_taproottaker_sync_and_save,
@@ -4612,18 +4612,12 @@ end
     result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_send_to_address,uniffi_clone_handle(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
     return result.consumeIntoTypeTxid
   end
-  def setup_logging(data_dir)
-        data_dir = (data_dir ? Coinswap::uniffi_utf8(data_dir) : nil)
-        RustBuffer.check_lower_Optionalstring(data_dir)
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir))
-  end
-  
-  def setup_logging_with_level(data_dir, log_level)
+  def setup_logging(data_dir, log_level)
         data_dir = (data_dir ? Coinswap::uniffi_utf8(data_dir) : nil)
         RustBuffer.check_lower_Optionalstring(data_dir)
         log_level = Coinswap::uniffi_utf8(log_level)
         
-      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.allocFromString(log_level))
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taker_setup_logging,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.allocFromString(log_level))
   end
   
   def sync_and_save()
@@ -4788,6 +4782,14 @@ end
     result = Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address,uniffi_clone_handle(),RustBuffer.allocFromString(address),amount,RustBuffer.alloc_from_Optionalf64(fee_rate),RustBuffer.alloc_from_OptionalSequenceTypeOutPoint(manually_selected_outpoints))
     return result.consumeIntoString
   end
+  def setup_logging(data_dir, log_level)
+        data_dir = (data_dir ? Coinswap::uniffi_utf8(data_dir) : nil)
+        RustBuffer.check_lower_Optionalstring(data_dir)
+        log_level = Coinswap::uniffi_utf8(log_level)
+        
+      Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging,uniffi_clone_handle(),RustBuffer.alloc_from_Optionalstring(data_dir),RustBuffer.allocFromString(log_level))
+  end
+  
   def sync_and_save()
       Coinswap.rust_call_with_error(TakerError,:uniffi_coinswap_ffi_fn_method_taproottaker_sync_and_save,uniffi_clone_handle(),)
   end

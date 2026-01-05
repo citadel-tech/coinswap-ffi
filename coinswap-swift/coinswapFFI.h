@@ -340,12 +340,7 @@ RustBuffer uniffi_coinswap_ffi_fn_method_taker_send_to_address(uint64_t ptr, Rus
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SETUP_LOGGING
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SETUP_LOGGING
-void uniffi_coinswap_ffi_fn_method_taker_setup_logging(uint64_t ptr, RustBuffer data_dir, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SETUP_LOGGING_WITH_LEVEL
-#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SETUP_LOGGING_WITH_LEVEL
-void uniffi_coinswap_ffi_fn_method_taker_setup_logging_with_level(uint64_t ptr, RustBuffer data_dir, RustBuffer log_level, RustCallStatus *_Nonnull out_status
+void uniffi_coinswap_ffi_fn_method_taker_setup_logging(uint64_t ptr, RustBuffer data_dir, RustBuffer log_level, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAKER_SYNC_AND_SAVE
@@ -446,6 +441,11 @@ void uniffi_coinswap_ffi_fn_method_taproottaker_run_offer_sync_now(uint64_t ptr,
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAPROOTTAKER_SEND_TO_ADDRESS
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAPROOTTAKER_SEND_TO_ADDRESS
 RustBuffer uniffi_coinswap_ffi_fn_method_taproottaker_send_to_address(uint64_t ptr, RustBuffer address, int64_t amount, RustBuffer fee_rate, RustBuffer manually_selected_outpoints, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAPROOTTAKER_SETUP_LOGGING
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAPROOTTAKER_SETUP_LOGGING
+void uniffi_coinswap_ffi_fn_method_taproottaker_setup_logging(uint64_t ptr, RustBuffer data_dir, RustBuffer log_level, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_FN_METHOD_TAPROOTTAKER_SYNC_AND_SAVE
@@ -872,12 +872,6 @@ uint16_t uniffi_coinswap_ffi_checksum_method_taker_setup_logging(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SETUP_LOGGING_WITH_LEVEL
-#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SETUP_LOGGING_WITH_LEVEL
-uint16_t uniffi_coinswap_ffi_checksum_method_taker_setup_logging_with_level(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SYNC_AND_SAVE
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAKER_SYNC_AND_SAVE
 uint16_t uniffi_coinswap_ffi_checksum_method_taker_sync_and_save(void
@@ -977,6 +971,12 @@ uint16_t uniffi_coinswap_ffi_checksum_method_taproottaker_run_offer_sync_now(voi
 #ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAPROOTTAKER_SEND_TO_ADDRESS
 #define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAPROOTTAKER_SEND_TO_ADDRESS
 uint16_t uniffi_coinswap_ffi_checksum_method_taproottaker_send_to_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAPROOTTAKER_SETUP_LOGGING
+#define UNIFFI_FFIDEF_UNIFFI_COINSWAP_FFI_CHECKSUM_METHOD_TAPROOTTAKER_SETUP_LOGGING
+uint16_t uniffi_coinswap_ffi_checksum_method_taproottaker_setup_logging(void
     
 );
 #endif
