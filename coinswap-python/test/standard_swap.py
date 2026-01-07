@@ -22,7 +22,7 @@ def cleanup_test_wallets():
         except Exception as e:
             print(f"Warning: Could not clean {coinswap_taker_dir}: {e}")
     
-    bitcoin_wallet_dir = os.path.expanduser("~/.bitcoin/regtest/wallets/python_test_wallet2")
+    bitcoin_wallet_dir = os.path.expanduser("~/.bitcoin/regtest/wallets/python_legacy_wallet")
     if os.path.exists(bitcoin_wallet_dir):
         try:
             shutil.rmtree(bitcoin_wallet_dir)
@@ -32,7 +32,7 @@ def cleanup_test_wallets():
     
     try:
         subprocess.run(
-            ['bitcoin-cli', '-regtest', 'unloadwallet', 'python_test_wallet2'],
+            ['bitcoin-cli', '-regtest', 'unloadwallet', 'python_legacy_wallet'],
             capture_output=True,
             text=True,
             check=False
@@ -65,7 +65,7 @@ def main():
         cleanup_test_wallets()
         print()
 
-        wallet_name = 'python_test_wallet2'
+        wallet_name = 'python_legacy_wallet'
         
         rpc_config = RpcConfig(
             url="localhost:18442",
@@ -91,7 +91,7 @@ def main():
         # Setup logging after initialization
         print("\nSetting up logging...")
         try:
-            taker.setup_logging_with_level(data_dir=data_dir, log_level="Info")
+            taker.setup_logging(data_dir=data_dir, log_level="Info")
             print("✓ Logging configured (level: Info)")
         except Exception as e:
             print(f"⚠️  Warning: Could not setup logging: {e}")
