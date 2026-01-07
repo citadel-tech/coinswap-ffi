@@ -85,6 +85,11 @@ generate_maker_service() {
     local wallet_name="$5"
     local sleep_time="${6:-15}"
 
+    local taproot_flag=""
+    if [[ "$USE_TAPROOT" == "true" ]]; then
+        taproot_flag=" --taproot"
+    fi
+
     cat << EOF
   ${wallet_name}:
     image: coinswap/${IMAGE_NAME}:master
@@ -115,7 +120,7 @@ generate_maker_service() {
           "base_fee = 100" \\
           "amount_relative_fee_ppt = 1000" \\
           > /home/coinswap/.coinswap/maker/config.toml
-        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"
+        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"${taproot_flag}
     volumes:
       - ${data_volume}:/home/coinswap/.coinswap
     environment:
@@ -333,7 +338,7 @@ fund_makers() {
     docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password generatetoaddress 1 "$addr"
 
     print_info "Waiting for fidelity bonds..."
-    sleep 30
+    sleep 10
 
     print_info "Mining blocks for fidelity bonds..."
     docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password generatetoaddress 5 "$addr"
@@ -403,7 +408,7 @@ stop_block_mining() {
 show_help() {
     echo "Coinswap Docker Setup Script (regtest, fixed config)"
     echo ""
-    echo "Usage: $0 [COMMAND]"
+    echo "Usage: $0 [COMMAND] [OPTIONS]"
     echo ""
     echo "Commands:"
     echo "  setup               Setup environment (clone repo, build images)"
@@ -419,14 +424,39 @@ show_help() {
     echo "  logs [service]      Show logs (bitcoind, tor, makerd1, makerd2)"
     echo "  status              Show status of running services"
     echo ""
+    echo "Options:"
+    echo "  --taproot           Enable Taproot protocol for makers (default: disabled)"
+    echo ""
     echo "Examples:"
     echo "  $0 setup            # First time setup"
     echo "  $0 start            # Starts stack, funds makers, begins auto-mining"
+    echo "  $0 start --taproot  # Start with Taproot protocol enabled"
     echo "  $0 mine 10          # Manually mine 10 blocks"
     echo "  $0 logs makerd1     # View makerd1 logs"
 }
 
-case "${1:-}" in
+# Parse command-line arguments
+COMMAND="${1:-}"
+shift || true
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --taproot)
+            USE_TAPROOT="true"
+            print_info "Taproot protocol enabled"
+            shift
+            ;;
+        *)
+            # Store first extra argument for subcommands (e.g., service name, block count)
+            if [[ -z "${SUBCOMMAND_ARG:-}" ]]; then
+                SUBCOMMAND_ARG="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+case "$COMMAND" in
     "setup")
         check_docker
         setup_coinswap_repo
@@ -458,7 +488,7 @@ case "${1:-}" in
         fund_makers
         ;;
     "mine")
-        mine_blocks "$2"
+        mine_blocks "${SUBCOMMAND_ARG:-1}"
         ;;
     "start-mining")
         start_block_mining
@@ -467,7 +497,7 @@ case "${1:-}" in
         stop_block_mining
         ;;
     "logs")
-        show_logs "$2"
+        show_logs "${SUBCOMMAND_ARG:-}"
         ;;
     "status")
         cd "$SCRIPT_DIR"
@@ -488,7 +518,7 @@ case "${1:-}" in
         show_help
         ;;
     *)
-        print_error "Unknown command: $1"
+        print_error "Unknown command: $COMMAND"
         echo ""
         show_help
         exit 1
