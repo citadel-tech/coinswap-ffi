@@ -14,7 +14,7 @@ use bitcoind::bitcoincore_rpc::RpcApi;
 use std::process::Command;
 use std::sync::Arc;
 
-// #[test]
+#[test]
 fn main() {
     cleanup_wallet();
     test_taproot_taker_complete_flow();
@@ -89,7 +89,7 @@ fn test_taproot_taker_complete_flow() {
     log::info!("Starting taproot taker test flow");
 
     let (taker, bitcoind) = setup_bitcoind_and_taproot_taker("test-taproot-taker");
-    
+
     println!(
         "Waiting for offerbook synchronization to complete…{:?}",
         taker.is_offerbook_syncing()
@@ -106,13 +106,16 @@ fn test_taproot_taker_complete_flow() {
     // Test get_name
     println!("Testing get_name...");
     let wallet_name = taker.get_wallet_name().unwrap();
-    assert_eq!(wallet_name, "test-taproot-taker", "Wallet name should match");
+    assert_eq!(
+        wallet_name, "test-taproot-taker",
+        "Wallet name should match"
+    );
     println!("✓ 'get_wallet_name' test passed");
 
     // Test address generation (external and internal)
     println!("\nTesting address generation...");
     let external_address1 = taker.get_next_external_address(crate::AddressType {
-        addr_type: "P2WPKH".to_string(),
+        addr_type: "P2TR".to_string(),
     });
     assert!(
         external_address1.is_ok(),
@@ -120,7 +123,7 @@ fn test_taproot_taker_complete_flow() {
     );
 
     let external_address2 = taker.get_next_external_address(crate::AddressType {
-        addr_type: "P2WPKH".to_string(),
+        addr_type: "P2TR".to_string(),
     });
     assert!(
         external_address2.is_ok(),
@@ -136,7 +139,7 @@ fn test_taproot_taker_complete_flow() {
     let internal_addresses = taker.get_next_internal_addresses(
         3,
         crate::AddressType {
-            addr_type: "P2WPKH".to_string(),
+            addr_type: "P2TR".to_string(),
         },
     );
     assert!(
@@ -252,7 +255,10 @@ fn test_taproot_taker_complete_flow() {
 
     taker.sync_and_save().unwrap();
 
-    println!("\nTesting updated balances after swap...{:?}", taker.get_balances());
+    println!(
+        "\nTesting updated balances after swap...{:?}",
+        taker.get_balances()
+    );
 
     println!("\n========================================");
     println!("All FFI method tests completed successfully!");
