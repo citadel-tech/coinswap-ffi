@@ -1,0 +1,153 @@
+name: Legacy Taker Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/*.gitignore'
+      - '.editorconfig'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test-taker:
+    name: Test Standard Taker Methods
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-taker-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libssl-dev \
+            pkg-config
+
+      - name: Check Docker
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Setup Docker environment
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          ./ffi-docker-setup setup
+          ./ffi-docker-setup start
+
+      - name: Wait for Docker services to be ready
+        run: |
+          echo "Waiting for Bitcoin Core to be ready..."
+          sleep 30
+          
+          # Check if bitcoind is responding
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=18442 -rpcuser=user -rpcpassword=password getblockchaininfo > /dev/null 2>&1; then
+              echo "Bitcoin Core is ready!"
+              break
+            fi
+            echo "Waiting for Bitcoin Core... (attempt $((attempt + 1))/$max_attempts)"
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Bitcoin Core failed to start!"
+            exit 1
+          fi
+          
+          echo "Waiting for Tor to be ready..."
+          sleep 10
+          
+          echo "Waiting for Makers to be ready..."
+          sleep 20
+
+      - name: Check Docker containers status
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a
+          
+          echo -e "\n=== Bitcoin Core Logs ==="
+          docker logs coinswap-bitcoind --tail 50 || true
+          
+          echo -e "\n=== Tor Logs ==="
+          docker logs tor --tail 30 || true
+          
+          echo -e "\n=== Maker1 Logs ==="
+          docker logs coinswap-makerd1 --tail 30 || true
+          
+          echo -e "\n=== Maker2 Logs ==="
+          docker logs coinswap-makerd2 --tail 30 || true
+
+      - name: Run Taker method tests
+        working-directory: ./ffi-commons
+        run: |
+          echo "Running Taker method tests..."
+          cargo test taker_methods -- --nocapture
+        continue-on-error: false
+
+      - name: Run Python test (standard_swap.py)
+        working-directory: ./coinswap-python
+        run: |
+          echo "Running Python coinswap test..."
+          python3 test/standard_swap.py
+        continue-on-error: false
+
+      - name: Cleanup Docker environment
+        if: always()
+        working-directory: ./ffi-commons
+        run: |
+          ./ffi-docker-setup stop || true
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taker-test-logs
+          path: |
+            ~/.coinswap/taker/debug.log
+            ffi-commons/.coinswap-docker-stack/logs/
+          retention-days: 7
