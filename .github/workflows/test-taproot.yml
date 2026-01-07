@@ -1,4 +1,4 @@
-name: Test Taproot Taker Methods
+name: Taproot Taker Tests
 
 on:
   push:
@@ -36,8 +36,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clip
-          
+          components: rustfmt, clippy
     
       - name: Setup Python
         uses: actions/setup-python@v5
