@@ -1,0 +1,174 @@
+name: Kotlin Bindings + Android Integration Test
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ffi-commons/**'
+      - 'coinswap-kotlin/**'
+      - '.github/workflows/test-kotlin.yml'
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  android-integration-test:
+    name: Build & Run Android Coinswap Example
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ------------------------------------------------------------------
+      # 1. Toolchains
+      # ------------------------------------------------------------------
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ------------------------------------------------------------------
+      # 2. Cache
+      # ------------------------------------------------------------------
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      # ------------------------------------------------------------------
+      # 3. Build native libcoinswap_ffi.so for all Android ABIs
+      # ------------------------------------------------------------------
+      # - name: Install system deps & Android NDK toolchain
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y libssl-dev pkg-config unzip
+
+      # - name: Install cargo-ndk
+      #   run: cargo install cargo-ndk
+
+      # - name: Build Android native libraries (all ABIs)
+      #   working-directory: ./ffi-commons
+      #   run: |
+      #     cargo build --release
+      #     mkdir -p ../coinswap-kotlin/app/src/main/jniLibs/armeabi-v7a
+      #     mkdir -p ../coinswap-kotlin/app/src/main/jniLibs/arm64-v8a
+      #     mkdir -p ../coinswap-kotlin/app/src/main/jniLibs/x86
+      #     mkdir -p ../coinswap-kotlin/app/src/main/jniLibs/x86_64
+      #     cp target/release/libcoinswap_ffi.so ../coinswap-kotlin/app/src/main/jniLibs/armeabi-v7a/
+      #     cp target/release/libcoinswap_ffi.so ../coinswap-kotlin/app/src/main/jniLibs/arm64-v8a/
+      #     cp target/release/libcoinswap_ffi.so ../coinswap-kotlin/app/src/main/jniLibs/x86/
+      #     cp target/release/libcoinswap_ffi.so ../coinswap-kotlin/app/src/main/jniLibs/x86_64/
+
+      # ------------------------------------------------------------------
+      # 4. Start Docker stack (Bitcoin + Tor + Makers)
+      # ------------------------------------------------------------------
+      - name: Start Docker environment
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          ./ffi-docker-setup setup
+          ./ffi-docker-setup start
+
+      - name: Wait for Bitcoin Core, Tor and Makers
+        run: |
+          echo "Waiting for Bitcoin Core..."
+          for i in {1..40}; do
+            if docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=18442 -rpcuser=user -rpcpassword=password getblockchaininfo >/dev/null 2>&1; then
+              echo "Bitcoin Core ready!"
+              break
+            fi
+            sleep 3
+          done
+
+          echo "Waiting extra time for Tor & Makers..."
+          sleep 25
+
+      # ------------------------------------------------------------------
+      # 5. Build APK before emulator
+      # ------------------------------------------------------------------
+      - name: Build Debug APK
+        working-directory: ./coinswap-kotlin
+        run: ./gradlew assembleDebug --stacktrace
+
+      # ------------------------------------------------------------------
+      # 6. Run tests on Android Emulator with reactivecircus action
+      # ------------------------------------------------------------------
+      - name: Run Android integration test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            # Port forwarding so emulator can reach host Docker containers
+            adb reverse tcp:18442 tcp:18442   # Bitcoin RPC
+            adb reverse tcp:28332 tcp:28332   # ZMQ
+            adb reverse tcp:9051 tcp:9051     # Tor control
+            
+            # Install APK
+            adb install coinswap-kotlin/app/build/outputs/apk/debug/app-debug.apk
+            
+            # Launch activity
+            adb shell am start -n com.example.coinswap/.WalletActivity
+            
+            # Capture logs (wait up to 5 minutes)
+            echo "App launched. Waiting up to 5 minutes for Offerbook sync and a test swap..."
+            timeout 300 adb logcat *:S Wallet:D Swap:D TakerError:E -v threadtime > android.log || true
+            
+            # Show logs
+            cat android.log
+
+      # ------------------------------------------------------------------
+      # Cleanup
+      # ------------------------------------------------------------------
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-${{ github.run_id }}
+          path: |
+            android.log
+            ffi-commons/.coinswap-docker-stack/logs/**
+            ~/.coinswap/taker/debug.log
+
+      - name: Stop Docker
+        if: always()
+        working-directory: ./ffi-commons
+        run: |
+          ./ffi-docker-setup stop || true
