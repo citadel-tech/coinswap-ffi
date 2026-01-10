@@ -85,23 +85,18 @@ jobs:
         run: |
           echo "Checking Python bindings..."
           ls -lh coinswap-python/coinswap.py
-          ls -lh coinswap-python/libcoinswap_ffi.so
           
           echo "Checking Ruby bindings..."
           ls -lh coinswap-ruby/coinswap.rb
-          ls -lh coinswap-ruby/libcoinswap_ffi.so
           
           echo "Checking Kotlin bindings..."
           ls -lh coinswap-kotlin/uniffi/coinswap/coinswap.kt
-          ls -lh coinswap-kotlin/libcoinswap_ffi.so
           
           echo "Checking Swift bindings..."
           ls -lh coinswap-swift/coinswap.swift
-          ls -lh coinswap-swift/libcoinswap_ffi.so
           
           echo "Checking Node.js bindings..."
           ls -lh coinswap-js/index.js
-          ls -lh coinswap-js/index.d.ts
           
       - name: Commit binding changes (main branch only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -114,33 +109,17 @@ jobs:
           
           # Add Python bindings and library files
           git add coinswap-python/coinswap.py
-          git add coinswap-python/libcoinswap_ffi.so
-          git add coinswap-python/libcoinswap_ffi.d
-          git add coinswap-python/uniffi-bindgen
-          git add coinswap-python/uniffi-bindgen.d
           
           # Add Ruby bindings and library files
           git add coinswap-ruby/coinswap.rb
-          git add coinswap-ruby/libcoinswap_ffi.so
-          git add coinswap-ruby/libcoinswap_ffi.d
-          git add coinswap-ruby/uniffi-bindgen
-          git add coinswap-ruby/uniffi-bindgen.d
-          
+
           # Add Kotlin bindings and library files
           git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
-          git add coinswap-kotlin/libcoinswap_ffi.so
-          git add coinswap-kotlin/libcoinswap_ffi.d
-          git add coinswap-kotlin/uniffi-bindgen
-          git add coinswap-kotlin/uniffi-bindgen.d
           
           # Add Swift bindings and library files
           git add coinswap-swift/coinswap.swift
           git add coinswap-swift/coinswapFFI.h
           git add coinswap-swift/coinswapFFI.modulemap
-          git add coinswap-swift/libcoinswap_ffi.so
-          git add coinswap-swift/libcoinswap_ffi.d
-          git add coinswap-swift/uniffi-bindgen
-          git add coinswap-swift/uniffi-bindgen.d
           
           if ! git diff --staged --quiet; then
             git commit -m "chore: update FFI bindings and library files"
