@@ -64,6 +64,12 @@ jobs:
             libssl-dev \
             pkg-config
 
+      # - name: Build FFI bindings
+      #   working-directory: ./ffi-commons
+      #   run: |
+      #     chmod +x create_bindings.sh
+      #     ./create_bindings.sh
+
       - name: Check Docker
         run: |
           docker --version
