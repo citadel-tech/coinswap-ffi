@@ -1,152 +1,151 @@
-# name: Update FFI Bindings
+name: Update FFI Bindings
 
-# on:
-#   push:
-#     branches:
-#       - main
-#     paths-ignore:
-#       - '**/*.md'
-#       - 'LICENSE'
-#       - '**/*.gitignore'
-#       - '.editorconfig'
-#       - 'docs/**'
-#   pull_request:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '**/*.gitignore'
+      - '.editorconfig'
+      - 'docs/**'
 
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-# env:
-#   CARGO_TERM_COLOR: always
-#   RUST_BACKTRACE: 1
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
-# jobs:
-#   build-and-test-bindings:
-#     name: Build Language Bindings and push them
-#     runs-on: ubuntu-latest
+jobs:
+  build-and-test-bindings:
+    name: Build Language Bindings and push them
+    runs-on: ubuntu-latest
     
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-#         with:
-#           submodules: recursive
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
-#       - name: Install Rust toolchain
-#         uses: dtolnay/rust-toolchain@stable
-#         with:
-#           components: rustfmt, clippy
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
-#       - name: Cache Rust dependencies
-#         uses: actions/cache@v4
-#         with:
-#           path: |
-#             ~/.cargo/bin/
-#             ~/.cargo/registry/index/
-#             ~/.cargo/registry/cache/
-#             ~/.cargo/git/db/
-#             ffi-commons/target/
-#           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-#           restore-keys: |
-#             ${{ runner.os }}-cargo-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-#       - name: Install system dependencies
-#         run: |
-#           sudo apt-get update
-#           sudo apt-get install -y \
-#             build-essential \
-#             libssl-dev \
-#             pkg-config \
-#             python3 \
-#             python3-pip \
-#             ruby \
-#             ruby-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libssl-dev \
+            pkg-config \
+            python3 \
+            python3-pip \
+            ruby \
+            ruby-dev
 
-#       - name: Setup Node.js
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: '22'
-#           cache: 'yarn'
-#           cache-dependency-path: coinswap-js/yarn.lock
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: coinswap-js/yarn.lock
 
-#       - name: Build FFI bindings
-#         working-directory: ./ffi-commons
-#         run: |
-#           chmod +x create_bindings.sh
-#           ./create_bindings.sh
+      - name: Build FFI bindings
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x create_bindings.sh
+          ./create_bindings.sh
 
-#       - name: Build Node.js bindings
-#         working-directory: ./coinswap-js
-#         run: |
-#           yarn install
-#           yarn build
+      - name: Build Node.js bindings
+        working-directory: ./coinswap-js
+        run: |
+          yarn install
+          yarn build
 
-#       - name: Verify bindings were created
-#         run: |
-#           echo "Checking Python bindings..."
-#           ls -lh coinswap-python/coinswap.py
-#           ls -lh coinswap-python/libcoinswap_ffi.so
+      - name: Verify bindings were created
+        run: |
+          echo "Checking Python bindings..."
+          ls -lh coinswap-python/coinswap.py
+          ls -lh coinswap-python/libcoinswap_ffi.so
           
-#           echo "Checking Ruby bindings..."
-#           ls -lh coinswap-ruby/coinswap.rb
-#           ls -lh coinswap-ruby/libcoinswap_ffi.so
+          echo "Checking Ruby bindings..."
+          ls -lh coinswap-ruby/coinswap.rb
+          ls -lh coinswap-ruby/libcoinswap_ffi.so
           
-#           echo "Checking Kotlin bindings..."
-#           ls -lh coinswap-kotlin/uniffi/coinswap/coinswap.kt
-#           ls -lh coinswap-kotlin/libcoinswap_ffi.so
+          echo "Checking Kotlin bindings..."
+          ls -lh coinswap-kotlin/uniffi/coinswap/coinswap.kt
+          ls -lh coinswap-kotlin/libcoinswap_ffi.so
           
-#           echo "Checking Swift bindings..."
-#           ls -lh coinswap-swift/coinswap.swift
-#           ls -lh coinswap-swift/libcoinswap_ffi.so
+          echo "Checking Swift bindings..."
+          ls -lh coinswap-swift/coinswap.swift
+          ls -lh coinswap-swift/libcoinswap_ffi.so
           
-#           echo "Checking Node.js bindings..."
-#           ls -lh coinswap-js/index.js
-#           ls -lh coinswap-js/index.d.ts
+          echo "Checking Node.js bindings..."
+          ls -lh coinswap-js/index.js
+          ls -lh coinswap-js/index.d.ts
           
-#       - name: Commit binding changes (main branch only)
-#         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-#         run: |
-#           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-#           git config --local user.name "github-actions[bot]"
+      - name: Commit binding changes (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           
-#           # Add Node.js bindings
-#           git add coinswap-js/index.d.ts coinswap-js/index.js
+          # Add Node.js bindings
+          git add coinswap-js/index.d.ts coinswap-js/index.js
           
-#           # Add Python bindings and library files
-#           git add coinswap-python/coinswap.py
-#           git add coinswap-python/libcoinswap_ffi.so
-#           git add coinswap-python/libcoinswap_ffi.d
-#           git add coinswap-python/uniffi-bindgen
-#           git add coinswap-python/uniffi-bindgen.d
+          # Add Python bindings and library files
+          git add coinswap-python/coinswap.py
+          git add coinswap-python/libcoinswap_ffi.so
+          git add coinswap-python/libcoinswap_ffi.d
+          git add coinswap-python/uniffi-bindgen
+          git add coinswap-python/uniffi-bindgen.d
           
-#           # Add Ruby bindings and library files
-#           git add coinswap-ruby/coinswap.rb
-#           git add coinswap-ruby/libcoinswap_ffi.so
-#           git add coinswap-ruby/libcoinswap_ffi.d
-#           git add coinswap-ruby/uniffi-bindgen
-#           git add coinswap-ruby/uniffi-bindgen.d
+          # Add Ruby bindings and library files
+          git add coinswap-ruby/coinswap.rb
+          git add coinswap-ruby/libcoinswap_ffi.so
+          git add coinswap-ruby/libcoinswap_ffi.d
+          git add coinswap-ruby/uniffi-bindgen
+          git add coinswap-ruby/uniffi-bindgen.d
           
-#           # Add Kotlin bindings and library files
-#           git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
-#           git add coinswap-kotlin/libcoinswap_ffi.so
-#           git add coinswap-kotlin/libcoinswap_ffi.d
-#           git add coinswap-kotlin/uniffi-bindgen
-#           git add coinswap-kotlin/uniffi-bindgen.d
+          # Add Kotlin bindings and library files
+          git add coinswap-kotlin/uniffi/coinswap/coinswap.kt
+          git add coinswap-kotlin/libcoinswap_ffi.so
+          git add coinswap-kotlin/libcoinswap_ffi.d
+          git add coinswap-kotlin/uniffi-bindgen
+          git add coinswap-kotlin/uniffi-bindgen.d
           
-#           # Add Swift bindings and library files
-#           git add coinswap-swift/coinswap.swift
-#           git add coinswap-swift/coinswapFFI.h
-#           git add coinswap-swift/coinswapFFI.modulemap
-#           git add coinswap-swift/libcoinswap_ffi.so
-#           git add coinswap-swift/libcoinswap_ffi.d
-#           git add coinswap-swift/uniffi-bindgen
-#           git add coinswap-swift/uniffi-bindgen.d
+          # Add Swift bindings and library files
+          git add coinswap-swift/coinswap.swift
+          git add coinswap-swift/coinswapFFI.h
+          git add coinswap-swift/coinswapFFI.modulemap
+          git add coinswap-swift/libcoinswap_ffi.so
+          git add coinswap-swift/libcoinswap_ffi.d
+          git add coinswap-swift/uniffi-bindgen
+          git add coinswap-swift/uniffi-bindgen.d
           
-#           if ! git diff --staged --quiet; then
-#             git commit -m "chore: update FFI bindings and library files"
-#             git push
-#             echo "✓ Committed and pushed binding changes"
-#           else
-#             echo "ℹ No binding changes to commit"
-#           fi
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update FFI bindings and library files"
+            git push
+            echo "✓ Committed and pushed binding changes"
+          else
+            echo "ℹ No binding changes to commit"
+          fi
