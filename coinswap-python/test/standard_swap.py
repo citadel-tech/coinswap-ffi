@@ -113,7 +113,7 @@ def main():
         try:
             taker.is_offerbook_syncing()
             print("Offerbook sync in progress...")
-            time.sleep(15)
+            time.sleep(30)
         except Exception as e:
             print(f"Error checking offerbook sync status: {e}")
         
