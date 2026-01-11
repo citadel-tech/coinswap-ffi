@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+
+# Docker generated files
+ffi-commons/docker-compose.generated.yml
+ffi-commons/torrc.generated
+
+# Kotlin/Swift/Ruby generated files
+coinswap-python/libcoinswap_ffi.so
+coinswap-kotlin/libcoinswap_ffi.so
+coinswap-swift/libcoinswap_ffi.so
+coinswap-ruby/libcoinswap_ffi.so
+coinswap-python/uniffi-bindgen
+coinswap-kotlin/uniffi-bindgen
+coinswap-swift/uniffi-bindgen
+coinswap-ruby/uniffi-bindgen
+
+# Process ID files
+*.pid
+
+# Build artifacts
+target/
+*.rlib
+*.rmeta
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
