@@ -1,4 +1,4 @@
-name: Taproot Taker Tests
+name: Python Tests
 
 on:
   push:
@@ -23,8 +23,8 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  test-taproot:
-    name: Test Taproot Taker
+  test-python:
+    name: Test Python Bindings
     runs-on: ubuntu-latest
     
     steps:
@@ -37,7 +37,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-    
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -52,7 +52,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ffi-commons/target/
-          key: ${{ runner.os }}-cargo-taproot-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-python-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
@@ -80,36 +80,7 @@ jobs:
         run: |
           chmod +x ffi-docker-setup
           ./ffi-docker-setup setup
-          ./ffi-docker-setup start --taproot
-
-      - name: Wait for Docker services to be ready
-        run: |
-          echo "Waiting for Bitcoin Core to be ready..."
-          sleep 30
-          
-          # Check if bitcoind is responding
-          max_attempts=30
-          attempt=0
-          while [ $attempt -lt $max_attempts ]; do
-            if docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=18442 -rpcuser=user -rpcpassword=password getblockchaininfo > /dev/null 2>&1; then
-              echo "Bitcoin Core is ready!"
-              break
-            fi
-            echo "Waiting for Bitcoin Core... (attempt $((attempt + 1))/$max_attempts)"
-            sleep 2
-            attempt=$((attempt + 1))
-          done
-          
-          if [ $attempt -eq $max_attempts ]; then
-            echo "Bitcoin Core failed to start!"
-            exit 1
-          fi
-          
-          echo "Waiting for Tor to be ready..."
-          sleep 10
-          
-          echo "Waiting for Makers to be ready..."
-          sleep 20
+          ./ffi-docker-setup start --run-all
 
       - name: Check Docker containers status
         run: |
@@ -120,7 +91,7 @@ jobs:
           docker logs coinswap-bitcoind --tail 50 || true
           
           echo -e "\n=== Tor Logs ==="
-          docker logs tor --tail 30 || true
+          docker logs coinswap-tor --tail 30 || true
           
           echo -e "\n=== Maker1 Logs ==="
           docker logs coinswap-makerd1 --tail 30 || true
@@ -128,17 +99,23 @@ jobs:
           echo -e "\n=== Maker2 Logs ==="
           docker logs coinswap-makerd2 --tail 30 || true
 
-      - name: Run Taproot Taker method tests
-        working-directory: ./ffi-commons
+          echo -e "\n=== Maker3 Logs ==="
+          docker logs coinswap-makerd3 --tail 30 || true
+          
+          echo -e "\n=== Maker4 Logs ==="
+          docker logs coinswap-makerd4 --tail 30 || true
+
+      - name: Run Python test (standard_swap.py)
+        working-directory: ./coinswap-python
         run: |
-          echo "Running Taproot Taker method tests..."
-          cargo test taproot_taker_methods -- --nocapture
+          echo "Running Python standard swap test..."
+          python3 test/standard_swap.py
         continue-on-error: false
 
       - name: Run Python test (taproot_swap.py)
         working-directory: ./coinswap-python
         run: |
-          echo "Running Python Taproot test..."
+          echo "Running Python taproot swap test..."
           python3 test/taproot_swap.py
         continue-on-error: false
 
@@ -152,7 +129,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: taproot-test-logs
+          name: python-test-logs
           path: |
             ~/.coinswap/taker/debug.log
             ffi-commons/.coinswap-docker-stack/logs/
