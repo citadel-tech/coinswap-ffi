@@ -1,15 +1,17 @@
 /**
- * Android Example for Coinswap Kotlin bindings
+ * Example: Android Integration Reference
  * 
- * Demonstrates how to integrate coinswap into an Android application
- * using lifecycle-aware components and coroutines.
+ * This file demonstrates how to integrate coinswap into an downstream Android application.
  */
 
+package coinswap.examples
+
+/*
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import coinswap.*
+import uniffi.coinswap.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,9 +78,9 @@ class WalletActivity : AppCompatActivity() {
     private fun getRpcConfig(): RPCConfig {
         return RPCConfig(
             url = "http://localhost:18442",
-            user = "bitcoin",
-            password = "bitcoin",
-            walletName = "taker_wallet"
+            user = "user",
+            password = "password",
+            walletName = "kotlin_test_taker"
         )
     }
     
@@ -96,5 +98,23 @@ class WalletActivity : AppCompatActivity() {
         report?.let {
             Log.d("Swap", "Swap completed: ${it.amountSwapped} sats swapped")
         }
+    }
+}
+*/
+
+// Reference implementation only - see comments above
+class AndroidExampleReference {
+    fun info(): String {
+        return """
+            This is a reference implementation for Android integration.
+            See the commented code in this file for the full example.
+            
+            Key points:
+            1. Use lifecycleScope for coroutine management
+            2. Run FFI operations on Dispatchers.IO
+            3. Handle TakerError exceptions
+            4. Sync wallet operations properly
+            5. Use secure storage for passwords
+        """.trimIndent()
     }
 }
