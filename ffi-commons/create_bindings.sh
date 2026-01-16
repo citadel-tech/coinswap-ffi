@@ -37,26 +37,49 @@ echo "Using library: $LIBRARY_PATH"
 
 # Define output directories for each language
 KOTLIN_DIR="../coinswap-kotlin"
+KOTLIN_UNIFFI_DIR="$KOTLIN_DIR/uniffi"
+KOTLIN_SRC_DIR="$KOTLIN_DIR/src/main/kotlin/uniffi/coinswap"
+KOTLIN_RESOURCES_DIR="$KOTLIN_DIR/src/main/resources/linux-x86-64"
 SWIFT_DIR="../coinswap-swift"
 PYTHON_DIR="../coinswap-python"
 RUBY_DIR="../coinswap-ruby"
 
 # Create directories if they don't exist
-mkdir -p "$KOTLIN_DIR"
+mkdir -p "$KOTLIN_UNIFFI_DIR"
+mkdir -p "$KOTLIN_SRC_DIR"
+mkdir -p "$KOTLIN_RESOURCES_DIR"
 mkdir -p "$SWIFT_DIR"
 mkdir -p "$PYTHON_DIR"
 mkdir -p "$RUBY_DIR"
 
 echo ""
 echo "Generating Kotlin bindings..."
+# First generate to uniffi/ directory (for reference)
 cargo run --bin uniffi-bindgen generate \
     --library "$LIBRARY_PATH" \
     --language "kotlin" \
-    --out-dir "$KOTLIN_DIR" \
+    --out-dir "$KOTLIN_UNIFFI_DIR" \
     --no-format
 
 if [ $? -eq 0 ]; then
-    echo "✓ Kotlin bindings generated at $KOTLIN_DIR"
+    echo "✓ Kotlin bindings generated at $KOTLIN_UNIFFI_DIR"
+    
+    # Copy bindings to proper Gradle source location
+    echo "Copying Kotlin bindings to Gradle src directory..."
+    cp -r "$KOTLIN_UNIFFI_DIR/"*.kt "$KOTLIN_SRC_DIR/" 2>/dev/null || \
+    cp -r "$KOTLIN_UNIFFI_DIR/uniffi/coinswap/"*.kt "$KOTLIN_SRC_DIR/" 2>/dev/null || \
+    echo "  ⚠ No .kt files found in expected locations"
+    
+    # Copy native library to resources
+    echo "Copying native library to Gradle resources..."
+    cp "$LIBRARY_PATH" "$KOTLIN_RESOURCES_DIR/"
+    
+    # Also keep a copy in root for reference
+    cp "$LIBRARY_PATH" "$KOTLIN_DIR/"
+    
+    echo "✓ Kotlin files placed in Gradle structure:"
+    echo "  Source: $KOTLIN_SRC_DIR"
+    echo "  Resources: $KOTLIN_RESOURCES_DIR"
 else
     echo "✗ Failed to generate Kotlin bindings"
     exit 1
@@ -108,9 +131,10 @@ else
 fi
 
 echo ""
-echo "Copying library files to language directories..."
+echo "Copying library files and debug symbols..."
 
-for DIR in "$KOTLIN_DIR" "$SWIFT_DIR" "$PYTHON_DIR" "$RUBY_DIR"; do
+# Copy to Swift, Python, Ruby (traditional flat structure)
+for DIR in "$SWIFT_DIR" "$PYTHON_DIR" "$RUBY_DIR"; do
     echo "Copying files to $DIR..."
     
     # Copy the main library
@@ -133,20 +157,38 @@ for DIR in "$KOTLIN_DIR" "$SWIFT_DIR" "$PYTHON_DIR" "$RUBY_DIR"; do
     echo "  ✓ Files copied to $DIR"
 done
 
+# Copy debug symbols to Kotlin root (not in Gradle structure)
+echo "Copying Kotlin debug symbols..."
+if [[ "$OS_TYPE" == MINGW* ]] || [[ "$OS_TYPE" == MSYS* ]] || [[ "$OS_TYPE" == CYGWIN* ]]; then
+    cp "./target/release/coinswap_ffi.d" "$KOTLIN_DIR/" 2>/dev/null || echo "  ⚠ coinswap_ffi.d not found (optional)"
+else
+    cp "./target/release/libcoinswap_ffi.d" "$KOTLIN_DIR/" 2>/dev/null || echo "  ⚠ libcoinswap_ffi.d not found (optional)"
+fi
+
+if [[ "$OS_TYPE" == MINGW* ]] || [[ "$OS_TYPE" == MSYS* ]] || [[ "$OS_TYPE" == CYGWIN* ]]; then
+    cp "./target/release/uniffi-bindgen.exe" "$KOTLIN_DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen.exe not found (optional)"
+else
+    cp "./target/release/uniffi-bindgen" "$KOTLIN_DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen not found (optional)"
+fi
+
+cp "./target/release/uniffi-bindgen.d" "$KOTLIN_DIR/" 2>/dev/null || echo "  ⚠ uniffi-bindgen.d not found (optional)"
+
 echo ""
 echo "All bindings generated successfully!"
 echo ""
 echo "Generated bindings:"
 echo "  Kotlin:  $KOTLIN_DIR"
+echo "    └── Gradle src:  $KOTLIN_SRC_DIR"
+echo "    └── Resources:   $KOTLIN_RESOURCES_DIR"
+echo "    └── Reference:   $KOTLIN_UNIFFI_DIR"
 echo "  Swift:   $SWIFT_DIR"
 echo "  Python:  $PYTHON_DIR"
 echo "  Ruby:    $RUBY_DIR"
 echo ""
-echo "Copied files to each directory:"
-echo "  - libcoinswap_ffi.$LIB_EXTENSION (main library)"
-echo "  - libcoinswap_ffi.d (debug symbols)"
-echo "  - uniffi-bindgen (binary)"
-echo "  - uniffi-bindgen.d (debug symbols)"
+echo "Kotlin files are now in proper Gradle structure:"
+echo "  ✓ Source files:     src/main/kotlin/uniffi/coinswap/*.kt"
+echo "  ✓ Native library:   src/main/resources/linux-x86-64/libcoinswap_ffi.$LIB_EXTENSION"
+echo "  ✓ Build ready:      ./gradlew build (from coinswap-kotlin/)"
 echo ""
 echo "See language-specific README files for usage:"
 echo "  - ../coinswap-kotlin/README.md"

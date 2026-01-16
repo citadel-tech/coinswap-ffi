@@ -16,12 +16,19 @@ ffi-commons/torrc.generated
 # Kotlin/Swift/Ruby generated files
 coinswap-python/libcoinswap_ffi.so
 coinswap-kotlin/libcoinswap_ffi.so
+coinswap-kotlin/src/main/kotlin/uniffi/
+coinswap-kotlin/src/main/resources/
 coinswap-swift/libcoinswap_ffi.so
 coinswap-ruby/libcoinswap_ffi.so
 coinswap-python/uniffi-bindgen
 coinswap-kotlin/uniffi-bindgen
 coinswap-swift/uniffi-bindgen
 coinswap-ruby/uniffi-bindgen
+
+# Gradle
+.gradle/
+build/
+*.log
 
 # Process ID files
 *.pid
@@ -30,6 +37,8 @@ coinswap-ruby/uniffi-bindgen
 target/
 *.rlib
 *.rmeta
+*.d
+*.d.debug
 
 # IDE
 .idea/
