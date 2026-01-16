@@ -1,4 +1,4 @@
-name: Legacy Taker Tests
+name: Coinswap Rust Bindings Tests
 
 on:
   push:
@@ -38,11 +38,6 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -64,12 +59,6 @@ jobs:
             libssl-dev \
             pkg-config
 
-      - name: Build FFI bindings
-        working-directory: ./ffi-commons
-        run: |
-          chmod +x create_bindings.sh
-          ./create_bindings.sh
-
       - name: Check Docker
         run: |
           docker --version
@@ -80,36 +69,7 @@ jobs:
         run: |
           chmod +x ffi-docker-setup
           ./ffi-docker-setup setup
-          ./ffi-docker-setup start
-
-      - name: Wait for Docker services to be ready
-        run: |
-          echo "Waiting for Bitcoin Core to be ready..."
-          sleep 30
-          
-          # Check if bitcoind is responding
-          max_attempts=30
-          attempt=0
-          while [ $attempt -lt $max_attempts ]; do
-            if docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=18442 -rpcuser=user -rpcpassword=password getblockchaininfo > /dev/null 2>&1; then
-              echo "Bitcoin Core is ready!"
-              break
-            fi
-            echo "Waiting for Bitcoin Core... (attempt $((attempt + 1))/$max_attempts)"
-            sleep 2
-            attempt=$((attempt + 1))
-          done
-          
-          if [ $attempt -eq $max_attempts ]; then
-            echo "Bitcoin Core failed to start!"
-            exit 1
-          fi
-          
-          echo "Waiting for Tor to be ready..."
-          sleep 10
-          
-          echo "Waiting for Makers to be ready..."
-          sleep 20
+          ./ffi-docker-setup start --run-all
 
       - name: Check Docker containers status
         run: |
@@ -128,18 +88,24 @@ jobs:
           echo -e "\n=== Maker2 Logs ==="
           docker logs coinswap-makerd2 --tail 30 || true
 
-      - name: Run Taker method tests
+          echo -e "\n=== Maker3 Logs ==="
+          docker logs coinswap-makerd3 --tail 30 || true
+          
+          echo -e "\n=== Maker2 Logs ==="
+          docker logs coinswap-makerd4 --tail 30 || true
+
+      - name: Run Taker method test - legacy (P2WPKH)
         working-directory: ./ffi-commons
         run: |
           echo "Running Taker method tests..."
           cargo test taker_methods -- --nocapture
         continue-on-error: false
 
-      - name: Run Python test (standard_swap.py)
-        working-directory: ./coinswap-python
+      - name: Run Taker method test - taproot (P2TR)
+        working-directory: ./ffi-commons
         run: |
-          echo "Running Python coinswap test..."
-          python3 test/standard_swap.py
+          echo "Running Taproot taker method tests..."
+          cargo test taproot_taker_methods -- --nocapture
         continue-on-error: false
 
       - name: Cleanup Docker environment

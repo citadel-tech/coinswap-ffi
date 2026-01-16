@@ -17,10 +17,15 @@ MAKERD1_PORT="6102"
 MAKERD1_RPC_PORT="6103"
 MAKERD2_PORT="16102"
 MAKERD2_RPC_PORT="16103"
+MAKERD3_PORT="26102"
+MAKERD3_RPC_PORT="26103"
+MAKERD4_PORT="36102"
+MAKERD4_RPC_PORT="36103"
 TOR_SOCKS_PORT="9050"
 TOR_CONTROL_PORT="9051"
 NUM_MAKERS="2"
 USE_TAPROOT="false"
+RUN_ALL="false"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -83,7 +88,7 @@ generate_maker_service() {
     local maker_rpc_port="$3"
     local data_volume="$4"
     local wallet_name="$5"
-    local sleep_time="${6:-15}"
+    local sleep_time="${6:-5}"
 
     local taproot_flag=""
     if [[ "$USE_TAPROOT" == "true" ]]; then
@@ -180,12 +185,28 @@ services:
       - "${TOR_CONTROL_PORT}:${TOR_CONTROL_PORT}"
       - "${MAKERD1_RPC_PORT}:${MAKERD1_RPC_PORT}"
       - "${MAKERD2_RPC_PORT}:${MAKERD2_RPC_PORT}"
+      - "${MAKERD3_RPC_PORT}:${MAKERD3_RPC_PORT}"
+      - "${MAKERD4_RPC_PORT}:${MAKERD4_RPC_PORT}"
     restart: unless-stopped
 
 EOF
 
-    generate_maker_service "1" "$MAKERD1_PORT" "$MAKERD1_RPC_PORT" "maker1-data" "makerd1" "15" >> "$compose_file"
-    generate_maker_service "2" "$MAKERD2_PORT" "$MAKERD2_RPC_PORT" "maker2-data" "makerd2" "20" >> "$compose_file"
+    # Generate makers based on --run-all or standard/taproot mode
+    if [[ "$RUN_ALL" == "true" ]]; then
+        print_info "Generating 4 makers (2 standard + 2 taproot)..."
+        # Standard makers
+        USE_TAPROOT="false"
+        generate_maker_service "1" "$MAKERD1_PORT" "$MAKERD1_RPC_PORT" "maker1-data" "makerd1" >> "$compose_file"
+        generate_maker_service "2" "$MAKERD2_PORT" "$MAKERD2_RPC_PORT" "maker2-data" "makerd2" >> "$compose_file"
+        # Taproot makers
+        USE_TAPROOT="true"
+        generate_maker_service "3" "$MAKERD3_PORT" "$MAKERD3_RPC_PORT" "maker3-data" "makerd3" >> "$compose_file"
+        generate_maker_service "4" "$MAKERD4_PORT" "$MAKERD4_RPC_PORT" "maker4-data" "makerd4" >> "$compose_file"
+    else
+        # Standard 2 makers (either standard or taproot)
+        generate_maker_service "1" "$MAKERD1_PORT" "$MAKERD1_RPC_PORT" "maker1-data" "makerd1" >> "$compose_file"
+        generate_maker_service "2" "$MAKERD2_PORT" "$MAKERD2_RPC_PORT" "maker2-data" "makerd2" >> "$compose_file"
+    fi
 
     cat >> "$compose_file" << EOF
 
@@ -197,6 +218,10 @@ volumes:
   maker1-data:
     driver: local
   maker2-data:
+    driver: local
+  maker3-data:
+    driver: local
+  maker4-data:
     driver: local
 
 networks:
@@ -334,20 +359,38 @@ fund_makers() {
         print_warning "Could not find makerd2 address."
     fi
 
-    print_info "Mining block to confirm funding..."
-    docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password generatetoaddress 1 "$addr"
+    # Only fund maker3 and maker4 if running in --run-all mode
+    if [[ "$RUN_ALL" == "true" ]]; then
+        print_info "Funding makerd3..."
+        local maker3_addr=$(docker logs coinswap-makerd3 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+        if [ -n "$maker3_addr" ]; then
+            print_info "Makerd3 address: $maker3_addr"
+            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker3_addr" 1.0
+            print_success "Sent 1 BTC to makerd3"
+        else
+            print_warning "Could not find makerd3 address."
+        fi
 
-    print_info "Waiting for fidelity bonds..."
-    sleep 10
-
-    print_info "Mining blocks for fidelity bonds..."
-    docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password generatetoaddress 5 "$addr"
+        print_info "Funding makerd4..."
+        local maker4_addr=$(docker logs coinswap-makerd4 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+        if [ -n "$maker4_addr" ]; then
+            print_info "Makerd4 address: $maker4_addr"
+            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker4_addr" 1.0
+            print_success "Sent 1 BTC to makerd4"
+        else
+            print_warning "Could not find makerd4 address."
+        fi
+    fi
 
     print_success "Makers funded successfully!"
     echo ""
     echo "Maker wallets:"
     echo "  Makerd1: 1 BTC (port 6103)"
     echo "  Makerd2: 1 BTC (port 16103)"
+    if [[ "$RUN_ALL" == "true" ]]; then
+        echo "  Makerd3: 1 BTC (port 26103)"
+        echo "  Makerd4: 1 BTC (port 36103)"
+    fi
 }
 
 mine_blocks() {
@@ -426,11 +469,13 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --taproot           Enable Taproot protocol for makers (default: disabled)"
+    echo "  --run-all           Run all 4 makers (2 standard + 2 taproot)"
     echo ""
     echo "Examples:"
     echo "  $0 setup            # First time setup"
-    echo "  $0 start            # Starts stack, funds makers, begins auto-mining"
-    echo "  $0 start --taproot  # Start with Taproot protocol enabled"
+    echo "  $0 start            # Starts stack with 2 standard makers"
+    echo "  $0 start --taproot  # Start with 2 Taproot makers"
+    echo "  $0 start --run-all  # Start with 4 makers (2 standard + 2 taproot)"
     echo "  $0 mine 10          # Manually mine 10 blocks"
     echo "  $0 logs makerd1     # View makerd1 logs"
 }
@@ -444,6 +489,11 @@ while [[ $# -gt 0 ]]; do
         --taproot)
             USE_TAPROOT="true"
             print_info "Taproot protocol enabled"
+            shift
+            ;;
+        --run-all)
+            RUN_ALL="true"
+            print_info "Running all makers (2 standard + 2 taproot)"
             shift
             ;;
         *)

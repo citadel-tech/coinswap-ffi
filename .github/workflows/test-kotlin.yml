@@ -1,0 +1,122 @@
+name: Kotlin Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'coinswap-kotlin/**'
+      - 'ffi-commons/**'
+      - '.github/workflows/test-kotlin.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'coinswap-kotlin/**'
+      - 'ffi-commons/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test-kotlin:
+    name: Test Kotlin Bindings
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-kotlin-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            coinswap-kotlin/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build FFI bindings
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x create_bindings.sh
+          ./create_bindings.sh
+
+      - name: Setup Docker environment
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          ./ffi-docker-setup setup
+          ./ffi-docker-setup start --run-all
+
+      - name: Check Docker status
+        run: |
+          docker ps -a
+          echo -e "\n=== Bitcoin Core ==="
+          docker logs coinswap-bitcoind --tail 20 || true
+          echo -e "\n=== Standard Maker1 ==="
+          docker logs coinswap-makerd1 --tail 20 || true
+          echo -e "\n=== Standard Maker2 ==="
+          docker logs coinswap-makerd2 --tail 20 || true
+          echo -e "\n=== Taproot Maker3 ==="
+          docker logs coinswap-makerd3 --tail 20 || true
+          echo -e "\n=== Taproot Maker4 ==="
+          docker logs coinswap-makerd4 --tail 20 || true
+
+      - name: Run Kotlin Standard Swap Test (P2WPKH)
+        working-directory: ./coinswap-kotlin
+        run: |
+          chmod +x gradlew
+          ./gradlew test --tests "coinswap.StandardSwap" --no-daemon --stacktrace
+
+      - name: Run Kotlin Taproot Swap Test (P2TR)
+        working-directory: ./coinswap-kotlin
+        run: |
+          ./gradlew test --tests "coinswap.TaprootSwap" --no-daemon --stacktrace
+
+      - name: Cleanup Docker
+        if: always()
+        working-directory: ./ffi-commons
+        run: |
+          ./ffi-docker-setup stop || true
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-test-results
+          path: |
+            coinswap-kotlin/build/reports/tests/
+            coinswap-kotlin/build/test-results/
+          retention-days: 7
