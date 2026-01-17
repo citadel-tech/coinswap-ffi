@@ -58,11 +58,11 @@ echo "Generating Kotlin bindings..."
 cargo run --bin uniffi-bindgen generate \
     --library "$LIBRARY_PATH" \
     --language "kotlin" \
-    --out-dir "$KOTLIN_UNIFFI_DIR" \
+    --out-dir "$KOTLIN_DIR" \
     --no-format
 
 if [ $? -eq 0 ]; then
-    echo "✓ Kotlin bindings generated at $KOTLIN_UNIFFI_DIR"
+    echo "✓ Kotlin bindings generated at $KOTLIN_DIR"
     
     # Copy bindings to proper Gradle source location
     echo "Copying Kotlin bindings to Gradle src directory..."

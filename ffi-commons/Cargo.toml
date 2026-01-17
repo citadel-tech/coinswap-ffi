@@ -24,9 +24,18 @@ bitcoin = "0.32.7"
 bitcoind = "0.36.1"
 hex = "0.4"
 log = "0.4.29"
+openssl-sys = { version = "0.9", features = ["vendored"] }
 
 [build-dependencies]
 uniffi = { version = "0.30.0", features = [ "build" ] }
 
 [dev-dependencies]
 env_logger = "0.10"
+
+[profile.release-smaller]
+inherits = "release"
+opt-level = "z"     # Optimize for size
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations
+strip = "debuginfo" # Paritally strips symbols from binary
+panic = "abort"     # Abort on panic instead of unwinding

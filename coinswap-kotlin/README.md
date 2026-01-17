@@ -213,6 +213,23 @@ enum class AddressType {
 Complete examples are available in the [`test/`](test/) directory:
 - [`AndroidExample.kt`](test/AndroidExample.kt) - Android integration with coroutines
 
+## Testing
+
+The project includes comprehensive test suites in Kotlin:
+
+### Running Tests
+
+```bash
+# Run all tests
+./gradlew test
+
+# Run Taproot/Legacy swap tests
+./gradlew :lib:test --tests "coinswap.StandardSwap"
+./gradlew :lib:test --tests "coinswap.TaprootSwap"
+```
+
+See the [CI workflow](.github/workflows/test-kotlin.yml) for complete test setup.
+
 ## Requirements
 
 ### Android
@@ -252,12 +269,11 @@ Build for Android architectures:
 
 ```bash
 # Add Android targets
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+rustup target add aarch64-linux-android x86_64-linux-android
 
 # Build for all Android architectures
 cd ../ffi-commons
 cargo build --release --target aarch64-linux-android
-cargo build --release --target armv7-linux-androideabi
 cargo build --release --target x86_64-linux-android
 ```
 
