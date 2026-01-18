@@ -112,12 +112,12 @@ jobs:
         working-directory: ./coinswap-kotlin
         run: |
           chmod +x gradlew
-          ./gradlew :lib:test --tests "coinswap.StandardSwap" --no-daemon --stacktrace
+          ./gradlew :lib:test --tests "org.coinswap.StandardSwap" --no-daemon --stacktrace
 
       - name: Run Kotlin Taproot Swap Test (P2TR)
         working-directory: ./coinswap-kotlin
         run: |
-          ./gradlew :lib:test --tests "coinswap.TaprootSwap" --no-daemon --stacktrace
+          ./gradlew :lib:test --tests "org.coinswap.TaprootSwap" --no-daemon --stacktrace
 
       - name: Cleanup Docker
         if: always()

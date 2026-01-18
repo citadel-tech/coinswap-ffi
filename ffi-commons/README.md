@@ -45,7 +45,7 @@ This will:
 1. Build the core Rust library (`libcoinswap_ffi`)
 2. Generate bindings for all supported languages
 3. Place generated files in their respective language directories:
-   - Kotlin: `../coinswap-kotlin/uniffi/coinswap/`
+   - Kotlin: `../coinswap-kotlin/lib/src/main/kotlin/org/coinswap/`
    - Swift: `../coinswap-swift/`
    - Python: `../coinswap-python/`
    - Ruby: `../coinswap-ruby/`

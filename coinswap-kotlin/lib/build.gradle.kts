@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm") version "1.9.22"
 }
 
-group = "uniffi.coinswap"
+group = "org.coinswap"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -46,29 +46,4 @@ tasks.test {
         showStackTraces = true
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
-}
-
-// Task to copy generated bindings from uniffi/ to src/main/kotlin/
-tasks.register<Copy>("syncBindings") {
-    description = "Sync generated UniFFI bindings to src/main/kotlin"
-    from("uniffi/coinswap")
-    into("src/main/kotlin/uniffi/coinswap")
-    include("*.kt")
-}
-
-// Task to copy native library to resources
-tasks.register<Copy>("syncNativeLib") {
-    description = "Sync native library to resources"
-    from(".")
-    into("src/main/resources/linux-x86-64")
-    include("libcoinswap_ffi.so")
-}
-
-// Make build depend on syncing
-tasks.named("compileKotlin") {
-    dependsOn("syncBindings", "syncNativeLib")
-}
-
-tasks.named("processResources") {
-    dependsOn("syncNativeLib")
 }

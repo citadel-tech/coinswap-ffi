@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "org.coinswap"
+
+[bindings.swift]
+module_name = "Coinswap"
