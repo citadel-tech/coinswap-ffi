@@ -3,9 +3,8 @@
  * 
  */
 
-package coinswap
+package org.coinswap
 
-import uniffi.coinswap.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.io.TempDir

@@ -38,8 +38,8 @@ echo "Using library: $LIBRARY_PATH"
 # Define output directories for each language
 KOTLIN_DIR="../coinswap-kotlin"
 KOTLIN_UNIFFI_DIR="$KOTLIN_DIR/uniffi"
-KOTLIN_SRC_DIR="$KOTLIN_DIR/src/main/kotlin/uniffi/coinswap"
-KOTLIN_RESOURCES_DIR="$KOTLIN_DIR/src/main/resources/linux-x86-64"
+KOTLIN_SRC_DIR="$KOTLIN_DIR/lib/src/main/kotlin/org/coinswap"
+KOTLIN_RESOURCES_DIR="$KOTLIN_DIR/lib/src/main/resources/linux-x86-64"
 SWIFT_DIR="../coinswap-swift"
 PYTHON_DIR="../coinswap-python"
 RUBY_DIR="../coinswap-ruby"
@@ -58,24 +58,23 @@ echo "Generating Kotlin bindings..."
 cargo run --bin uniffi-bindgen generate \
     --library "$LIBRARY_PATH" \
     --language "kotlin" \
-    --out-dir "$KOTLIN_UNIFFI_DIR" \
+    --out-dir "$KOTLIN_DIR" \
     --no-format
 
 if [ $? -eq 0 ]; then
-    echo "✓ Kotlin bindings generated at $KOTLIN_UNIFFI_DIR"
+    echo "✓ Kotlin bindings generated at $KOTLIN_DIR"
     
     # Copy bindings to proper Gradle source location
     echo "Copying Kotlin bindings to Gradle src directory..."
-    cp -r "$KOTLIN_UNIFFI_DIR/"*.kt "$KOTLIN_SRC_DIR/" 2>/dev/null || \
-    cp -r "$KOTLIN_UNIFFI_DIR/uniffi/coinswap/"*.kt "$KOTLIN_SRC_DIR/" 2>/dev/null || \
+    cp "$KOTLIN_DIR/org/coinswap/"*.kt "$KOTLIN_SRC_DIR/" 2>/dev/null || \
     echo "  ⚠ No .kt files found in expected locations"
     
     # Copy native library to resources
     echo "Copying native library to Gradle resources..."
     cp "$LIBRARY_PATH" "$KOTLIN_RESOURCES_DIR/"
     
-    # Also keep a copy in root for reference
-    cp "$LIBRARY_PATH" "$KOTLIN_DIR/"
+    # Clean up generated files in root
+    rm -rf "$KOTLIN_DIR/org"
     
     echo "✓ Kotlin files placed in Gradle structure:"
     echo "  Source: $KOTLIN_SRC_DIR"
@@ -186,8 +185,8 @@ echo "  Python:  $PYTHON_DIR"
 echo "  Ruby:    $RUBY_DIR"
 echo ""
 echo "Kotlin files are now in proper Gradle structure:"
-echo "  ✓ Source files:     src/main/kotlin/uniffi/coinswap/*.kt"
-echo "  ✓ Native library:   src/main/resources/linux-x86-64/libcoinswap_ffi.$LIB_EXTENSION"
+echo "  ✓ Source files:     lib/src/main/kotlin/org/coinswap/*.kt"
+echo "  ✓ Native library:   lib/src/main/resources/linux-x86-64/libcoinswap_ffi.$LIB_EXTENSION"
 echo "  ✓ Build ready:      ./gradlew build (from coinswap-kotlin/)"
 echo ""
 echo "See language-specific README files for usage:"

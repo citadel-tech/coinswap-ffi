@@ -11,7 +11,7 @@
 Coinswap FFI provides Foreign Function Interface (FFI) bindings for the [Coinswap](https://github.com/citadel-tech/coinswap) Bitcoin privacy protocol, enabling integration with multiple programming languages and platforms. This repository contains binding implementations for:
 
 ### JavaScript/TypeScript
-- **[coinswap-js](./coinswap-js)** - Node.js bindings via NAPI-RS for JavaScript/TypeScript applications
+- **[coinswap-js](./coinswap-js)** - Node.js bindings for JavaScript/TypeScript applications
 
 ### Multi-Language Bindings (via UniFFI)
 Generated from **[ffi-commons](./ffi-commons)** - the core UniFFI binding generator:
@@ -23,7 +23,7 @@ Generated from **[ffi-commons](./ffi-commons)** - the core UniFFI binding genera
 
 ## Quick Start
 
-### Node.js (NAPI)
+### Node.js (Node add-ons)
 
 ```bash
 cd coinswap-js
@@ -56,7 +56,7 @@ This generates bindings for all supported languages. See individual language REA
 
 ### Reference Implementation
 
-The [taker-app](https://github.com/citadel-tech/taker-app) demonstrates a production-ready desktop GUI built with the NAPI bindings, showcasing wallet management, swap execution, market analytics, and UTXO control. Use it as a reference for your own applications.
+The [taker-app](https://github.com/citadel-tech/taker-app) demonstrates a production-ready desktop GUI built with the node-addons, showcasing wallet management, swap execution, market analytics, and UTXO control. Use it as a reference for your own applications.
 
 ## Requirementss
 
@@ -67,7 +67,7 @@ The [taker-app](https://github.com/citadel-tech/taker-app) demonstrates a produc
 
 ### Platform-Specific
 
-#### NAPI (Node.js)
+#### NAPI (Node addons)
 - Node.js 18.0.0 or higher
 - Build tools: `build-essential`, `automake`, `libtool`
 
