@@ -3,7 +3,7 @@
 
 @file:Suppress("NAME_SHADOWING")
 
-package uniffi.coinswap
+package org.coinswap
 
 // Common helper code.
 //

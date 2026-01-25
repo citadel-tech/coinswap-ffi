@@ -18,12 +18,16 @@ coinswap-python/libcoinswap_ffi.so
 coinswap-kotlin/libcoinswap_ffi.so
 coinswap-kotlin/src/main/kotlin/uniffi/
 coinswap-kotlin/src/main/resources/
+coinswap-kotlin/local.properties
 coinswap-swift/libcoinswap_ffi.so
 coinswap-ruby/libcoinswap_ffi.so
 coinswap-python/uniffi-bindgen
 coinswap-kotlin/uniffi-bindgen
 coinswap-swift/uniffi-bindgen
 coinswap-ruby/uniffi-bindgen
+coinswap-kotlin/lib/src/main/jniLibs/x86_64/uniffi-bindgen
+coinswap-kotlin/lib/src/main/jniLibs/arm64-v8a/uniffi-bindgen
+coinswap-kotlin/lib/src/main/jniLibs/arm64-v8a/libc++_shared.so
 
 # Gradle
 .gradle/

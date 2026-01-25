@@ -1,0 +1,52 @@
+name: Build Kotlin API Documentation
+
+# Generates API documentation for Kotlin bindings using Dokka.
+# Creates HTML documentation website that can be deployed.
+# Manual workflow for generating API documentation on specific tags.
+
+on: workflow_dispatch
+
+permissions: {}
+
+jobs:
+  build-docs:
+    name: "Build API docs"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: "Set up JDK 17"
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: "Set up Android SDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "Write local.properties for Gradle"
+        working-directory: coinswap-kotlin
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: "Set up Android NDK"
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26c
+
+      - name: "Build Android API documentation"
+        working-directory: coinswap-kotlin
+        run: |
+          bash ./build-scripts/release/build-release-linux-arm64_v8a.sh
+          bash ./build-scripts/release/build-release-linux-armeabi-v7a.sh
+          ./gradlew dokkaHtml
+
+      - name: "Upload documentation website"
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-android-api-docs
+          path: /home/runner/work/coinswap-ffi/coinswap-kotlin/lib/build/dokka/html/
+  
