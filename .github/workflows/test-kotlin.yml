@@ -43,11 +43,6 @@ jobs:
       - name: "Set up Android SDK"
         uses: android-actions/setup-android@v3
 
-      - name: "Write local.properties for Gradle"
-        working-directory: ./coinswap-kotlin
-        run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-
       - name: "Set up Android NDK"
         uses: nttld/setup-ndk@v1
         with:
