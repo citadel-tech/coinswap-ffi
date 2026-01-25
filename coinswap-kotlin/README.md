@@ -29,7 +29,7 @@ chmod +x create_bindings.sh
 ```
 
 This generates:
-- `uniffi/coinswap/coinswap.kt` - Kotlin binding classes
+- `lib/src/main/kotlin/org/coinswap/coinswap.kt` - Kotlin binding classes
 - `libcoinswap_ffi.so` - Native library (Linux)
 - `libcoinswap_ffi.dylib` - Native library (macOS)
 
@@ -40,7 +40,7 @@ This generates:
 1. Copy the generated files to your Android project:
 ```bash
 # Copy Kotlin bindings
-cp uniffi/coinswap/coinswap.kt app/src/main/java/coinswap/
+cp lib/src/main/kotlin/org/coinswap/coinswap.kt app/src/main/java/org/coinswap/
 
 # Copy native libraries for each architecture
 cp target/aarch64-linux-android/release/libcoinswap_ffi.so app/src/main/jniLibs/arm64-v8a/
@@ -70,20 +70,20 @@ System.setProperty("java.library.path", "/path/to/coinswap-kotlin")
 ### Basic Usage
 
 ```kotlin
-import coinswap.*
+import org.coinswap.*
 
 // Initialize a Taker
 val taker = Taker.init(
     dataDir = "/path/to/data",
     walletFileName = "taker_wallet",
-    rpcConfig = RPCConfig(
+    rpcConfig = RpcConfig(
         // regtest
-        url = "http://localhost:18442",
-        user = "user",
+        url = "localhost:18442",
+        username = "user",
         password = "password",
         walletName = "taker_wallet"
     ),
-    controlPort = 9051,
+    controlPort = 9051u,
     torAuthPassword = "your_tor_password",
     zmqAddr = "tcp://localhost:28332",
     // backup and restore
@@ -91,18 +91,18 @@ val taker = Taker.init(
 )
 
 // Setup logging
-taker.setupLogging(dataDir = "/path/to/data")
+taker.setupLogging(dataDir = "/path/to/data", logLevel = "info")
 
 // Sync wallet
 taker.syncAndSave()
 
 // Get balances
 val balances = taker.getBalances()
-println("Total Balance: ${balances.total} sats")
+println("Total Balance: ${balances.spendable} sats")
 
 // Get a new receiving address
-val address = taker.getNextExternalAddress(AddressType.P2WPKH)
-println("Receive to: ${address.value}")
+val address = taker.getNextExternalAddress(AddressType("P2WPKH"))
+println("Receive to: ${address.address}")
 
 // Wait for offerbook to sync
 println("Waiting for offerbook synchronization...")
@@ -114,7 +114,7 @@ println("Offerbook synchronized!")
 
 // Perform a coinswap
 val swapParams = SwapParams(
-    sendAmount = 1000000uL, // 0.01 BTC in sats
+    sendAmount = 1000000u, // 0.01 BTC in sats
     makerCount = 2u,
     manuallySelectedOutpoints = null
 )
@@ -122,8 +122,9 @@ val swapParams = SwapParams(
 val report = taker.doCoinswap(swapParams)
 report?.let {
     println("Swap completed!")
-    println("Amount swapped: ${it.amountSwapped} sats")
-    println("Routing fee paid: ${it.routingFeesPaid} sats")
+    println("Swap ID: ${it.swapId}")
+    println("Target Amount: ${it.targetAmount} sats")
+    println("Total Fee: ${it.totalFee} sats")
 }
 ```
 
@@ -213,6 +214,23 @@ enum class AddressType {
 Complete examples are available in the [`test/`](test/) directory:
 - [`AndroidExample.kt`](test/AndroidExample.kt) - Android integration with coroutines
 
+## Testing
+
+The project includes comprehensive test suites in Kotlin:
+
+### Running Tests
+
+```bash
+# Run all tests
+./gradlew test
+
+# Run Taproot/Legacy swap tests
+./gradlew :lib:test --tests "coinswap.StandardSwap"
+./gradlew :lib:test --tests "coinswap.TaprootSwap"
+```
+
+See the [CI workflow](.github/workflows/test-kotlin.yml) for complete test setup.
+
 ## Requirements
 
 ### Android
@@ -252,12 +270,11 @@ Build for Android architectures:
 
 ```bash
 # Add Android targets
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+rustup target add aarch64-linux-android x86_64-linux-android
 
 # Build for all Android architectures
 cd ../ffi-commons
 cargo build --release --target aarch64-linux-android
-cargo build --release --target armv7-linux-androideabi
 cargo build --release --target x86_64-linux-android
 ```
 
