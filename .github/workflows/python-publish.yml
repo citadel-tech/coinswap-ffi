@@ -1,10 +1,14 @@
 name: Publish coinswap to PyPI
 
-# Publishes the coinswap Python package to PyPI as platform-specific wheels.
+# Automatic workflow for testing, publishes the coinswap Python package to PyPI as platform-specific wheels.
 # Uses cibuildwheel to build wheels for multiple platforms and Python versions.
-# Manual workflow that requires PyPI credentials (username and token).
+# Triggers on push to main. Requires PyPI credentials (username and token).
+# Manual workflow that requires PyPI credentials (username and token). # commented for automatic
 
-on: [workflow_dispatch]
+on: 
+  push:
+    branches: [python_package]
+  # [workflow_dispatch] # commented for automatic
 
 permissions:
   contents: write
@@ -38,6 +42,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip build wheel setuptools
+
+      - name: Install required Perl module (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          perl -MCPAN -e "install Locale::Maketext::Simple"
 
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
