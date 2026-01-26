@@ -83,6 +83,7 @@ jobs:
           merge-multiple: true
 
       - name: Commit and push native libraries
+        working-directory: ./coinswap-ffi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
