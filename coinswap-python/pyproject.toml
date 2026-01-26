@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coinswap"
+version = "1.0.0"
+description = "Coinswap Taker bindings for Python"
+readme = "README.md"
+license = { text = "Apache-2.0 OR MIT" }
+authors = [
+    { name = "Citadel-Tech", email = "" }
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/citadel-tech/coinswap"
+Documentation = "https://github.com/citadel-tech/coinswap-ffi/blob/main/coinswap-python/README.md"
+Repository = "https://github.com/citadel-tech/coinswap-ffi.git"
+Issues = "https://github.com/citadel-tech/coinswap/issues"
+
+[tool.setuptools]
+packages = ["coinswap"]
+package-dir = { "" = "src" }
+
+[tool.setuptools.package-data]
+coinswap = [
+    "native/linux-x86_64/*.so",
+    "native/linux-aarch64/*.so",
+    "native/darwin-x86_64/*.dylib",
+    "native/darwin-arm64/*.dylib",
+    "native/win-amd64/*.dll",
+]
+
+[tool.setuptools.exclude-package-data]
+coinswap = ["*.py.bak"]
