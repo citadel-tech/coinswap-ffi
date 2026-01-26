@@ -9,7 +9,7 @@ description = "Coinswap Taker bindings for Python"
 readme = "README.md"
 license = { text = "Apache-2.0 OR MIT" }
 authors = [
-    { name = "Citadel-Tech", email = "" }
+    { name = "Citadel-Tech", email = "xyz@gmail.com" }
 ]
 requires-python = ">=3.8"
 classifiers = [
