@@ -83,7 +83,6 @@ jobs:
           merge-multiple: true
 
       - name: Commit and push native libraries
-        if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
