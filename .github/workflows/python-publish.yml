@@ -52,9 +52,9 @@ jobs:
         working-directory: ./coinswap-python
         run: |
           chmod +x build-scripts/release/build-release-macos-x86_64.sh
-          chmod +x build-scripts/release/build-release-macos-arm64.sh
+          chmod +x build-scripts/release/build-release-macos-aarch64.sh
           bash build-scripts/release/build-release-macos-x86_64.sh
-          bash build-scripts/release/build-release-macos-arm64.sh
+          bash build-scripts/release/build-release-macos-aarch64.sh
           python -m build --wheel
 
       - name: Build wheels (Windows)
