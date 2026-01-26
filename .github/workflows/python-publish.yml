@@ -46,7 +46,12 @@ jobs:
       - name: Install required Perl module (Windows)
         if: runner.os == 'Windows'
         run: |
-          perl -MCPAN -e "install Locale::Maketext::Simple"
+          cpan -i -f Locale::Maketext::Simple
+
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install openssl --version=1.1.1.2100
 
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
@@ -70,6 +75,8 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: ./coinswap-python
         shell: bash
+        env:
+          OPENSSL_NO_VENDOR: 1
         run: |
           bash build-scripts/release/build-release-windows-x86_64.sh
           python -m build --wheel
