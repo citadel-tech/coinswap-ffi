@@ -25,18 +25,13 @@ env:
 jobs:
   test-taker:
     name: Test Standard Taker Methods
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
