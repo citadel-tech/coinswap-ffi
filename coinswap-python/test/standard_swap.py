@@ -3,9 +3,7 @@ import os
 import subprocess
 import time 
 
-bindings_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')
-)
+bindings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'coinswap', 'native', 'linux-x86_64'))
 sys.path.insert(0, bindings_path)
 
 from coinswap import Taker, SwapParams, RpcConfig, AddressType

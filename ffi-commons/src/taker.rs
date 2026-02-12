@@ -20,19 +20,25 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+/// Swap specific parameters. These are user's policy and can differ among swaps.
+/// SwapParams govern the criteria to find suitable set of makers from the offerbook.
+///
+/// If no maker matches with a given SwapParam, that coinswap round will fail.
 #[derive(uniffi::Record)]
 pub struct SwapParams {
-    /// Total Amount
+    /// Total Amount to Swap.
     pub send_amount: u64,
-    /// How many hops (number of makers)
+    /// How many hops.
     pub maker_count: u32,
-    /// User selected UTXOs (optional)
+    /// User selected UTXOs
     pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
+/// SwapParams govern the criteria to find suitable set of makers from the offerbook.
 impl TryFrom<SwapParams> for CoinswapSwapParams {
     type Error = TakerError;
 
+    /// Swap specific parameters. These are user's policy and can differ among swaps.
     fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
         let send_amount = coinswapAmount::from_sat(params.send_amount);
 
@@ -61,8 +67,12 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
     }
 }
 
+/// The Taker structure that performs bulk of the coinswap protocol. Taker connects
+/// to multiple Makers and send protocol messages sequentially to them. The communication
+/// sequence and corresponding SwapCoin infos are stored in `ongoing_swap_state`.
 #[derive(uniffi::Object)]
 pub struct Taker {
+    /// The Taker structure that performs bulk of the coinswap protocol.
     taker: Mutex<CoinswapTaker>,
 }
 
@@ -70,6 +80,20 @@ pub struct Taker {
 impl Taker {
     #[uniffi::constructor]
     // #[allow(clippy::too_many_arguments)]
+    ///  Initializes a Taker structure.
+    ///
+    /// This function sets up a Taker instance with configurable parameters.
+    /// It handles the initialization of data directories, wallet files, and RPC configurations.
+    ///
+    /// ### Parameters:
+    /// - `data_dir`:
+    ///   - `Some(value)`: Use the specified directory for storing data.
+    ///   - `None`: Use the default data directory (e.g., for Linux: `~/.coinswap/taker`).
+    /// - `wallet_file_name`:
+    ///   - `Some(value)`: Attempt to load a wallet file named `value`. If it does not exist,
+    ///     a new wallet with the given name will be created.
+    ///   - `None`: Create a new wallet file with the default name `taker-wallet`.
+    /// - If `rpc_config` = `None`: Use the default [`RPCConfig`]
     pub fn init(
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
@@ -100,6 +124,12 @@ impl Taker {
         }))
     }
 
+    /// Sets up the logger for the taker component.
+    ///
+    /// This method initializes the logging configuration for the taker, directing logs to both
+    /// the console and a file. It sets the `RUST_LOG` environment variable to provide default
+    /// log levels and configures log4rs with the specified filter level for fine-grained control
+    /// of log verbosity.
     pub fn setup_logging(
         &self,
         data_dir: Option<String>,
@@ -118,6 +148,7 @@ impl Taker {
         Ok(())
     }
 
+    ///  Does the coinswap process
     pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
@@ -127,6 +158,7 @@ impl Taker {
         Ok(swap_report.map(SwapReport::from))
     }
 
+    /// Returns a list of recent Incoming Transactions (bydefault last 10)
     pub fn get_transactions(
         &self,
         count: Option<u32>,
@@ -179,6 +211,7 @@ impl Taker {
             .collect())
     }
 
+    /// Gets the next internal addresses from the HD keychain.
     pub fn get_next_internal_addresses(
         &self,
         count: u32,
@@ -199,6 +232,7 @@ impl Taker {
         Ok(internal_addresses.into_iter().map(Address::from).collect())
     }
 
+    /// Gets the next external address from the HD keychain. Saves the wallet to disk
     pub fn get_next_external_address(
         &self,
         address_type: AddressType,
@@ -218,6 +252,9 @@ impl Taker {
         Ok(Address::from(external_address))
     }
 
+    /// Returns a list all utxos with their spend info tracked by the wallet.
+    /// Optionally takes in an Utxo list to reduce RPC calls. If None is given, the
+    /// full list of utxo is fetched from core rpc.
     pub fn list_all_utxo_spend_info(&self) -> Result<Vec<TotalUtxoInfo>, TakerError> {
         let entries = self
             .taker
@@ -328,6 +365,31 @@ impl Taker {
             .collect())
     }
 
+    /// Creates a wallet backup for GUI/FFI applications with optional encryption.
+    ///
+    /// This is a ffi-only wrapper around [`Wallet::backup`] that handles encryption
+    /// material generation internally based on whether a password is provided.
+    ///
+    /// # Behavior
+    ///
+    /// - If `password` is `Some(pwd)` and not empty: Creates encrypted backup using the password
+    /// - If `password` is `None` or empty string: Creates unencrypted backup (logs warning)
+    /// - The backup is written as a `.json` file at the specified path
+    ///
+    /// # Parameters
+    ///
+    /// - `destination_path`: Destination file path for the backup (`.json`)
+    /// - `password`: Optional password for encryption. Use `None` or empty string for plaintext backup
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Encrypted backup
+    /// wallet.backup_gui_app("/path/to/backup".to_string(), Some("my_password".to_string()))?;
+    ///
+    /// // Unencrypted backup
+    /// wallet.backup_gui_app("/path/to/backup".to_string(), None)?;
+    /// ```
     pub fn backup(
         &self,
         destination_path: String,
@@ -346,6 +408,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Locks the fidelity and live_contract utxos which are not considered for spending from the wallet.
     pub fn lock_unspendable_utxos(&self) -> Result<(), TakerError> {
         self.taker
             .lock()
@@ -360,6 +423,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Sends specified Amount of Satoshis to an External Address
     pub fn send_to_address(
         &self,
         address: String,
@@ -402,6 +466,10 @@ impl Taker {
         Ok(txid.into())
     }
 
+    /// Calculates the total balances of different categories in the wallet.
+    /// Includes regular, swap, contract, fidelity, and spendable (regular + swap) utxos.
+    /// Optionally takes in a list of UTXOs to reduce rpc call. If None is provided,
+    /// the full list is fetched from core rpc.
     pub fn get_balances(&self) -> Result<Balances, TakerError> {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -415,6 +483,10 @@ impl Taker {
         Ok(Balances::from(balances))
     }
 
+    /// Wrapper around Self::sync that also saves the wallet to disk.
+    ///
+    /// This method first synchronizes the wallet with the Bitcoin Core node,
+    /// then persists the wallet state in the disk.
     pub fn sync_and_save(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -428,6 +500,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Indicates if offerbook syncing is in progress or not.
     pub fn is_offerbook_syncing(&self) -> Result<bool, TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
             msg: format!(
@@ -438,6 +511,7 @@ impl Taker {
         Ok(taker.is_offerbook_syncing())
     }
 
+    /// Run offer sync now.
     pub fn run_offer_sync_now(&self) -> Result<(), TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
             msg: format!(
@@ -449,6 +523,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Returns the OfferBook.
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -461,6 +536,8 @@ impl Taker {
         Ok(OfferBook::from(&offerbook))
     }
 
+    /// Displays a maker offer candidate in a human-readable format.
+    /// If the maker does not yet have an offer, a partial view is shown.
     pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
         let offer_json = serde_json::json!({
             "base_fee": maker_offer.base_fee,
@@ -476,6 +553,7 @@ impl Taker {
             .map_err(|e| TakerError::General { msg: e.to_string() })
     }
 
+    /// Get the wallet name
     pub fn get_wallet_name(&self) -> Result<String, TakerError> {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -483,6 +561,7 @@ impl Taker {
         Ok(taker.get_wallet().get_name().to_string())
     }
 
+    /// Recover from a bad swap
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -491,6 +570,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Fetch all makers good, bad, and unresponsive
     pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),

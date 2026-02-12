@@ -24,7 +24,7 @@ use std::{
 /// Note: V2 has additional parameters compared to V1
 #[derive(uniffi::Record)]
 pub struct TaprootSwapParams {
-    /// Amount to send in satoshis
+    /// Amount to send in the swap
     pub send_amount: u64,
     /// Number of makers to use in the swap
     pub maker_count: u32,
@@ -36,9 +36,11 @@ pub struct TaprootSwapParams {
     pub manually_selected_outpoints: Option<Vec<OutPoint>>,
 }
 
+/// Parameters for initiating a coinswap
 impl TryFrom<TaprootSwapParams> for CoinswapTaprootSwapParams {
     type Error = TakerError;
 
+    /// Parameters for initiating a coinswap
     fn try_from(params: TaprootSwapParams) -> Result<Self, Self::Error> {
         let send_amount = coinswapAmount::from_sat(params.send_amount);
 
@@ -69,14 +71,17 @@ impl TryFrom<TaprootSwapParams> for CoinswapTaprootSwapParams {
     }
 }
 
+/// Taker implementation for coinswap protocol
 #[derive(uniffi::Object)]
 pub struct TaprootTaker {
+    /// Taker implementation for coinswap protocol
     taker: Mutex<CoinswapTaprootTaker>,
 }
 
 #[uniffi::export]
 impl TaprootTaker {
     #[uniffi::constructor]
+    /// Initialize a new Taker instance
     pub fn init(
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
@@ -107,6 +112,12 @@ impl TaprootTaker {
         }))
     }
 
+    /// Sets up the logger for the taker component.
+    ///
+    /// This method initializes the logging configuration for the taker, directing logs to both
+    /// the console and a file. It sets the `RUST_LOG` environment variable to provide default
+    /// log levels and configures log4rs with the specified filter level for fine-grained control
+    /// of log verbosity.
     pub fn setup_logging(
         &self,
         data_dir: Option<String>,
@@ -125,6 +136,7 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Initiate a coinswap with the given parameters
     pub fn do_coinswap(
         &self,
         swap_params: TaprootSwapParams,
@@ -137,6 +149,7 @@ impl TaprootTaker {
         Ok(swap_report.map(SwapReport::from))
     }
 
+    /// Returns a list of recent Incoming Transactions (bydefault last 10)
     pub fn get_transactions(
         &self,
         count: Option<u32>,
@@ -189,6 +202,7 @@ impl TaprootTaker {
             .collect())
     }
 
+    /// Gets the next internal addresses from the HD keychain.
     pub fn get_next_internal_addresses(
         &self,
         count: u32,
@@ -209,6 +223,7 @@ impl TaprootTaker {
         Ok(internal_addresses.into_iter().map(Address::from).collect())
     }
 
+    /// Gets the next external address from the HD keychain. Saves the wallet to disk
     pub fn get_next_external_address(
         &self,
         address_type: AddressType,
@@ -228,6 +243,9 @@ impl TaprootTaker {
         Ok(Address::from(external_address))
     }
 
+    /// Returns a list all utxos with their spend info tracked by the wallet.
+    /// Optionally takes in an Utxo list to reduce RPC calls. If None is given, the
+    /// full list of utxo is fetched from core rpc.
     pub fn list_all_utxo_spend_info(&self) -> Result<Vec<TotalUtxoInfo>, TakerError> {
         let entries = self
             .taker
@@ -338,6 +356,31 @@ impl TaprootTaker {
             .collect())
     }
 
+    /// Creates a wallet backup for GUI/FFI applications with optional encryption.
+    ///
+    /// This is a ffi-only wrapper around [`Wallet::backup`] that handles encryption
+    /// material generation internally based on whether a password is provided.
+    ///
+    /// # Behavior
+    ///
+    /// - If `password` is `Some(pwd)` and not empty: Creates encrypted backup using the password
+    /// - If `password` is `None` or empty string: Creates unencrypted backup (logs warning)
+    /// - The backup is written as a `.json` file at the specified path
+    ///
+    /// # Parameters
+    ///
+    /// - `destination_path`: Destination file path for the backup (`.json`)
+    /// - `password`: Optional password for encryption. Use `None` or empty string for plaintext backup
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Encrypted backup
+    /// wallet.backup_gui_app("/path/to/backup".to_string(), Some("my_password".to_string()))?;
+    ///
+    /// // Unencrypted backup
+    /// wallet.backup_gui_app("/path/to/backup".to_string(), None)?;
+    /// ```
     pub fn backup(
         &self,
         destination_path: String,
@@ -356,6 +399,7 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Locks the fidelity and live_contract utxos which are not considered for spending from the wallet.
     pub fn lock_unspendable_utxos(&self) -> Result<(), TakerError> {
         self.taker
             .lock()
@@ -370,6 +414,7 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Indicates if offerbook syncing is in progress or not.
     pub fn is_offerbook_syncing(&self) -> Result<bool, TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
             msg: format!(
@@ -380,6 +425,7 @@ impl TaprootTaker {
         Ok(taker.is_offerbook_syncing())
     }
 
+    /// Run offer sync now.
     pub fn run_offer_sync_now(&self) -> Result<(), TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
             msg: format!(
@@ -391,6 +437,7 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Sends specified Amount of Satoshis to an External Address
     pub fn send_to_address(
         &self,
         address: String,
@@ -433,6 +480,9 @@ impl TaprootTaker {
         Ok(txid.to_string())
     }
 
+    /// Calculates the total balances of different categories in the wallet.
+    /// Includes regular, swap, contract, fidelity, and spendable (regular + swap) utxos.
+    /// Optionally takes in a list of UTXOs to reduce rpc call. If None is provided, the full list is fetched from core rpc.
     pub fn get_balances(&self) -> Result<Balances, TakerError> {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -446,6 +496,10 @@ impl TaprootTaker {
         Ok(Balances::from(balances))
     }
 
+    /// Wrapper around Self::sync that also saves the wallet to disk.
+    ///
+    /// This method first synchronizes the wallet with the Bitcoin Core node,
+    /// then persists the wallet state in the disk.
     pub fn sync_and_save(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -459,6 +513,8 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Fetch offers from available makers
+    /// This syncs the offerbook first and then returns a reference to it
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -471,6 +527,8 @@ impl TaprootTaker {
         Ok(OfferBook::from(&offerbook))
     }
 
+    /// Displays a maker offer candidate in a human-readable format.
+    /// If the maker does not yet have an offer, a partial view is shown.
     pub fn display_offer(&self, maker_offer: &Offer) -> Result<String, TakerError> {
         let offer_json = serde_json::json!({
             "base_fee": maker_offer.base_fee,
@@ -486,6 +544,7 @@ impl TaprootTaker {
             .map_err(|e| TakerError::General { msg: e.to_string() })
     }
 
+    /// Get the wallet name
     pub fn get_wallet_name(&self) -> Result<String, TakerError> {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -493,6 +552,12 @@ impl TaprootTaker {
         Ok(taker.get_wallet().get_name().to_string())
     }
 
+    /// Recover from a failed taproot swap by attempting to spend unfinished contracts
+    ///
+    /// Recovery strategy:
+    /// 1. For incoming contracts: Try hashlock spend using stored preimage, fallback to timelock
+    /// 2. For outgoing contracts: Wait for timelock maturity, then spend via timelock
+    /// 3. Skip contracts that were already spent (via keypath, hashlock, or timelock)
     pub fn recover_from_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
@@ -501,6 +566,7 @@ impl TaprootTaker {
         Ok(())
     }
 
+    /// Fetch all makers good, bad, and unresponsive
     pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),

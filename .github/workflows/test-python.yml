@@ -55,10 +55,9 @@ jobs:
             pkg-config
 
       - name: Build FFI bindings
-        working-directory: ./ffi-commons
+        working-directory: ./coinswap-python
         run: |
-          chmod +x create_bindings.sh
-          ./create_bindings.sh
+          bash ./build-scripts/development/build-dev-linux-x86_64.sh
 
       - name: Check Docker
         run: |
