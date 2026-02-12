@@ -239,6 +239,21 @@ except Exception as e:
 - Synced, non-pruned node with `-txindex`
 - Tor daemon for privacy
 
+## Docs (local)
+
+```bash
+cd coinswap-python
+bash ./build-scripts/development/build-dev-linux-x86_64.sh
+pip install pdoc
+pdoc coinswap -d google --output-directory docs
+```
+
+To browse interactively:
+
+```bash
+pdoc coinswap -d google
+```
+
 ## Support
 
 - [Main Coinswap Repository](https://github.com/citadel-tech/coinswap)

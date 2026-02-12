@@ -28,7 +28,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/citadel-tech/coinswap"
-Documentation = "https://github.com/citadel-tech/coinswap-ffi/blob/main/coinswap-python/README.md"
+Documentation = "https://citadel-tech.github.io/coinswap-ffi/"
 Repository = "https://github.com/citadel-tech/coinswap-ffi.git"
 Issues = "https://github.com/citadel-tech/coinswap/issues"
 
