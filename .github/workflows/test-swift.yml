@@ -1,0 +1,120 @@
+name: Test Swift
+
+# Tests the Swift bindings for cs-ffi on macOS.
+# Triggered by changes to cs-ffi or coinswap-swift directories.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ffi-commons/**"
+      - "coinswap-swift/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ffi-commons/**"
+      - "coinswap-swift/**"
+
+permissions: {}
+
+jobs:
+  test:
+    name: "Test Swift library"
+    runs-on: macos-15-intel 
+    defaults:
+      run:
+        working-directory: ./coinswap-swift
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Set up Rust"
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ffi-commons/target/
+          key: ${{ runner.os }}-cargo-swift-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: "Build Swift package"
+        run: bash ./build-xcframework-ci.sh
+
+      - name: Setup Docker on macOS
+        uses: douglascamata/setup-docker-macos-action@v1.1.0
+        with:
+          colima-network-address: false
+
+      - name: Check Docker
+        run: |
+          docker version
+          docker info
+
+      - name: Setup Docker environment
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          ./ffi-docker-setup setup
+          ./ffi-docker-setup start --run-all
+
+      - name: Check Docker containers status
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a
+
+          echo -e "\n=== Bitcoin Core Logs ==="
+          docker logs coinswap-bitcoind --tail 50 || true
+
+          echo -e "\n=== Tor Logs ==="
+          docker logs coinswap-tor --tail 30 || true
+
+          echo -e "\n=== Maker1 Logs ==="
+          docker logs coinswap-makerd1 --tail 30 || true
+
+          echo -e "\n=== Maker2 Logs ==="
+          docker logs coinswap-makerd2 --tail 30 || true
+
+          echo -e "\n=== Maker3 Logs ==="
+          docker logs coinswap-makerd3 --tail 30 || true
+
+          echo -e "\n=== Maker4 Logs ==="
+          docker logs coinswap-makerd4 --tail 30 || true
+
+          echo -e "\n=== Host Port Connectivity ==="
+          for i in {1..30}; do
+            all_ok=true
+            for port in 18442 28332 9051; do
+              nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
+            done
+            if $all_ok; then
+              echo "All ports forwarded to host!"; break
+            fi
+            echo "Retry $i/30..."
+            sleep 5
+          done
+          if ! $all_ok; then
+            echo "Port forwarding failed. Colima status:"
+            colima status || true
+            colima list || true
+            exit 1
+          fi
+
+      - name: "Run Swift tests"
+        run: sudo -E swift test --filter Live
+
+      - name: Cleanup Docker environment
+        if: always()
+        working-directory: ./ffi-commons
+        run: |
+          ./ffi-docker-setup stop || true
+          colima stop || true

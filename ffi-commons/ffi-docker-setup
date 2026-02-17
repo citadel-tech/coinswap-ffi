@@ -252,8 +252,27 @@ build_bitcoin_image() {
         local s_amd64=$(grep "^SHA256_AMD64=" "docker/bitcoin-mutinynet.version" | cut -d'=' -f2)
         local f_arm64=$(grep "^FILENAME_ARM64=" "docker/bitcoin-mutinynet.version" | cut -d'=' -f2)
         local s_arm64=$(grep "^SHA256_ARM64=" "docker/bitcoin-mutinynet.version" | cut -d'=' -f2)
+        local target_arch="${TARGETARCH:-}"
+
+        if [ -z "$target_arch" ]; then
+            case "$(uname -m)" in
+                x86_64|amd64)
+                    target_arch="amd64"
+                    ;;
+                arm64|aarch64)
+                    target_arch="arm64"
+                    ;;
+                *)
+                    print_error "Unsupported host architecture: $(uname -m)"
+                    exit 1
+                    ;;
+            esac
+        fi
+
+        print_info "Using TARGETARCH=$target_arch for Bitcoin image build"
 
         if docker build \
+            --build-arg TARGETARCH="$target_arch" \
             --build-arg TAG="$tag" \
             --build-arg FILENAME_AMD64="$f_amd64" \
             --build-arg SHA256_AMD64="$s_amd64" \
@@ -310,6 +329,8 @@ stop_stack() {
         docker exec coinswap-bitcoind sh -c "rm -rf /home/*" 2>/dev/null || true
         docker exec coinswap-makerd1 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
         docker exec coinswap-makerd2 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
+        docker exec coinswap-makerd3 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
+        docker exec coinswap-makerd4 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
         
         docker compose -f docker-compose.generated.yml down
     fi
@@ -340,7 +361,7 @@ fund_makers() {
     sleep 15
 
     print_info "Funding makerd1..."
-    local maker1_addr=$(docker logs coinswap-makerd1 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+    local maker1_addr=$(docker logs coinswap-makerd1 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
     if [ -n "$maker1_addr" ]; then
         print_info "Makerd1 address: $maker1_addr"
         docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker1_addr" 1.0
@@ -350,7 +371,7 @@ fund_makers() {
     fi
 
     print_info "Funding makerd2..."
-    local maker2_addr=$(docker logs coinswap-makerd2 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+    local maker2_addr=$(docker logs coinswap-makerd2 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
     if [ -n "$maker2_addr" ]; then
         print_info "Makerd2 address: $maker2_addr"
         docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker2_addr" 1.0
@@ -362,7 +383,7 @@ fund_makers() {
     # Only fund maker3 and maker4 if running in --run-all mode
     if [[ "$RUN_ALL" == "true" ]]; then
         print_info "Funding makerd3..."
-        local maker3_addr=$(docker logs coinswap-makerd3 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+        local maker3_addr=$(docker logs coinswap-makerd3 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
         if [ -n "$maker3_addr" ]; then
             print_info "Makerd3 address: $maker3_addr"
             docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker3_addr" 1.0
@@ -372,7 +393,7 @@ fund_makers() {
         fi
 
         print_info "Funding makerd4..."
-        local maker4_addr=$(docker logs coinswap-makerd4 2>&1 | grep "Send at least" | tail -1 | grep -oP 'bcrt1[a-zA-Z0-9]+')
+        local maker4_addr=$(docker logs coinswap-makerd4 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
         if [ -n "$maker4_addr" ]; then
             print_info "Makerd4 address: $maker4_addr"
             docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker4_addr" 1.0
