@@ -4,15 +4,17 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/*.md'
-      - 'LICENSE'
-      - '**/*.gitignore'
-      - '.editorconfig'
-      - 'docs/**'
+    paths:
+      - 'coinswap-python/**'
+      - 'ffi-commons/**'
+      - '.github/workflows/test-python.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'coinswap-python/**'
+      - 'ffi-commons/**'
+      - '.github/workflows/test-python.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

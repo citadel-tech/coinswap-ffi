@@ -14,6 +14,7 @@ on:
     paths:
       - 'coinswap-kotlin/**'
       - 'ffi-commons/**'
+      - '.github/workflows/test-kotlin.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
