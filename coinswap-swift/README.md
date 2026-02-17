@@ -8,7 +8,7 @@
 
 ## Overview
 
-Swift bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enabling native iOS and macOS integration with the Bitcoin coinswap privacy protocol. Built using [UniFFI](https://mozilla.github.io/uniffi-rs/).
+Swift bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enabling native iOS and macOS integration with the Bitcoin coinswap protocol. Built using [UniFFI](https://mozilla.github.io/uniffi-rs/).
 
 ## Quick Start
 
@@ -20,56 +20,42 @@ Swift bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enablin
 
 ### Building
 
-Generate the Swift bindings from the UniFFI core:
+Use the xcframework scripts in this folder:
 
 ```bash
-cd ../ffi-commons
-chmod +x create_bindings.sh
-./create_bindings.sh
+# Dev build (fast, debug; builds host arch + iOS device + iOS simulator)
+bash ./build-xcframework-dev.sh
+
+# Workflow build (configured for github CI only; builds x86_64 Mac-Intel)
+bash ./build-xcframework-ci.sh
+
+# Release build (release-smaller profile; builds all Apple targets)
+bash ./build-xcframework.sh
 ```
 
-This generates:
-- `coinswap.swift` - Swift binding classes
-- `coinswapFFI.h` - C header file
-- `coinswapFFI.modulemap` - Module map
-- `libcoinswap_ffi.dylib` - Native library (macOS)
-- `libcoinswap_ffi.a` - Static library (iOS)
+Outputs for production build:
+- `Sources/Coinswap/Coinswap.swift` - Swift bindings
+- `CoinswapFFI.h` and `module.modulemap` - C headers
+- `libcoinswap_ffi.a` - native static lib
+- `coinswap_ffi.xcframework` - packaged slices (macOS, iOS device, iOS simulator). 
+- Each platform slice has the aforementioned C header and static lib files.
 
 ### Installation
 
-#### iOS
+4. Add the package to your app:
 
-1. Build for iOS targets:
-```bash
-cd ../ffi-commons
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim
-cargo build --release --target aarch64-apple-ios
+Xcode: File > Add Packages... and select the `coinswap-swift` folder.
+
+Package.swift:
+```swift
+.package(path: "../coinswap-swift")
 ```
 
-2. Create an XCFramework:
-```bash
-xcodebuild -create-xcframework \
-  -library target/aarch64-apple-ios/release/libcoinswap_ffi.a \
-  -headers coinswap-swift \
-  -output CoinswapFFI.xcframework
-```
+Then depend on `Coinswap` and `import Coinswap` in your app.
 
-3. Add to your Xcode project:
-   - Drag `CoinswapFFI.xcframework` into your project
-   - Add to "Frameworks, Libraries, and Embedded Content"
-   - Copy `coinswap.swift` to your project
+#### iOS and macOS
 
-#### macOS
-
-1. Copy files to your project:
-```bash
-cp coinswap-swift/coinswap.swift YourApp/
-cp coinswap-swift/libcoinswap_ffi.dylib YourApp/
-```
-
-2. Add the library to your Xcode project:
-   - Add `libcoinswap_ffi.dylib` to "Frameworks and Libraries"
-   - Set "Embed" to "Embed & Sign"
+Use the generated `coinswap_ffi.xcframework` and the Swift package in this repo.
 
 ### Basic Usage
 
@@ -77,7 +63,7 @@ cp coinswap-swift/libcoinswap_ffi.dylib YourApp/
 import Foundation
 
 // Initialize a Taker
-let taker = try Taker(
+let taker = try Taker.`init`(
     dataDir: "/path/to/data",
     walletFileName: "taker_wallet",
     rpcConfig: RPCConfig(
@@ -114,6 +100,10 @@ while try taker.isOfferbookSyncing() {
 }
 print("Offerbook synchronized!")
 
+
+// Manual offerbook sync in case the syncing doesn't initialize
+try taker.runOfferSyncNow()
+
 // Perform a coinswap
 let swapParams = SwapParams(
     sendAmount: 1_000_000, // 0.01 BTC in sats
@@ -123,8 +113,6 @@ let swapParams = SwapParams(
 
 if let report = try taker.doCoinswap(swapParams: swapParams) {
     print("Swap completed!")
-    print("Amount swapped: \(report.amountSwapped) sats")
-    print("Routing fee paid: \(report.routingFeesPaid) sats")
 }
 ```
 
@@ -136,7 +124,7 @@ Initialize and manage a coinswap taker:
 
 ```swift
 // Initialize
-let taker = try Taker(
+let taker = try Taker.`init`(
     dataDir: String?,
     walletFileName: String?,
     rpcConfig: RPCConfig?,
@@ -215,25 +203,21 @@ enum AddressType {
 
 ## Examples
 
-Complete examples are available in the [`test/`](test/) directory:
-- [`iOSExample.swift`](test/iOSExample.swift) - iOS integration with UIKit
-- [`SwiftUIExample.swift`](test/SwiftUIExample.swift) - SwiftUI integration with async/await
+Live integration tests are in [Tests/CoinswapTests](Tests/CoinswapTests):
+- [LiveStandardSwapTests.swift](Tests/CoinswapTests/LiveStandardSwapTests.swift)
+- [LiveTaprootSwapTests.swift](Tests/CoinswapTests/LiveTaprootSwapTests.swift)
+- [LiveTestSupport.swift](Tests/CoinswapTests/LiveTestSupport.swift)
 
-## Requirements
+To test them, fire up the docker setup in ```../ffi-commons``` folder:
+```bash
+./ffi-docker-setup help 
+./ffi-docker-setup start  (Starts tor, 2 legacy makers, regtest bitcoind)
+./ffi-docker-setup start --run-all  (Starts tor, 2 legacy makers and 2 taproot makers, regtest bitcoind)
+./ffi-docker-setup stop
+```
+Alternatively, you can set them up locally and toggle the ports in the [LiveTaprootSwapTests.swift](Tests/CoinswapTests/LiveTaprootSwapTests.swift)
 
-### iOS
-- iOS 13.0 or later
-- Architectures: arm64 (device), x86_64/arm64 (simulator)
-- Capabilities: Network access
-
-### macOS
-- macOS 10.15 or later
-- Architectures: x86_64, arm64 (Apple Silicon)
-
-### Bitcoin Setup
-- Bitcoin Core with RPC enabled
-- Synced, non-pruned node with `-txindex`
-- Tor daemon running for privacy
+While testing, you may encounter warnings like "ld: warning: object file (...) was built for newer 'macOS' version (X.X) than being linked (14.0)". This occurs because the library is built with a minimum deployment target of macOS 14.0 for broad compatibility, but the build environment may be running a newer macOS version. These warnings are harmless and do not affect the functionality or performance of the library.
 
 ## Error Handling
 
@@ -256,24 +240,17 @@ do {
 
 ## Cross-Compilation
 
-Build for iOS and macOS:
+Prefer the xcframework script, which handles targets and combines slices:
 
 ```bash
-cd ../ffi-commons
-
-# iOS Device (arm64)
-rustup target add aarch64-apple-ios
-cargo build --release --target aarch64-apple-ios
-
-# iOS Simulator (arm64 for M1+, x86_64 for Intel)
-rustup target add aarch64-apple-ios-sim x86_64-apple-ios
-cargo build --release --target aarch64-apple-ios-sim
-cargo build --release --target x86_64-apple-ios
-
-# macOS
-cargo build --release --target aarch64-apple-darwin  # Apple Silicon
-cargo build --release --target x86_64-apple-darwin   # Intel
+bash ./build-xcframework.sh
 ```
+
+It builds all Apple targets, then uses `lipo` to merge:
+- macOS arm64 + x86_64 -> a universal macOS static library
+- iOS simulator arm64 + x86_64 -> a universal simulator static library
+
+Those combined slices are packaged into `coinswap_ffi.xcframework` alongside the iOS device (arm64) slice.
 
 ## Support
 

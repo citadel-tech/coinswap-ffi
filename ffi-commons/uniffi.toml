@@ -4,4 +4,4 @@ cdylib_name = "coinswap_ffi"
 
 [bindings.swift]
 module_name = "Coinswap"
-cdylib_name = "coinswap_ffi"
+cdylib_name = "Coinswap_ffi"

@@ -1,0 +1,58 @@
+name: Publish Apple Slices
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build-xcframework:
+    name: Build and upload Swift XCFramework slices
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: coinswap-swift
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build xcframework
+        run: bash ./build-xcframework.sh
+
+      - name: Upload macOS slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: coinswap_ffi-macos
+          path: coinswap-swift/coinswap_ffi.xcframework/macos-arm64_x86_64
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload iOS device slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: coinswap_ffi-ios-device
+          path: coinswap-swift/coinswap_ffi.xcframework/ios-arm64
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload iOS simulator slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: coinswap_ffi-ios-simulator
+          path: coinswap-swift/coinswap_ffi.xcframework/ios-arm64_x86_64-simulator
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload full xcframework
+        uses: actions/upload-artifact@v4
+        with:
+          name: coinswap_ffi-xcframework
+          path: coinswap-swift/coinswap_ffi.xcframework
+          if-no-files-found: warn
+          retention-days: 14
