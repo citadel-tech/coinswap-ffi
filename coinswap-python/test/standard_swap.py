@@ -197,10 +197,13 @@ def main():
             if result:
                 print(f"\n✅ Coinswap completed successfully!")
                 print(f"\nSwap Report:")
+                outgoing_amount = getattr(result, "outgoing_amount", getattr(result, "target_amount", None))
+                fee_value = getattr(result, "fee_paid_or_earned", getattr(result, "total_fee", None))
+                total_fee_paid = abs(fee_value) if fee_value is not None else None
                 print(f"  Swap ID: {result.swap_id}")
                 print(f"  Duration: {result.swap_duration_seconds:.2f} seconds")
-                print(f"  Target Amount: {result.target_amount} sats")
-                print(f"  Total Fee: {result.total_fee} sats")
+                print(f"  Outgoing/Target Amount: {outgoing_amount} sats")
+                print(f"  Total Fee Paid: {total_fee_paid} sats")
                 print(f"  Maker Fees: {result.total_maker_fees} sats")
                 print(f"  Mining Fee: {result.mining_fee} sats")
                 print(f"  Fee Percentage: {result.fee_percentage:.4f}%")

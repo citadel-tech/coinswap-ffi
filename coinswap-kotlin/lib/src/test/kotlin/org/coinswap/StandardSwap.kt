@@ -209,12 +209,28 @@ class StandardSwap {
                 val swapReport = taker.doCoinswap(swapParams)
                 
                 if (swapReport != null) {
+                    val outgoingAmount = swapReport.javaClass.methods
+                        .firstOrNull { it.name == "getOutgoingAmount" }
+                        ?.invoke(swapReport)
+                        ?: swapReport.javaClass.methods
+                            .firstOrNull { it.name == "getTargetAmount" }
+                            ?.invoke(swapReport)
+                    val feeValue = swapReport.javaClass.methods
+                        .firstOrNull { it.name == "getFeePaidOrEarned" }
+                        ?.invoke(swapReport)
+                        ?: swapReport.javaClass.methods
+                            .firstOrNull { it.name == "getTotalFee" }
+                            ?.invoke(swapReport)
+                    val totalFeePaid = when (feeValue) {
+                        is Number -> kotlin.math.abs(feeValue.toLong())
+                        else -> feeValue
+                    }
                     println("\n✅ Coinswap completed successfully!")
                     println("\nSwap Report:")
                     println("  Swap ID: ${swapReport.swapId}")
                     println("  Duration: ${swapReport.swapDurationSeconds} seconds")
-                    println("  Target Amount: ${swapReport.targetAmount} sats")
-                    println("  Total Fee: ${swapReport.totalFee} sats")
+                    println("  Outgoing/Target Amount: ${outgoingAmount} sats")
+                    println("  Total Fee Paid: ${totalFeePaid} sats")
                     println("  Maker Fees: ${swapReport.totalMakerFees} sats")
                     println("  Mining Fee: ${swapReport.miningFee} sats")
                     println("  Fee Percentage: ${swapReport.feePercentage}%")

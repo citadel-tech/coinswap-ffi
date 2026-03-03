@@ -205,12 +205,15 @@ def main
       result = taker.do_coinswap(swap_params)
       
       if result
+        outgoing_amount = result.respond_to?(:outgoing_amount) ? result.outgoing_amount : result.target_amount
+        fee_value = result.respond_to?(:fee_paid_or_earned) ? result.fee_paid_or_earned : result.total_fee
+        total_fee_paid = fee_value.nil? ? nil : fee_value.abs
         puts "\n✅ Coinswap completed successfully!"
         puts "\nSwap Report:"
         puts "  Swap ID: #{result.swap_id}"
         puts "  Duration: #{result.swap_duration_seconds.round(2)} seconds"
-        puts "  Target Amount: #{result.target_amount} sats"
-        puts "  Total Fee: #{result.total_fee} sats"
+        puts "  Outgoing/Target Amount: #{outgoing_amount} sats"
+        puts "  Total Fee Paid: #{total_fee_paid} sats"
         puts "  Maker Fees: #{result.total_maker_fees} sats"
         puts "  Mining Fee: #{result.mining_fee} sats"
         puts "  Fee Percentage: #{result.fee_percentage.round(4)}%"

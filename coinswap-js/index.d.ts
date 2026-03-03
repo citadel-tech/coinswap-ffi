@@ -222,24 +222,42 @@ export interface SwapParams {
 export interface SwapReport {
   /** Unique swap ID */
   swapId: string
+  /** Role of report creator (Taker/Maker) */
+  role: string
+  /** Swap status (Success/Failed/RecoveryHashlock/RecoveryTimelock) */
+  status: string
   /** Duration of the swap in seconds */
   swapDurationSeconds: number
-  /** Target amount for the swap */
-  targetAmount: number
-  /** Total input amount */
-  totalInputAmount: number
-  /** Total output amount */
-  totalOutputAmount: number
+  /** Duration of recovery phase in seconds */
+  recoveryDurationSeconds: number
+  /** Unix start timestamp */
+  startTimestamp: number
+  /** Unix end timestamp */
+  endTimestamp: number
+  /** Bitcoin network */
+  network: string
+  /** Error message if any */
+  errorMessage?: string
+  /** Incoming amount in sats */
+  incomingAmount: number
+  /** Outgoing amount in sats */
+  outgoingAmount: number
+  /** Fee paid (negative) or earned (positive) */
+  feePaidOrEarned: number
+  /** Incoming contract txid */
+  incomingContractTxid?: string
+  /** Outgoing contract txid */
+  outgoingContractTxid?: string
+  /** Funding transaction IDs organized by hops */
+  fundingTxids: Array<Array<string>>
+  /** Recovery transaction IDs */
+  recoveryTxids?: Array<string>
+  /** Contract timelock in blocks */
+  timelock: number
   /** Number of makers involved */
-  makersCount: number
+  makersCount?: number
   /** List of maker addresses used */
   makerAddresses: Array<string>
-  /** Total number of funding transactions */
-  totalFundingTxs: number
-  /** Funding transaction IDs organized by hop */
-  fundingTxidsByHop: Array<Array<string>>
-  /** Total fees paid */
-  totalFee: number
   /** Total maker fees */
   totalMakerFees: number
   /** Mining fees */
