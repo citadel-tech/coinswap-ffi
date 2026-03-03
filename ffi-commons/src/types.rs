@@ -573,24 +573,42 @@ impl From<csMakerFeeInfo> for MakerFeeInfo {
 pub struct SwapReport {
     /// Unique swap ID
     pub swap_id: String,
+    /// Role of report creator (Taker/Maker)
+    pub role: String,
+    /// Swap status (Success/Failed/RecoveryHashlock/RecoveryTimelock)
+    pub status: String,
     /// Duration of the swap in seconds
     pub swap_duration_seconds: f64,
-    /// Target amount for the swap
-    pub target_amount: i64,
-    /// Total input amount
-    pub total_input_amount: i64,
-    /// Total output amount
-    pub total_output_amount: i64,
+    /// Duration of recovery phase in seconds
+    pub recovery_duration_seconds: f64,
+    /// Unix start timestamp
+    pub start_timestamp: i64,
+    /// Unix end timestamp
+    pub end_timestamp: i64,
+    /// Bitcoin network
+    pub network: String,
+    /// Error message if any
+    pub error_message: Option<String>,
+    /// Incoming amount in sats
+    pub incoming_amount: i64,
+    /// Outgoing amount in sats
+    pub outgoing_amount: i64,
+    /// Fee paid (negative) or earned (positive)
+    pub fee_paid_or_earned: i64,
+    /// Incoming contract txid
+    pub incoming_contract_txid: Option<String>,
+    /// Outgoing contract txid
+    pub outgoing_contract_txid: Option<String>,
+    /// Funding transaction IDs organized by hops
+    pub funding_txids: Vec<Vec<String>>,
+    /// Recovery transaction IDs
+    pub recovery_txids: Option<Vec<String>>,
+    /// Contract timelock in blocks
+    pub timelock: u16,
     /// Number of makers involved
-    pub makers_count: u32,
+    pub makers_count: Option<u32>,
     /// List of maker addresses used
     pub maker_addresses: Vec<String>,
-    /// Total number of funding transactions
-    pub total_funding_txs: i64,
-    /// Funding transaction IDs organized by hops
-    pub funding_txids_by_hop: Vec<Vec<String>>,
-    /// Total fees paid
-    pub total_fee: i64,
     /// Total maker fees
     pub total_maker_fees: i64,
     /// Mining fees
@@ -621,15 +639,24 @@ impl From<csSwapReport> for SwapReport {
     fn from(report: csSwapReport) -> Self {
         Self {
             swap_id: report.swap_id,
+            role: report.role.to_string(),
+            status: report.status.to_string(),
             swap_duration_seconds: report.swap_duration_seconds,
-            target_amount: report.target_amount as i64,
-            total_input_amount: report.total_input_amount as i64,
-            total_output_amount: report.total_output_amount as i64,
-            makers_count: report.makers_count as u32,
+            recovery_duration_seconds: report.recovery_duration_seconds,
+            start_timestamp: report.start_timestamp as i64,
+            end_timestamp: report.end_timestamp as i64,
+            network: report.network.to_string(),
+            error_message: report.error_message,
+            incoming_amount: report.incoming_amount as i64,
+            outgoing_amount: report.outgoing_amount as i64,
+            fee_paid_or_earned: report.fee_paid_or_earned,
+            incoming_contract_txid: report.incoming_contract_txid,
+            outgoing_contract_txid: report.outgoing_contract_txid,
+            funding_txids: report.funding_txids,
+            recovery_txids: report.recovery_txids,
+            timelock: report.timelock,
+            makers_count: report.makers_count.map(|count| count as u32),
             maker_addresses: report.maker_addresses,
-            total_funding_txs: report.total_funding_txs as i64,
-            funding_txids_by_hop: report.funding_txids_by_hop,
-            total_fee: report.total_fee as i64,
             total_maker_fees: report.total_maker_fees as i64,
             mining_fee: report.mining_fee as i64,
             fee_percentage: report.fee_percentage,
