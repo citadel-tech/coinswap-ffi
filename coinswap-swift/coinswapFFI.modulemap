@@ -1,5 +1,5 @@
-module coinswapFFI {
-    header "coinswapFFI.h"
+module CoinswapFFI {
+    header "CoinswapFFI.h"
     export *
     use "Darwin"
     use "_Builtin_stdbool"
