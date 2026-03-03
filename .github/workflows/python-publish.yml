@@ -7,8 +7,9 @@ name: Publish coinswap to PyPI
 
 on: 
   push:
-    branches: [python_package]
-  # [workflow_dispatch] # commented for automatic
+    branches:
+      - '**'
+  workflow_dispatch:
 
 permissions:
   contents: write
