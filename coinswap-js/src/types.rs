@@ -397,49 +397,49 @@ impl From<csMakerAddress> for MakerAddress {
 #[napi(object)]
 #[derive(Debug, Clone)]
 pub struct MakerState {
-    /// State type: "Good", "Unresponsive", or "Bad"
-    pub state_type: String,
-    /// Number of retries (only for Unresponsive state)
-    pub retries: Option<u8>,
+  /// State type: "Good", "Unresponsive", or "Bad"
+  pub state_type: String,
+  /// Number of retries (only for Unresponsive state)
+  pub retries: Option<u8>,
 }
 
 impl From<csMakerState> for MakerState {
-    fn from(state: csMakerState) -> Self {
-        match state {
-            csMakerState::Good => MakerState {
-                state_type: "Good".to_string(),
-                retries: None,
-            },
-            csMakerState::Unresponsive { retries } => MakerState {
-                state_type: "Unresponsive".to_string(),
-                retries: Some(retries),
-            },
-            csMakerState::Bad => MakerState {
-                state_type: "Bad".to_string(),
-                retries: None,
-            },
-        }
+  fn from(state: csMakerState) -> Self {
+    match state {
+      csMakerState::Good => MakerState {
+        state_type: "Good".to_string(),
+        retries: None,
+      },
+      csMakerState::Unresponsive { retries } => MakerState {
+        state_type: "Unresponsive".to_string(),
+        retries: Some(retries),
+      },
+      csMakerState::Bad => MakerState {
+        state_type: "Bad".to_string(),
+        retries: None,
+      },
     }
+  }
 }
 
 #[napi(object)]
 #[derive(Debug, Clone)]
 pub struct MakerProtocol {
-    /// Protocol type: "Legacy" or "Taproot"
-    pub protocol_type: String,
+  /// Protocol type: "Legacy" or "Taproot"
+  pub protocol_type: String,
 }
 
 impl From<csMakerProtocol> for MakerProtocol {
-    fn from(protocol: csMakerProtocol) -> Self {
-        match protocol {
-            csMakerProtocol::Legacy => MakerProtocol {
-                protocol_type: "Legacy".to_string(),
-            },
-            csMakerProtocol::Taproot => MakerProtocol {
-                protocol_type: "Taproot".to_string(),
-            },
-        }
+  fn from(protocol: csMakerProtocol) -> Self {
+    match protocol {
+      csMakerProtocol::Legacy => MakerProtocol {
+        protocol_type: "Legacy".to_string(),
+      },
+      csMakerProtocol::Taproot => MakerProtocol {
+        protocol_type: "Taproot".to_string(),
+      },
     }
+  }
 }
 
 #[napi(object)]

@@ -142,17 +142,12 @@ class TaprootSwap {
             
             // Sync offerbook
             println("\n� Syncing offerbook...")
-            println("Checking if offerbook is syncing: ${taker.isOfferbookSyncing()}")
-            
-            taker.runOfferSyncNow()
-            
-            // Wait for synchronization to complete
             println("Waiting for offerbook synchronization to complete...")
             try {
-                println("Offerbook sync in progress...")
-                Thread.sleep(30000)
+                taker.syncOfferbookAndWait()
+                println("Offerbook synchronized")
             } catch (e: Exception) {
-                println("Error checking offerbook sync status: ${e.message}")
+                println("Error during offerbook sync: ${e.message}")
             }
             
             

@@ -20,14 +20,8 @@ final class LiveTaprootSwapTests: XCTestCase {
 
         try taker.setupLogging(dataDir: config.dataDir, logLevel: "Info")
 
-        try taker.runOfferSyncNow()
-        Thread.sleep(forTimeInterval: 30.0)
-        print("Offerbook sync status: \(try taker.isOfferbookSyncing())")
-        while !(try taker.isOfferbookSyncing()) {
-            print("Offerbook not syncing yet, triggering sync...")
-            // try taker.runOfferSyncNow()
-            Thread.sleep(forTimeInterval: 5.0)
-        }
+        try taker.syncOfferbookAndWait()
+        print("Offerbook synchronized")
         
         let offers = try taker.fetchOffers()
         print("Fetched offers: \(offers)")

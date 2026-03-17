@@ -103,7 +103,7 @@ impl TaprootTaker {
   #[napi]
   pub fn setup_logging(data_dir: Option<String>, level: String) -> Result<()> {
     let path = data_dir.map(PathBuf::from);
-    
+
     let log_level = match level.to_lowercase().as_str() {
       "trace" => log::LevelFilter::Trace,
       "debug" => log::LevelFilter::Debug,
@@ -113,11 +113,11 @@ impl TaprootTaker {
       "off" => log::LevelFilter::Off,
       _ => log::LevelFilter::Info,
     };
-    
+
     coinswap::utill::setup_taker_logger(log_level, false, path);
     Ok(())
   }
-  
+
   #[napi]
   pub fn init_native_logging() {
     // For full backtrace panics
@@ -168,20 +168,15 @@ impl TaprootTaker {
     Ok(swap_report.map(SwapReport::from))
   }
 
-
   #[napi]
-  pub fn run_offer_sync_now(&self) -> Result<()> {
-    let taker = self.inner.lock().map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    Ok(taker.run_offer_sync_now())
-  }
-  
-  #[napi]
-  pub fn is_offerbook_syncing(&self) -> Result<bool> {
+  pub fn sync_offerbook_and_wait(&self) -> Result<()> {
     let taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    Ok(taker.is_offerbook_syncing())
+    taker
+      .sync_offerbook_and_wait()
+      .map_err(|e| napi::Error::from_reason(format!("Offerbook sync error: {:?}", e)))
   }
 
   #[napi]
@@ -293,12 +288,11 @@ impl TaprootTaker {
 
   #[napi]
   pub fn list_all_utxo_spend_info(&self) -> Result<Vec<(ListUnspentResultEntry, UtxoSpendInfo)>> {
-    let entries = self
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
-      .get_wallet()
-      .list_all_utxo_spend_info();
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let entries = taker.get_wallet().list_all_utxo_spend_info();
     Ok(
       entries
         .into_iter()
@@ -306,16 +300,19 @@ impl TaprootTaker {
           let utxo = ListUnspentResultEntry {
             txid: Txid::from(cs_utxo.txid),
             vout: cs_utxo.vout,
-            address: cs_utxo.address.map(|a| a.assume_checked().to_string()),
-            label: cs_utxo.label,
-            script_pub_key: ScriptBuf::from(cs_utxo.script_pub_key),
+            address: cs_utxo
+              .address
+              .as_ref()
+              .map(|a| a.clone().assume_checked().to_string()),
+            label: cs_utxo.label.clone(),
+            script_pub_key: ScriptBuf::from(cs_utxo.script_pub_key.clone()),
             amount: Amount::from(cs_utxo.amount),
             confirmations: cs_utxo.confirmations,
-            redeem_script: cs_utxo.redeem_script.map(ScriptBuf::from),
-            witness_script: cs_utxo.witness_script.map(ScriptBuf::from),
+            redeem_script: cs_utxo.redeem_script.clone().map(ScriptBuf::from),
+            witness_script: cs_utxo.witness_script.clone().map(ScriptBuf::from),
             spendable: cs_utxo.spendable,
             solvable: cs_utxo.solvable,
-            desc: cs_utxo.descriptor,
+            desc: cs_utxo.descriptor.clone(),
             safe: cs_utxo.safe,
           };
           let spend_info = match cs_info {
@@ -325,9 +322,9 @@ impl TaprootTaker {
               address_type: _,
             } => UtxoSpendInfo {
               spend_type: "SeedCoin".to_string(),
-              path: Some(path),
+              path: Some(path.to_string()),
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(input_value)),
+              input_value: Some(Amount::from(*input_value)),
               index: None,
             },
             csUtxoSpendInfo::IncomingSwapCoin {
@@ -335,7 +332,7 @@ impl TaprootTaker {
             } => UtxoSpendInfo {
               spend_type: "IncomingSwapCoin".to_string(),
               path: None,
-              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript.clone())),
               input_value: None,
               index: None,
             },
@@ -344,7 +341,7 @@ impl TaprootTaker {
             } => UtxoSpendInfo {
               spend_type: "OutgoingSwapCoin".to_string(),
               path: None,
-              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript)),
+              multisig_redeemscript: Some(ScriptBuf::from(multisig_redeemscript.clone())),
               input_value: None,
               index: None,
             },
@@ -354,8 +351,8 @@ impl TaprootTaker {
             } => UtxoSpendInfo {
               spend_type: "TimelockContract".to_string(),
               path: None,
-              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
-              input_value: Some(Amount::from(input_value)),
+              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript.clone())),
+              input_value: Some(Amount::from(*input_value)),
               index: None,
             },
             csUtxoSpendInfo::HashlockContract {
@@ -364,16 +361,16 @@ impl TaprootTaker {
             } => UtxoSpendInfo {
               spend_type: "HashlockContract".to_string(),
               path: None,
-              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript)),
-              input_value: Some(Amount::from(input_value)),
+              multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript.clone())),
+              input_value: Some(Amount::from(*input_value)),
               index: None,
             },
             csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
               spend_type: "FidelityBondCoin".to_string(),
               path: None,
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(input_value)),
-              index: Some(index),
+              input_value: Some(Amount::from(*input_value)),
+              index: Some(*index),
             },
             csUtxoSpendInfo::SweptCoin {
               path,
@@ -381,9 +378,9 @@ impl TaprootTaker {
               address_type: _,
             } => UtxoSpendInfo {
               spend_type: "SweptCoin".to_string(),
-              path: Some(path),
+              path: Some(path.to_string()),
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(input_value)),
+              input_value: Some(Amount::from(*input_value)),
               index: None,
             },
           };
