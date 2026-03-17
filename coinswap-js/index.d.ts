@@ -7,8 +7,7 @@ export declare class Taker {
   /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates
   doCoinswap(swapParams: SwapParams): SwapReport | null
-  isOfferbookSyncing(): boolean
-  runOfferSyncNow(): void
+  syncOfferbookAndWait(): void
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
   getNextExternalAddress(addressType: AddressType): Address
@@ -37,8 +36,7 @@ export declare class TaprootTaker {
   static fetchMempoolFees(): FeeRates
   /** Execute a Taproot coinswap */
   doCoinswap(swapParams: TaprootSwapParams): SwapReport | null
-  runOfferSyncNow(): void
-  isOfferbookSyncing(): boolean
+  syncOfferbookAndWait(): void
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
   getNextExternalAddress(addressType: AddressType): Address

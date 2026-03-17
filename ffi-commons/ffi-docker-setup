@@ -161,7 +161,7 @@ services:
     image: coinswap/${BITCOIN_IMAGE_NAME}:${bitcoin_tag}
     container_name: coinswap-bitcoind
     user: "0:0"
-    command: bitcoind -datadir=/home/bitcoin/.bitcoin -server=1 -rpcuser=user -rpcpassword=password -rpcallowip=0.0.0.0/0 -txindex=1 -blockfilterindex=1 -regtest=1 -fallbackfee=0.00001000 -rpcbind=0.0.0.0 -rpcport=${BITCOIN_RPC_PORT} -zmqpubrawblock=tcp://0.0.0.0:${BITCOIN_ZMQ_PORT} -zmqpubrawtx=tcp://0.0.0.0:${BITCOIN_ZMQ_PORT}
+    command: bitcoind -datadir=/home/bitcoin/.bitcoin -server=1 -rest=1 -rpcuser=user -rpcpassword=password -rpcallowip=0.0.0.0/0 -txindex=1 -blockfilterindex=1 -regtest=1 -fallbackfee=0.00001000 -rpcbind=0.0.0.0 -rpcport=${BITCOIN_RPC_PORT} -zmqpubrawblock=tcp://0.0.0.0:${BITCOIN_ZMQ_PORT} -zmqpubrawtx=tcp://0.0.0.0:${BITCOIN_ZMQ_PORT}
     ports:
       - "${BITCOIN_RPC_PORT}:${BITCOIN_RPC_PORT}"
       - "${BITCOIN_ZMQ_PORT}:${BITCOIN_ZMQ_PORT}"

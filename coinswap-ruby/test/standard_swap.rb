@@ -103,20 +103,12 @@ def main
     puts "Wallet name: #{wallet_name_check}"
 
     puts "\n📡 Syncing offerbook..."
-    puts "Checking if offerbook is syncing: #{taker.is_offerbook_syncing}"
-    
-    # Trigger immediate sync
-    puts "Triggering immediate offerbook sync..."
-    taker.run_offer_sync_now
-    
-    # Wait for synchronization to complete
     puts "Waiting for offerbook synchronization to complete..."
     begin
-      taker.is_offerbook_syncing
-      puts "Offerbook sync in progress..."
-      sleep(15)
+      taker.sync_offerbook_and_wait
+      puts "Offerbook synchronized"
     rescue => e
-      puts "Error checking offerbook sync status: #{e.message}"
+      puts "Error during offerbook sync: #{e.message}"
     end
     
     puts "\n📡 Attempting to fetch offers from makers..."

@@ -89,18 +89,7 @@ fn test_taker_complete_flow() {
 
     let (taker, bitcoind) = setup_bitcoind_and_taker("test-taker");
 
-    println!(
-        "Waiting for offerbook synchronization to complete…{:?}",
-        taker.is_offerbook_syncing()
-    );
-    for _ in 1..=2 {
-        println!("sync now {:?}", taker.run_offer_sync_now());
-        println!(
-            "Waiting for offerbook synchronization to complete…{:?}",
-            taker.is_offerbook_syncing()
-        );
-        std::thread::sleep(std::time::Duration::from_secs(15));
-    }
+    taker.sync_offerbook_and_wait().unwrap();
 
     // Test get_name
     println!("Testing get_name...");
@@ -179,7 +168,7 @@ fn test_taker_complete_flow() {
     let funding_address = funding_address_str
         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
         .unwrap()
-        .require_network(bitcoin::Network::Regtest)
+        .require_network(bitcoin::Network::Signet)
         .unwrap();
 
     let fund_amount = Amount::from_sat(80000);
@@ -229,23 +218,13 @@ fn test_taker_complete_flow() {
         maker_count: 2,
         manually_selected_outpoints: None,
     };
-    let swap_report = taker.do_coinswap(swap_params);
-
-    match swap_report {
-        Ok(Some(report)) => {
-            println!("Swap completed successfully!");
-            println!("Swap Report: {:?}", report);
-            println!("✓ 'do_coinswap' test passed");
-        }
-        Ok(None) => {
-            println!("Swap completed but no report returned");
-            println!("✓ 'do_coinswap' test passed (no report)");
-        }
-        Err(e) => {
-            println!("Swap failed with error: {:?}", e);
-            println!("✓ 'do_coinswap' test passed (error handling verified)");
-        }
-    }
+    let swap_report = taker
+        .do_coinswap(swap_params)
+        .expect("'do_coinswap' should succeed");
+    let report = swap_report.expect("'do_coinswap' should return a swap report");
+    println!("Swap completed successfully!");
+    println!("Swap Report: {:?}", report);
+    println!("✓ 'do_coinswap' test passed");
 
     taker.sync_and_save().unwrap();
 

@@ -119,14 +119,9 @@ def main():
         print(f"✓ 'get_wallet_name' test passed: {wallet_name_check}")
 
         print("\n📡 Syncing offerbook...")
-        print(f"Checking if offerbook is syncing: {taker.is_offerbook_syncing()}")
-        
-        # Trigger immediate sync and wait
-        for i in range(1, 3):
-            print(f"\nSync attempt {i}/2...")
-            taker.run_offer_sync_now()
-            print(f"Offerbook syncing status: {taker.is_offerbook_syncing()}")
-            time.sleep(15)
+        print("Waiting for offerbook synchronization to complete...")
+        taker.sync_offerbook_and_wait()
+        print("Offerbook synchronized")
 
         # Test address generation (external and internal)
         print("\nTesting address generation...")
@@ -220,38 +215,28 @@ def main():
         print(f"  Maker Count: {swap_params.maker_count}")
         print(f"  TX Count: {swap_params.tx_count}")
         print(f"  Required Confirms: {swap_params.required_confirms}")
-        
-        try:
-            print("\n🔄 Executing taproot coinswap (this may take a while)...")
-            swap_report = taker.do_coinswap(swap_params=swap_params)
-            
-            if swap_report:
-                print("\n✅ Swap completed successfully!")
-                print(f"\nSwap Report:")
-                outgoing_amount = getattr(swap_report, "outgoing_amount", getattr(swap_report, "target_amount", None))
-                fee_value = getattr(swap_report, "fee_paid_or_earned", getattr(swap_report, "total_fee", None))
-                total_fee_paid = abs(fee_value) if fee_value is not None else None
-                print(f"  Swap ID: {swap_report.swap_id}")
-                print(f"  Duration: {swap_report.swap_duration_seconds:.2f} seconds")
-                print(f"  Outgoing/Target Amount: {outgoing_amount} sats")
-                print(f"  Total Fee Paid: {total_fee_paid} sats")
-                print(f"  Maker Fees: {swap_report.total_maker_fees} sats")
-                print(f"  Mining Fee: {swap_report.mining_fee} sats")
-                print(f"  Fee Percentage: {swap_report.fee_percentage:.4f}%")
-                print(f"  Number of Makers Used: {swap_report.makers_count}")
-                print(f"  Maker Addresses:")
-                for i, addr in enumerate(swap_report.maker_addresses, 1):
-                    print(f"    {i}. {addr}")
-                print("✓ 'do_coinswap' test passed")
-            else:
-                print("\n⚠️  Swap completed but no report returned")
-                print("✓ 'do_coinswap' test passed (no report)")
-                
-        except Exception as e:
-            print(f"\n❌ Swap failed with error: {e}")
-            print("✓ 'do_coinswap' test passed (error handling verified)")
-            import traceback
-            traceback.print_exc()
+
+        print("\n🔄 Executing taproot coinswap (this may take a while)...")
+        swap_report = taker.do_coinswap(swap_params=swap_params)
+        assert swap_report is not None, "Taproot coinswap should return a swap report"
+
+        print("\n✅ Swap completed successfully!")
+        print(f"\nSwap Report:")
+        outgoing_amount = getattr(swap_report, "outgoing_amount", getattr(swap_report, "target_amount", None))
+        fee_value = getattr(swap_report, "fee_paid_or_earned", getattr(swap_report, "total_fee", None))
+        total_fee_paid = abs(fee_value) if fee_value is not None else None
+        print(f"  Swap ID: {swap_report.swap_id}")
+        print(f"  Duration: {swap_report.swap_duration_seconds:.2f} seconds")
+        print(f"  Outgoing/Target Amount: {outgoing_amount} sats")
+        print(f"  Total Fee Paid: {total_fee_paid} sats")
+        print(f"  Maker Fees: {swap_report.total_maker_fees} sats")
+        print(f"  Mining Fee: {swap_report.mining_fee} sats")
+        print(f"  Fee Percentage: {swap_report.fee_percentage:.4f}%")
+        print(f"  Number of Makers Used: {swap_report.makers_count}")
+        print(f"  Maker Addresses:")
+        for i, addr in enumerate(swap_report.maker_addresses, 1):
+            print(f"    {i}. {addr}")
+        print("✓ 'do_coinswap' test passed")
 
         # Final balance check
         print("\n📊 Final balances after swap...")
