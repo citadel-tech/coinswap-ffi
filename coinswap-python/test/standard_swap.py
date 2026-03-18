@@ -108,7 +108,6 @@ def main():
             print(f"Error during offerbook sync: {e}")
         
         print("\n📡 Attempting to fetch offers from makers...")
-        print("   Note: In regtest mode, makers are auto-discovered during coinswap")
         try:
             offerbook = taker.fetch_offers()
             print(f"✓ Successfully fetched offers")
@@ -143,8 +142,7 @@ def main():
                 print("\n⚠️  No makers found in offerbook")
                 
         except Exception as e:
-            print(f"⚠️  Could not fetch offers (expected in regtest): {e}")
-            print("   Makers running on localhost will be auto-discovered during coinswap")
+            print(f"⚠️  Could not fetch offers: {e}")
 
         print("\nSyncing wallet...")
         taker.sync_and_save()

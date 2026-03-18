@@ -47,11 +47,10 @@ final class LiveStandardSwapTests: XCTestCase {
                 XCTAssertEqual(Int64(report.makersCount), 2)
 
                 // Transaction details
-                XCTAssertEqual(report.totalFundingTxs, 3)
-                XCTAssertEqual(report.fundingTxidsByHop.count, 3)
+                XCTAssertEqual(report.fundingTxids.count, 3)
 
                 // Fee information
-                assertApprox(report.totalFee, 3889)
+                assertApprox(abs(report.feePaidOrEarned), 3889)
                 XCTAssertEqual(report.totalMakerFees, 2696)
                 assertApprox(report.miningFee, 1193)
 

@@ -168,7 +168,7 @@ fn test_taker_complete_flow() {
     let funding_address = funding_address_str
         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
         .unwrap()
-        .require_network(bitcoin::Network::Signet)
+        .require_network(bitcoin::Network::Regtest)
         .unwrap();
 
     let fund_amount = Amount::from_sat(80000);
