@@ -47,13 +47,13 @@ final class LiveTaprootSwapTests: XCTestCase {
             let report = try taker.doCoinswap(swapParams: params)
             if let report = report {
                 // Swap parameters
-                XCTAssertEqual(report.targetAmount, 500000)
-                XCTAssertEqual(report.totalInputAmount, 100000000)
-                assertApprox(report.totalOutputAmount, 99995995)
-                XCTAssertEqual(Int64(report.makersCount), 2)
+                XCTAssertEqual(report.outgoingAmount, 500000)
+                XCTAssertEqual(report.inputUtxos.reduce(Int64(0), +), 100000000)
+                assertApprox(Int64(report.incomingAmount), 99995995)
+                XCTAssertEqual(Int64(report.makersCount ?? 0), 2)
 
                 // Fee information
-                assertApprox(report.totalFee, 4005)
+                assertApprox(abs(report.feePaidOrEarned), 4005)
                 XCTAssertEqual(report.totalMakerFees, 2696)
                 assertApprox(report.miningFee, 1309)
 
