@@ -56,11 +56,6 @@ jobs:
             libssl-dev \
             pkg-config
 
-      - name: Build FFI bindings
-        working-directory: ./coinswap-python
-        run: |
-          bash ./build-scripts/development/build-dev-linux-x86_64.sh
-
       - name: Check Docker
         run: |
           docker --version
@@ -95,6 +90,11 @@ jobs:
           
           echo -e "\n=== Maker4 Logs ==="
           docker logs coinswap-makerd4 --tail 30 || true
+
+      - name: Build FFI bindings
+        working-directory: ./coinswap-python
+        run: |
+          bash ./build-scripts/development/build-dev-linux-x86_64.sh
 
       - name: Run Python test (standard_swap.py)
         working-directory: ./coinswap-python
