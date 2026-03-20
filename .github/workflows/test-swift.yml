@@ -47,9 +47,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: "Build Swift package"
-        run: bash ./build-xcframework-ci.sh
-
       - name: Setup Docker on macOS
         uses: douglascamata/setup-docker-macos-action@v1.1.0
         with:
@@ -109,8 +106,14 @@ jobs:
             exit 1
           fi
 
-      - name: "Run Swift tests"
-        run: sudo -E swift test --filter Live
+      - name: "Build Swift package"
+        run: bash ./build-xcframework-ci.sh
+
+      - name: "Run Swift live standard swap test"
+        run: sudo -E swift test --filter LiveStandardSwapTests/testLiveTakerFlow
+
+      - name: "Run Swift live taproot swap test"
+        run: sudo -E swift test --filter LiveTaprootSwapTests/testLiveTaprootTakerFlow
 
       - name: Cleanup Docker environment
         if: always()
