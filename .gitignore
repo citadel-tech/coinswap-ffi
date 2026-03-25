@@ -20,6 +20,10 @@ coinswap-kotlin/src/main/kotlin/uniffi/
 coinswap-kotlin/src/main/resources/
 coinswap-kotlin/local.properties
 coinswap-swift/libcoinswap_ffi.so
+coinswap-swift/Coinswap.swift
+coinswap-swift/coinswap.swift
+coinswap-swift/CoinswapFFI.modulemap
+coinswap-swift/coinswapFFI.modulemap
 coinswap-ruby/libcoinswap_ffi.so
 coinswap-python/uniffi-bindgen
 coinswap-kotlin/uniffi-bindgen
