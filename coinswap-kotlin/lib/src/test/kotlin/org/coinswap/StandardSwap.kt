@@ -26,9 +26,13 @@ class StandardSwap {
     @Test
     fun `test SwapParams creation`() {
         val params = SwapParams(
+            protocol = "Legacy",
             sendAmount = 100000u,
             makerCount = 2u,
-            manuallySelectedOutpoints = null
+            txCount = null,
+            requiredConfirms = null,
+            manuallySelectedOutpoints = null,
+            preferredMakers = null,
         )
         
         assertNotNull(params)
@@ -201,7 +205,8 @@ class StandardSwap {
             
             try {
                 println("\n🔄 Executing coinswap (this may take a while)...")
-                val swapReport = taker.doCoinswap(swapParams)
+                    val swapId = taker.prepareCoinswap(swapParams)
+                    val swapReport = taker.startCoinswap(swapId)
                 
                 if (swapReport != null) {
                     val outgoingAmount = swapReport.javaClass.methods
