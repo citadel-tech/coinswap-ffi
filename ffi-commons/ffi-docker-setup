@@ -4,6 +4,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COINSWAP_REPO="https://github.com/citadel-tech/coinswap.git"
+COINSWAP_REV="90c9a02c3ecd4464b59140119a94c5ad867d184a"
 COINSWAP_DIR="$SCRIPT_DIR/.coinswap-docker-stack"
 IMAGE_NAME="coinswap"
 BITCOIN_IMAGE_NAME="bitcoin-mutinynet"
@@ -64,10 +65,17 @@ check_docker() {
 setup_coinswap_repo() {
     if [ ! -d "$COINSWAP_DIR" ]; then
         print_info "Cloning coinswap repository for Docker images..."
-        git clone --depth 1 "$COINSWAP_REPO" "$COINSWAP_DIR"
+        git clone "$COINSWAP_REPO" "$COINSWAP_DIR"
     else
         print_info "Coinswap repository already exists at $COINSWAP_DIR"
     fi
+
+    print_info "Checking out pinned coinswap revision: $COINSWAP_REV"
+    (
+        cd "$COINSWAP_DIR"
+        git fetch --depth 1 origin "$COINSWAP_REV"
+        git checkout --detach "$COINSWAP_REV"
+    )
 }
 
 generate_torrc() {
