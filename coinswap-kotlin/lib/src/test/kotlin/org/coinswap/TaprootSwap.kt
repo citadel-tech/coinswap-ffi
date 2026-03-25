@@ -24,19 +24,21 @@ class TaprootSwap {
     }
     
     @Test
-    fun `test TaprootSwapParams creation`() {
-        val params = TaprootSwapParams(
+    fun `test Taproot SwapParams creation`() {
+        val params = SwapParams(
+            protocol = "Taproot",
             sendAmount = 100000u,
             makerCount = 2u,
             txCount = 3u,
             requiredConfirms = 1u,
             manuallySelectedOutpoints = null,
+            preferredMakers = null,
         )
         
         assertNotNull(params)
         assertEquals(100000u, params.sendAmount)
         assertEquals(2u, params.makerCount)
-        println("✅ TaprootSwapParams created: sendAmount=${params.sendAmount}, makerCount=${params.makerCount}")
+        println("✅ Taproot SwapParams created: sendAmount=${params.sendAmount}, makerCount=${params.makerCount}")
     }
     
     @Test
@@ -70,7 +72,7 @@ class TaprootSwap {
         
         try {
             // Initialize Taker
-            val taker = TaprootTaker.init(
+            val taker = Taker.init(
                 dataDir = tempDir.toString(),
                 walletFileName = "test_wallet",
                 rpcConfig = rpcConfig,
@@ -192,20 +194,23 @@ class TaprootSwap {
             
             // Perform a coinswap
             println("\n� Initiating coinswap...")
-            val TaprootSwapParams = TaprootSwapParams(
+            val taprootSwapParams = SwapParams(
+                protocol = "Taproot",
                 sendAmount = 500000u,  // 500,000 sats (same as Python test)
                 makerCount = 2u,
                 txCount = 3u,
                 requiredConfirms = 1u,
                 manuallySelectedOutpoints = null,
+                preferredMakers = null,
             )
             println("Swap Parameters:")
-            println("  Send Amount: ${TaprootSwapParams.sendAmount} sats")
-            println("  Maker Count: ${TaprootSwapParams.makerCount}")
+            println("  Send Amount: ${taprootSwapParams.sendAmount} sats")
+            println("  Maker Count: ${taprootSwapParams.makerCount}")
             
             try {
                 println("\n🔄 Executing coinswap (this may take a while)...")
-                val swapReport = taker.doCoinswap(TaprootSwapParams)
+                val swapId = taker.prepareCoinswap(taprootSwapParams)
+                val swapReport = taker.startCoinswap(swapId)
                 
                 if (swapReport != null) {
                     val outgoingAmount = swapReport.javaClass.methods
