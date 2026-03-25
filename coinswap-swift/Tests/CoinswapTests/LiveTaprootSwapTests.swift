@@ -8,7 +8,7 @@ final class LiveTaprootSwapTests: XCTestCase {
         try cleanupCoinswapData(walletName: "swift_taproot_wallet")
         let config = try LiveTestConfig(walletNameOverride: "swift_taproot_wallet")
 
-        let taker = try TaprootTaker.`init`(
+        let taker = try Taker.`init`(
             dataDir: config.dataDir,
             walletFileName: config.walletName,
             rpcConfig: config.rpcConfig,
@@ -37,14 +37,17 @@ final class LiveTaprootSwapTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(updatedBalances.spendable, 0)
 
         if config.performSwap {
-            let params = TaprootSwapParams(
+            let params = SwapParams(
+                protocol: "Taproot",
                 sendAmount: config.swapAmount,
                 makerCount: 2,
                 txCount: nil,
                 requiredConfirms: nil,
-                manuallySelectedOutpoints: nil
+                manuallySelectedOutpoints: nil,
+                preferredMakers: nil
             )
-            let report = try taker.doCoinswap(swapParams: params)
+            let swapId = try taker.prepareCoinswap(swapParams: params)
+            let report = try taker.startCoinswap(swapId: swapId)
             if let report = report {
                 // Swap parameters
                 XCTAssertEqual(report.outgoingAmount, 500000)

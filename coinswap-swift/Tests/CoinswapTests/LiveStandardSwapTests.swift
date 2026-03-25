@@ -37,8 +37,17 @@ final class LiveStandardSwapTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(updatedBalances.spendable, 0)
 
         if config.performSwap {
-            let params = SwapParams(sendAmount: config.swapAmount, makerCount: 2, manuallySelectedOutpoints: nil)
-            let report = try taker.doCoinswap(swapParams: params)
+            let params = SwapParams(
+                protocol: "Legacy",
+                sendAmount: config.swapAmount,
+                makerCount: 2,
+                txCount: nil,
+                requiredConfirms: nil,
+                manuallySelectedOutpoints: nil,
+                preferredMakers: nil
+            )
+            let swapId = try taker.prepareCoinswap(swapParams: params)
+            let report = try taker.startCoinswap(swapId: swapId)
             if let report = report {
                 // Swap parameters
                 XCTAssertEqual(report.outgoingAmount, 500000)
