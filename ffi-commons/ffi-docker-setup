@@ -13,19 +13,11 @@ BITCOIN_DATADIR="/home/coinswap/.bitcoin"
 BITCOIN_NETWORK="regtest"
 BITCOIN_RPC_PORT="18442"
 BITCOIN_ZMQ_PORT="28332"
-MAKERD1_PORT="6102"
-MAKERD1_RPC_PORT="6103"
-MAKERD2_PORT="16102"
-MAKERD2_RPC_PORT="16103"
-MAKERD3_PORT="26102"
-MAKERD3_RPC_PORT="26103"
-MAKERD4_PORT="36102"
-MAKERD4_RPC_PORT="36103"
+MAKER_BASE_PORT="6102"
+MAKER_NETWORK_PORT_OFFSET="10000"
 TOR_SOCKS_PORT="9050"
 TOR_CONTROL_PORT="9051"
 NUM_MAKERS="2"
-USE_TAPROOT="false"
-RUN_ALL="false"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -47,6 +39,18 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+maker_network_port() {
+    local maker_num="$1"
+    local rpc_port
+    rpc_port="$(maker_rpc_port "$maker_num")"
+    echo $((rpc_port + MAKER_NETWORK_PORT_OFFSET))
+}
+
+maker_rpc_port() {
+    local maker_num="$1"
+    echo $((MAKER_BASE_PORT + maker_num - 1))
 }
 
 check_docker() {
@@ -86,14 +90,8 @@ generate_maker_service() {
     local maker_num="$1"
     local maker_port="$2"
     local maker_rpc_port="$3"
-    local data_volume="$4"
-    local wallet_name="$5"
-    local sleep_time="${6:-5}"
-
-    local taproot_flag=""
-    if [[ "$USE_TAPROOT" == "true" ]]; then
-        taproot_flag=" --taproot"
-    fi
+    local wallet_name="$4"
+    local sleep_time="${5:-5}"
 
     cat << EOF
   ${wallet_name}:
@@ -125,9 +123,7 @@ generate_maker_service() {
           "base_fee = 100" \\
           "amount_relative_fee_ppt = 1000" \\
           > /home/coinswap/.coinswap/maker/config.toml
-        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"${taproot_flag}
-    volumes:
-      - ${data_volume}:/home/coinswap/.coinswap
+        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"
     environment:
       - RUST_LOG=info
       - TOR_SOCKS_PORT=${TOR_SOCKS_PORT}
@@ -165,8 +161,6 @@ services:
     ports:
       - "${BITCOIN_RPC_PORT}:${BITCOIN_RPC_PORT}"
       - "${BITCOIN_ZMQ_PORT}:${BITCOIN_ZMQ_PORT}"
-    volumes:
-      - bitcoin-data:/home/bitcoin/.bitcoin
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "bitcoin-cli", "-rpcuser=user", "-rpcpassword=password", "getblockchaininfo"]
@@ -178,51 +172,43 @@ services:
     image: osminogin/tor-simple
     container_name: coinswap-tor
     volumes:
-      - tor-data:/var/lib/tor
       - ./torrc.generated:/etc/tor/torrc:ro
     ports:
       - "${TOR_SOCKS_PORT}:${TOR_SOCKS_PORT}"
       - "${TOR_CONTROL_PORT}:${TOR_CONTROL_PORT}"
-      - "${MAKERD1_RPC_PORT}:${MAKERD1_RPC_PORT}"
-      - "${MAKERD2_RPC_PORT}:${MAKERD2_RPC_PORT}"
-      - "${MAKERD3_RPC_PORT}:${MAKERD3_RPC_PORT}"
-      - "${MAKERD4_RPC_PORT}:${MAKERD4_RPC_PORT}"
+
+EOF
+
+    local i
+    for ((i=1; i<=NUM_MAKERS; i++)); do
+        local maker_port
+        local maker_rpc_port
+        maker_port="$(maker_network_port "$i")"
+        maker_rpc_port="$(maker_rpc_port "$i")"
+        cat >> "$compose_file" << EOF
+      - "${maker_port}:${maker_port}"
+      - "${maker_rpc_port}:${maker_rpc_port}"
+
+EOF
+    done
+
+    cat >> "$compose_file" << EOF
     restart: unless-stopped
 
 EOF
 
-    # Generate makers based on --run-all or standard/taproot mode
-    if [[ "$RUN_ALL" == "true" ]]; then
-        print_info "Generating 4 makers (2 standard + 2 taproot)..."
-        # Standard makers
-        USE_TAPROOT="false"
-        generate_maker_service "1" "$MAKERD1_PORT" "$MAKERD1_RPC_PORT" "maker1-data" "makerd1" >> "$compose_file"
-        generate_maker_service "2" "$MAKERD2_PORT" "$MAKERD2_RPC_PORT" "maker2-data" "makerd2" >> "$compose_file"
-        # Taproot makers
-        USE_TAPROOT="true"
-        generate_maker_service "3" "$MAKERD3_PORT" "$MAKERD3_RPC_PORT" "maker3-data" "makerd3" >> "$compose_file"
-        generate_maker_service "4" "$MAKERD4_PORT" "$MAKERD4_RPC_PORT" "maker4-data" "makerd4" >> "$compose_file"
-    else
-        # Standard 2 makers (either standard or taproot)
-        generate_maker_service "1" "$MAKERD1_PORT" "$MAKERD1_RPC_PORT" "maker1-data" "makerd1" >> "$compose_file"
-        generate_maker_service "2" "$MAKERD2_PORT" "$MAKERD2_RPC_PORT" "maker2-data" "makerd2" >> "$compose_file"
-    fi
+    print_info "Generating ${NUM_MAKERS} makers..."
+    for ((i=1; i<=NUM_MAKERS; i++)); do
+        local maker_port
+        local maker_rpc_port
+        local maker_sleep_time
+        maker_port="$(maker_network_port "$i")"
+        maker_rpc_port="$(maker_rpc_port "$i")"
+        maker_sleep_time="$i"
+        generate_maker_service "$i" "$maker_port" "$maker_rpc_port" "makerd${i}" "$maker_sleep_time" >> "$compose_file"
+    done
 
     cat >> "$compose_file" << EOF
-
-volumes:
-  bitcoin-data:
-    driver: local
-  tor-data:
-    driver: local
-  maker1-data:
-    driver: local
-  maker2-data:
-    driver: local
-  maker3-data:
-    driver: local
-  maker4-data:
-    driver: local
 
 networks:
   default:
@@ -327,12 +313,15 @@ stop_stack() {
         # Clean up wallet directories in containers before stopping them
         print_info "Cleaning wallet directories in containers..."
         docker exec coinswap-bitcoind sh -c "rm -rf /home/*" 2>/dev/null || true
-        docker exec coinswap-makerd1 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
-        docker exec coinswap-makerd2 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
-        docker exec coinswap-makerd3 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
-        docker exec coinswap-makerd4 sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
+
+        local maker_containers
+        maker_containers=$(docker ps -a --format '{{.Names}}' | grep -E '^coinswap-makerd[0-9]+$' || true)
+        local container
+        for container in $maker_containers; do
+            docker exec "$container" sh -c "rm -rf /home/coinswap/.coinswap/*" 2>/dev/null || true
+        done
         
-        docker compose -f docker-compose.generated.yml down
+        docker compose -f docker-compose.generated.yml down -v
     fi
     print_success "Coinswap stack stopped and cleaned up"
 }
@@ -360,58 +349,44 @@ fund_makers() {
     print_info "Waiting for makers to start..."
     sleep 15
 
-    print_info "Funding makerd1..."
-    local maker1_addr=$(docker logs coinswap-makerd1 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
-    if [ -n "$maker1_addr" ]; then
-        print_info "Makerd1 address: $maker1_addr"
-        docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker1_addr" 1.0
-        print_success "Sent 1 BTC to makerd1"
-    else
-        print_warning "Could not find makerd1 address."
+    local maker_indices
+    maker_indices=$(docker ps --format '{{.Names}}' | sed -n 's/^coinswap-makerd\([0-9][0-9]*\)$/\1/p' | sort -n)
+    if [ -z "$maker_indices" ]; then
+        maker_indices=$(seq 1 "$NUM_MAKERS")
     fi
 
-    print_info "Funding makerd2..."
-    local maker2_addr=$(docker logs coinswap-makerd2 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
-    if [ -n "$maker2_addr" ]; then
-        print_info "Makerd2 address: $maker2_addr"
-        docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker2_addr" 1.0
-        print_success "Sent 1 BTC to makerd2"
-    else
-        print_warning "Could not find makerd2 address."
-    fi
+    local total_rounds
+    total_rounds=$(wc -w <<< "$maker_indices" | tr -d ' ')
+    local current_round=0
 
-    # Only fund maker3 and maker4 if running in --run-all mode
-    if [[ "$RUN_ALL" == "true" ]]; then
-        print_info "Funding makerd3..."
-        local maker3_addr=$(docker logs coinswap-makerd3 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
-        if [ -n "$maker3_addr" ]; then
-            print_info "Makerd3 address: $maker3_addr"
-            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker3_addr" 1.0
-            print_success "Sent 1 BTC to makerd3"
+    local idx
+    for idx in $maker_indices; do
+        current_round=$((current_round + 1))
+        local maker_name="makerd${idx}"
+        local container_name="coinswap-${maker_name}"
+        print_info "Funding ${maker_name}..."
+        local maker_addr
+        maker_addr=$(docker logs "$container_name" 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
+        if [ -n "$maker_addr" ]; then
+            print_info "${maker_name} address: $maker_addr"
+            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker_addr" 1.0
+            print_success "Sent 1 BTC to ${maker_name}"
         else
-            print_warning "Could not find makerd3 address."
+            print_warning "Could not find ${maker_name} address."
         fi
 
-        print_info "Funding makerd4..."
-        local maker4_addr=$(docker logs coinswap-makerd4 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
-        if [ -n "$maker4_addr" ]; then
-            print_info "Makerd4 address: $maker4_addr"
-            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker4_addr" 1.0
-            print_success "Sent 1 BTC to makerd4"
-        else
-            print_warning "Could not find makerd4 address."
+        # Pause between rounds so maker funding has a predictable cadence.
+        if [ "$current_round" -lt "$total_rounds" ]; then
+            sleep 3
         fi
-    fi
+    done
 
     print_success "Makers funded successfully!"
     echo ""
     echo "Maker wallets:"
-    echo "  Makerd1: 1 BTC (port 6103)"
-    echo "  Makerd2: 1 BTC (port 16103)"
-    if [[ "$RUN_ALL" == "true" ]]; then
-        echo "  Makerd3: 1 BTC (port 26103)"
-        echo "  Makerd4: 1 BTC (port 36103)"
-    fi
+    for idx in $maker_indices; do
+        echo "  Makerd${idx}: 1 BTC (rpc port $(maker_rpc_port "$idx"), net port $(maker_network_port "$idx"))"
+    done
 }
 
 mine_blocks() {
@@ -472,31 +447,26 @@ stop_block_mining() {
 show_help() {
     echo "Coinswap Docker Setup Script (regtest, fixed config)"
     echo ""
-    echo "Usage: $0 [COMMAND] [OPTIONS]"
+    echo "Usage: $0 [COMMAND] [ARGS]"
     echo ""
     echo "Commands:"
     echo "  setup               Setup environment (clone repo, build images)"
     echo "  build               Build the Coinswap Docker image"
     echo "  build-bitcoin       Build the Bitcoin Mutinynet Docker image"
-    echo "  start               Start the full stack (auto-funds makers, auto-mines blocks)"
+    echo "  start [N]           Start the full stack with N makers (default: 2)"
     echo "  stop                Stop the Coinswap stack and block mining"
     echo "  restart             Restart the Coinswap stack"
     echo "  fund-makers         Manually fund maker wallets (done automatically on start)"
     echo "  mine [N]            Manually mine N blocks (auto-mining runs every 3s)"
     echo "  start-mining        Start automatic block mining"
     echo "  stop-mining         Stop automatic block mining"
-    echo "  logs [service]      Show logs (bitcoind, tor, makerd1, makerd2)"
+    echo "  logs [service]      Show logs (bitcoind, tor, makerdN)"
     echo "  status              Show status of running services"
-    echo ""
-    echo "Options:"
-    echo "  --taproot           Enable Taproot protocol for makers (default: disabled)"
-    echo "  --run-all           Run all 4 makers (2 standard + 2 taproot)"
     echo ""
     echo "Examples:"
     echo "  $0 setup            # First time setup"
-    echo "  $0 start            # Starts stack with 2 standard makers"
-    echo "  $0 start --taproot  # Start with 2 Taproot makers"
-    echo "  $0 start --run-all  # Start with 4 makers (2 standard + 2 taproot)"
+    echo "  $0 start            # Starts stack with 2 makers"
+    echo "  $0 start 4          # Starts stack with 4 makers"
     echo "  $0 mine 10          # Manually mine 10 blocks"
     echo "  $0 logs makerd1     # View makerd1 logs"
 }
@@ -507,16 +477,6 @@ shift || true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --taproot)
-            USE_TAPROOT="true"
-            print_info "Taproot protocol enabled"
-            shift
-            ;;
-        --run-all)
-            RUN_ALL="true"
-            print_info "Running all makers (2 standard + 2 taproot)"
-            shift
-            ;;
         *)
             # Store first extra argument for subcommands (e.g., service name, block count)
             if [[ -z "${SUBCOMMAND_ARG:-}" ]]; then
@@ -545,6 +505,16 @@ case "$COMMAND" in
         ;;
     "start")
         check_docker
+        if [[ -n "${SUBCOMMAND_ARG:-}" ]]; then
+            if ! [[ "$SUBCOMMAND_ARG" =~ ^[0-9]+$ ]] || [[ "$SUBCOMMAND_ARG" -lt 1 ]]; then
+                print_error "Invalid maker count '$SUBCOMMAND_ARG'. Use a positive integer."
+                exit 1
+            fi
+            NUM_MAKERS="$SUBCOMMAND_ARG"
+        else
+            NUM_MAKERS="2"
+        fi
+        print_info "Starting with ${NUM_MAKERS} maker(s)"
         start_stack
         ;;
     "stop")
