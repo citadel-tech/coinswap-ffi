@@ -9,7 +9,7 @@ use coinswap::{
     PublicKey as csPublicKey, ScriptBuf as csScriptBuf, SignedAmount, Txid as csTxid,
   },
   bitcoind::bitcoincore_rpc::Auth,
-  protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
+  protocol::common_messages::{FidelityProof as csFidelityProof, Offer as csOffer},
   taker::offers::{
     MakerAddress as csMakerAddress, MakerOfferCandidate as csMakerOfferCandidate,
     MakerProtocol as csMakerProtocol, MakerState as csMakerState, OfferBook as csOfferBook,
@@ -63,20 +63,6 @@ pub enum TakerBehavior {
   Normal,
   DropConnectionAfterFullSetup,
   BroadcastContractAfterFullSetup,
-}
-
-impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
-  fn from(behavior: TakerBehavior) -> Self {
-    match behavior {
-      TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
-      TakerBehavior::DropConnectionAfterFullSetup => {
-        coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
-      }
-      TakerBehavior::BroadcastContractAfterFullSetup => {
-        coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
-      }
-    }
-  }
 }
 
 #[napi(object)]
@@ -437,6 +423,9 @@ impl From<csMakerProtocol> for MakerProtocol {
       },
       csMakerProtocol::Taproot => MakerProtocol {
         protocol_type: "Taproot".to_string(),
+      },
+      csMakerProtocol::Unified => MakerProtocol {
+        protocol_type: "Unified".to_string(),
       },
     }
   }
