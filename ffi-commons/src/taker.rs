@@ -12,7 +12,10 @@ use crate::{
 };
 use coinswap::{
     bitcoin::{Amount as coinswapAmount, OutPoint as coinswapOutPoint, Txid as coinswapTxid},
-    taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
+    protocol::ProtocolVersion,
+    taker::api::{
+        ConnectionType, SwapParams as CoinswapSwapParams, Taker as CoinswapTaker, TakerInitConfig,
+    },
     wallet::{RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use std::{
@@ -26,12 +29,20 @@ use std::{
 /// If no maker matches with a given SwapParam, that coinswap round will fail.
 #[derive(uniffi::Record)]
 pub struct SwapParams {
+    /// Protocol to use: Legacy or Taproot.
+    pub protocol: Option<String>,
     /// Total Amount to Swap.
     pub send_amount: u64,
     /// How many hops.
     pub maker_count: u32,
+    /// Number of transaction splits.
+    pub tx_count: Option<u32>,
+    /// Required funding confirmations.
+    pub required_confirms: Option<u32>,
     /// User selected UTXOs
     pub manually_selected_outpoints: Option<Vec<OutPoint>>,
+    /// Optional explicit maker addresses.
+    pub preferred_makers: Option<Vec<String>>,
 }
 
 /// SwapParams govern the criteria to find suitable set of makers from the offerbook.
@@ -40,6 +51,16 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
 
     /// Swap specific parameters. These are user's policy and can differ among swaps.
     fn try_from(params: SwapParams) -> Result<Self, Self::Error> {
+        let protocol = match params.protocol.as_deref().unwrap_or("Legacy") {
+            "Legacy" | "legacy" => ProtocolVersion::Legacy,
+            "Taproot" | "taproot" => ProtocolVersion::Taproot,
+            other => {
+                return Err(TakerError::General {
+                    msg: format!("Invalid protocol: {} (expected legacy or taproot)", other),
+                });
+            }
+        };
+
         let send_amount = coinswapAmount::from_sat(params.send_amount);
 
         let manually_selected_outpoints = params
@@ -60,9 +81,13 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
             .transpose()?;
 
         Ok(CoinswapSwapParams {
+            protocol,
             send_amount,
             maker_count: params.maker_count as usize,
+            tx_count: params.tx_count.unwrap_or(1),
+            required_confirms: params.required_confirms.unwrap_or(1),
             manually_selected_outpoints,
+            preferred_makers: params.preferred_makers,
         })
     }
 }
@@ -107,17 +132,20 @@ impl Taker {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
 
-        let taker = CoinswapTaker::init(
+        let init_config = TakerInitConfig {
             data_dir,
             wallet_file_name,
             rpc_config,
-            // #[cfg(feature = "integration-test")]
-            // _behavior.unwrap_or(TakerBehavior::Normal).into(),
             control_port,
             tor_auth_password,
+            socks_port: 9050,
             zmq_addr,
             password,
-        )?;
+            connection_type: ConnectionType::Tor,
+            nostr_relays: TakerInitConfig::default().nostr_relays,
+        };
+
+        let taker = CoinswapTaker::init(init_config)?;
 
         Ok(Arc::new(Self {
             taker: Mutex::new(taker),
@@ -148,14 +176,23 @@ impl Taker {
         Ok(())
     }
 
-    ///  Does the coinswap process
-    pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>, TakerError> {
+    /// Prepares a coinswap and returns a swap id.
+    pub fn prepare_coinswap(&self, swap_params: SwapParams) -> Result<String, TakerError> {
         let params = CoinswapSwapParams::try_from(swap_params)?;
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        let swap_report = taker.do_coinswap(params)?;
-        Ok(swap_report.map(SwapReport::from))
+        let summary = taker.prepare_coinswap(params)?;
+        Ok(summary.swap_id)
+    }
+
+    /// Starts execution for a prepared coinswap.
+    pub fn start_coinswap(&self, swap_id: String) -> Result<SwapReport, TakerError> {
+        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let report = taker.start_coinswap(&swap_id)?;
+        Ok(SwapReport::from(report))
     }
 
     /// Returns a list of recent Incoming Transactions (bydefault last 10)
@@ -164,13 +201,13 @@ impl Taker {
         count: Option<u32>,
         skip: Option<u32>,
     ) -> Result<Vec<ListTransactionResult>, TakerError> {
-        let txns = self
-            .taker
-            .lock()
-            .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
-            })?
-            .get_wallet()
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
+            msg: "Failed to acquire wallet read lock".to_string(),
+        })?;
+        let txns = wallet
             .get_transactions(count.map(|c| c as usize), skip.map(|s| s as usize))
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Get Transactions Error: {:?}", e),
@@ -218,13 +255,13 @@ impl Taker {
         address_type: AddressType,
     ) -> Result<Vec<Address>, TakerError> {
         let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
-        let internal_addresses = self
-            .taker
-            .lock()
-            .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
-            })?
-            .get_wallet()
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
+            msg: "Failed to acquire wallet read lock".to_string(),
+        })?;
+        let internal_addresses = wallet
             .get_next_internal_addresses(count, cs_address_type)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Get internal addresses error: {:?}", e),
@@ -238,13 +275,16 @@ impl Taker {
         address_type: AddressType,
     ) -> Result<Address, TakerError> {
         let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
-        let external_address = self
-            .taker
-            .lock()
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let mut wallet = taker
+            .get_wallet()
+            .write()
             .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
-            })?
-            .get_wallet_mut()
+                msg: "Failed to acquire wallet write lock".to_string(),
+            })?;
+        let external_address = wallet
             .get_next_external_address(cs_address_type)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Get next external address error: {:?}", e),
@@ -259,7 +299,10 @@ impl Taker {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        let entries = taker.get_wallet().list_all_utxo_spend_info();
+        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
+            msg: "Failed to acquire wallet read lock".to_string(),
+        })?;
+        let entries = wallet.list_all_utxo_spend_info();
 
         Ok(entries
             .into_iter()
@@ -291,7 +334,7 @@ impl Taker {
                         spend_type: "SeedCoin".to_string(),
                         path: Some(path.to_string()),
                         multisig_redeemscript: None,
-                        input_value: Some(Amount::from(*input_value)),
+                        input_value: Some(Amount::from(input_value)),
                         index: None,
                     },
                     csUtxoSpendInfo::IncomingSwapCoin {
@@ -321,7 +364,7 @@ impl Taker {
                         multisig_redeemscript: Some(ScriptBuf::from(
                             swapcoin_multisig_redeemscript.clone(),
                         )),
-                        input_value: Some(Amount::from(*input_value)),
+                        input_value: Some(Amount::from(input_value)),
                         index: None,
                     },
                     csUtxoSpendInfo::HashlockContract {
@@ -333,15 +376,15 @@ impl Taker {
                         multisig_redeemscript: Some(ScriptBuf::from(
                             swapcoin_multisig_redeemscript.clone(),
                         )),
-                        input_value: Some(Amount::from(*input_value)),
+                        input_value: Some(Amount::from(input_value)),
                         index: None,
                     },
                     csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
                         spend_type: "FidelityBondCoin".to_string(),
                         path: None,
                         multisig_redeemscript: None,
-                        input_value: Some(Amount::from(*input_value)),
-                        index: Some(*index),
+                        input_value: Some(Amount::from(input_value)),
+                        index: Some(index),
                     },
                     csUtxoSpendInfo::SweptCoin {
                         path,
@@ -351,7 +394,7 @@ impl Taker {
                         spend_type: "SweptCoin".to_string(),
                         path: Some(path.to_string()),
                         multisig_redeemscript: None,
-                        input_value: Some(Amount::from(*input_value)),
+                        input_value: Some(Amount::from(input_value)),
                         index: None,
                     },
                 };
@@ -394,12 +437,15 @@ impl Taker {
         destination_path: String,
         password: Option<String>,
     ) -> Result<(), TakerError> {
-        self.taker
-            .lock()
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        taker
+            .get_wallet()
+            .write()
             .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
+                msg: "Failed to acquire wallet write lock".to_string(),
             })?
-            .get_wallet_mut()
             .backup_wallet_gui_app(destination_path, password)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Backup error: {:?}", e),
@@ -409,12 +455,15 @@ impl Taker {
 
     /// Locks the fidelity and live_contract utxos which are not considered for spending from the wallet.
     pub fn lock_unspendable_utxos(&self) -> Result<(), TakerError> {
-        self.taker
-            .lock()
-            .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
-            })?
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        taker
             .get_wallet()
+            .read()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire wallet read lock".to_string(),
+            })?
             .lock_unspendable_utxos()
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Lock error: {:?}", e),
@@ -446,13 +495,15 @@ impl Taker {
             })
             .transpose()?;
 
-        let txid = self
-            .taker
-            .lock()
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let txid = taker
+            .get_wallet()
+            .write()
             .map_err(|_| TakerError::General {
-                msg: "Failed to acquire taker lock".to_string(),
+                msg: "Failed to acquire wallet write lock".to_string(),
             })?
-            .get_wallet_mut()
             .send_to_address(
                 amount as u64,
                 address,
@@ -473,12 +524,12 @@ impl Taker {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        let balances = taker
-            .get_wallet()
-            .get_balances()
-            .map_err(|e| TakerError::Wallet {
-                msg: format!("Get balances error: {:?}", e),
-            })?;
+        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
+            msg: "Failed to acquire wallet read lock".to_string(),
+        })?;
+        let balances = wallet.get_balances().map_err(|e| TakerError::Wallet {
+            msg: format!("Get balances error: {:?}", e),
+        })?;
         Ok(Balances::from(balances))
     }
 
@@ -487,11 +538,15 @@ impl Taker {
     /// This method first synchronizes the wallet with the Bitcoin Core node,
     /// then persists the wallet state in the disk.
     pub fn sync_and_save(&self) -> Result<(), TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
         taker
-            .get_wallet_mut()
+            .get_wallet()
+            .write()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire wallet write lock".to_string(),
+            })?
             .sync_and_save()
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Sync wallet error: {:?}", e),
@@ -516,7 +571,7 @@ impl Taker {
 
     /// Returns the OfferBook.
     pub fn fetch_offers(&self) -> Result<OfferBook, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
 
@@ -549,21 +604,24 @@ impl Taker {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        Ok(taker.get_wallet().get_name().to_string())
+        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
+            msg: "Failed to acquire wallet read lock".to_string(),
+        })?;
+        Ok(wallet.get_name().to_string())
     }
 
     /// Recover from a bad swap
-    pub fn recover_from_swap(&self) -> Result<(), TakerError> {
+    pub fn recover_active_swap(&self) -> Result<(), TakerError> {
         let mut taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        taker.recover_from_swap()?;
+        taker.recover_active_swap()?;
         Ok(())
     }
 
     /// Fetch all makers good, bad, and unresponsive
     pub fn fetch_all_makers(&self) -> Result<Vec<String>, TakerError> {
-        let mut taker = self.taker.lock().map_err(|_| TakerError::General {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
 
