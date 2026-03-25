@@ -11,7 +11,7 @@ use coinswap::{
     },
     bitcoind::bitcoincore_rpc::Auth,
     fee_estimation::{BlockTarget, FeeEstimator},
-    protocol::messages::{FidelityProof as csFidelityProof, Offer as csOffer},
+    protocol::common_messages::{FidelityProof as csFidelityProof, Offer as csOffer},
     taker::{
         error::TakerError as CoinswapTakerError,
         offers::{
@@ -101,20 +101,6 @@ pub enum TakerBehavior {
     DropConnectionAfterFullSetup,
     /// Behavior to broadcast the contract after the full coinswap setup.
     BroadcastContractAfterFullSetup,
-}
-
-impl From<TakerBehavior> for coinswap::taker::api::TakerBehavior {
-    fn from(behavior: TakerBehavior) -> Self {
-        match behavior {
-            TakerBehavior::Normal => coinswap::taker::api::TakerBehavior::Normal,
-            TakerBehavior::DropConnectionAfterFullSetup => {
-                coinswap::taker::api::TakerBehavior::DropConnectionAfterFullSetup
-            }
-            TakerBehavior::BroadcastContractAfterFullSetup => {
-                coinswap::taker::api::TakerBehavior::BroadcastContractAfterFullSetup
-            }
-        }
-    }
 }
 
 /// Represents total wallet balances of different categories.
@@ -469,6 +455,9 @@ impl From<csMakerProtocol> for MakerProtocol {
             },
             csMakerProtocol::Taproot => MakerProtocol {
                 protocol_type: "Taproot".to_string(),
+            },
+            csMakerProtocol::Unified => MakerProtocol {
+                protocol_type: "Unified".to_string(),
             },
         }
     }
