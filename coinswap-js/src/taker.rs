@@ -11,8 +11,11 @@ use crate::types::{
 use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   fee_estimation::{BlockTarget, FeeEstimator},
-  taker::api::{SwapParams as CoinswapSwapParams, Taker as CoinswapTaker},
-  wallet::{ffi, UTXOSpendInfo as csUtxoSpendInfo},
+  protocol::ProtocolVersion,
+  taker::api::{
+    ConnectionType, SwapParams as CoinswapSwapParams, Taker as CoinswapTaker, TakerInitConfig,
+  },
+  wallet::{ffi, AddressType as csAddressType, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -20,15 +23,31 @@ use std::{path::PathBuf, str::FromStr, sync::Mutex};
 
 #[napi(object)]
 pub struct SwapParams {
+  pub protocol: Option<String>,
   pub send_amount: i64,
   pub maker_count: u32,
+  pub tx_count: Option<u32>,
+  pub required_confirms: Option<u32>,
   pub manually_selected_outpoints: Option<Vec<OutPoint>>,
+  pub preferred_makers: Option<Vec<String>>,
 }
 
 impl TryFrom<SwapParams> for CoinswapSwapParams {
   type Error = napi::Error;
 
   fn try_from(params: SwapParams) -> Result<Self> {
+    let protocol = match params.protocol.as_deref().unwrap_or("Legacy") {
+      "Legacy" | "legacy" => ProtocolVersion::Legacy,
+      "Taproot" | "taproot" => ProtocolVersion::Taproot,
+      "Unified" | "unified" => ProtocolVersion::Legacy,
+      other => {
+        return Err(napi::Error::from_reason(format!(
+          "Invalid protocol: {} (expected legacy, taproot, or unified)",
+          other
+        )));
+      }
+    };
+
     let send_amount = csAmount::from_sat(params.send_amount as u64);
 
     let manually_selected_outpoints = params
@@ -46,9 +65,13 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
       .transpose()?;
 
     Ok(CoinswapSwapParams {
+      protocol,
       send_amount,
       maker_count: params.maker_count as usize,
+      tx_count: params.tx_count.unwrap_or(1),
+      required_confirms: params.required_confirms.unwrap_or(1),
       manually_selected_outpoints,
+      preferred_makers: params.preferred_makers,
     })
   }
 }
@@ -74,18 +97,21 @@ impl Taker {
     let data_dir = data_dir.map(PathBuf::from);
     let rpc_config = rpc_config.map(|cfg| cfg.into());
 
-    let taker = CoinswapTaker::init(
+    let init_config = TakerInitConfig {
       data_dir,
       wallet_file_name,
       rpc_config,
-      // #[cfg(feature = "integration-test")]
-      // _behavior.unwrap_or(TakerBehavior::Normal).into(),
       control_port,
       tor_auth_password,
+      socks_port: 9050,
       zmq_addr,
       password,
-    )
-    .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
+      connection_type: ConnectionType::Tor,
+      nostr_relays: TakerInitConfig::default().nostr_relays,
+    };
+
+    let taker = CoinswapTaker::init(init_config)
+      .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
     Ok(Self {
       inner: Mutex::new(taker),
@@ -147,16 +173,28 @@ impl Taker {
   }
 
   #[napi]
-  pub fn do_coinswap(&self, swap_params: SwapParams) -> Result<Option<SwapReport>> {
+  pub fn prepare_coinswap(&self, swap_params: SwapParams) -> Result<String> {
     let params = CoinswapSwapParams::try_from(swap_params)?;
     let mut taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    let swap_report = taker
-      .do_coinswap(params)
-      .map_err(|e| napi::Error::from_reason(format!("Send coinswap error: {:?}", e)))?;
-    Ok(swap_report.map(SwapReport::from))
+    let summary = taker
+      .prepare_coinswap(params)
+      .map_err(|e| napi::Error::from_reason(format!("Prepare coinswap error: {:?}", e)))?;
+    Ok(summary.swap_id)
+  }
+
+  #[napi]
+  pub fn start_coinswap(&self, swap_id: String) -> Result<SwapReport> {
+    let mut taker = self
+      .inner
+      .lock()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let report = taker
+      .start_coinswap(&swap_id)
+      .map_err(|e| napi::Error::from_reason(format!("Start coinswap error: {:?}", e)))?;
+    Ok(SwapReport::from(report))
   }
 
   #[napi]
@@ -176,11 +214,15 @@ impl Taker {
     count: Option<u32>,
     skip: Option<u32>,
   ) -> Result<Vec<ListTransactionResult>> {
-    let txns = self
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let wallet = taker
       .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    let txns = wallet
       .get_transactions(count.map(|c| c as usize), skip.map(|s| s as usize))
       .map_err(|e| napi::Error::from_reason(format!("Get Transactions Error: {:?}", e)))?;
 
@@ -239,12 +281,16 @@ impl Taker {
     count: u32,
     address_type: AddressType,
   ) -> Result<Vec<Address>> {
-    let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
-    let internal_addresses = self
+    let cs_address_type = csAddressType::try_from(address_type)?;
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let wallet = taker
       .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    let internal_addresses = wallet
       .get_next_internal_addresses(count, cs_address_type)
       .map_err(|e| napi::Error::from_reason(format!("Get internal addresses error: {:?}", e)))?;
     Ok(internal_addresses.into_iter().map(Address::from).collect())
@@ -252,12 +298,16 @@ impl Taker {
 
   #[napi]
   pub fn get_next_external_address(&mut self, address_type: AddressType) -> Result<Address> {
-    let cs_address_type = coinswap::wallet::AddressType::try_from(address_type)?;
-    let external_address = self
+    let cs_address_type = csAddressType::try_from(address_type)?;
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
-      .get_wallet_mut()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let mut wallet = taker
+      .get_wallet()
+      .write()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    let external_address = wallet
       .get_next_external_address(cs_address_type)
       .map_err(|e| napi::Error::from_reason(format!("Get next external address error: {:?}", e)))?;
     Ok(Address::from(external_address))
@@ -266,15 +316,15 @@ impl Taker {
   // Get Name of the Wallet
   #[napi]
   pub fn get_name(&self) -> Result<String> {
-    Ok(
-      self
-        .inner
-        .lock()
-        .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
-        .get_wallet()
-        .get_name()
-        .to_string(),
-    )
+    let taker = self
+      .inner
+      .lock()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let wallet = taker
+      .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    Ok(wallet.get_name().to_string())
   }
 
   #[napi]
@@ -283,7 +333,11 @@ impl Taker {
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    let entries = taker.get_wallet().list_all_utxo_spend_info();
+    let wallet = taker
+      .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    let entries = wallet.list_all_utxo_spend_info();
     Ok(
       entries
         .into_iter()
@@ -315,7 +369,7 @@ impl Taker {
               spend_type: "SeedCoin".to_string(),
               path: Some(path.to_string()),
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(*input_value)),
+              input_value: Some(Amount::from(input_value)),
               index: None,
             },
             csUtxoSpendInfo::IncomingSwapCoin {
@@ -343,7 +397,7 @@ impl Taker {
               spend_type: "TimelockContract".to_string(),
               path: None,
               multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript.clone())),
-              input_value: Some(Amount::from(*input_value)),
+              input_value: Some(Amount::from(input_value)),
               index: None,
             },
             csUtxoSpendInfo::HashlockContract {
@@ -353,15 +407,15 @@ impl Taker {
               spend_type: "HashlockContract".to_string(),
               path: None,
               multisig_redeemscript: Some(ScriptBuf::from(swapcoin_multisig_redeemscript.clone())),
-              input_value: Some(Amount::from(*input_value)),
+              input_value: Some(Amount::from(input_value)),
               index: None,
             },
             csUtxoSpendInfo::FidelityBondCoin { index, input_value } => UtxoSpendInfo {
               spend_type: "FidelityBondCoin".to_string(),
               path: None,
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(*input_value)),
-              index: Some(*index),
+              input_value: Some(Amount::from(input_value)),
+              index: Some(index),
             },
             csUtxoSpendInfo::SweptCoin {
               path,
@@ -371,7 +425,7 @@ impl Taker {
               spend_type: "SweptCoin".to_string(),
               path: Some(path.to_string()),
               multisig_redeemscript: None,
-              input_value: Some(Amount::from(*input_value)),
+              input_value: Some(Amount::from(input_value)),
               index: None,
             },
           };
@@ -383,11 +437,14 @@ impl Taker {
 
   #[napi]
   pub fn backup(&self, destination_path: String, password: Option<String>) -> Result<()> {
-    self
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
-      .get_wallet_mut()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    taker
+      .get_wallet()
+      .write()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
       .backup_wallet_gui_app(destination_path, password)
       .map_err(|e| napi::Error::from_reason(format!("App's Backup error: {:?}", e)))?;
 
@@ -415,11 +472,14 @@ impl Taker {
 
   #[napi]
   pub fn lock_unspendable_utxos(&self) -> Result<()> {
-    self
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    taker
       .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
       .lock_unspendable_utxos()
       .map_err(|e| napi::Error::from_reason(format!("Lock error: {:?}", e)))?;
     Ok(())
@@ -445,11 +505,14 @@ impl Taker {
           .collect::<Result<Vec<_>, _>>()
       })
       .transpose()?;
-    let txid = self
+    let taker = self
       .inner
       .lock()
-      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?
-      .get_wallet_mut()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    let txid = taker
+      .get_wallet()
+      .write()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
       .send_to_address(
         amount as u64,
         address,
@@ -467,8 +530,11 @@ impl Taker {
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
-    let balances = taker
+    let wallet = taker
       .get_wallet()
+      .read()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?;
+    let balances = wallet
       .get_balances()
       .map_err(|e| napi::Error::from_reason(format!("Get balances error: {:?}", e)))?;
     Ok(Balances::from(balances))
@@ -476,12 +542,14 @@ impl Taker {
 
   #[napi]
   pub fn sync_and_save(&mut self) -> Result<()> {
-    let mut taker = self
+    let taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
     taker
-      .get_wallet_mut()
+      .get_wallet()
+      .write()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
       .sync_and_save()
       .map_err(|e| napi::Error::from_reason(format!("Sync wallet error: {:?}", e)))?;
     Ok(())
@@ -507,20 +575,20 @@ impl Taker {
 
   /// Recover from a failed swap
   #[napi]
-  pub fn recover_from_swap(&mut self) -> Result<()> {
+  pub fn recover_active_swap(&mut self) -> Result<()> {
     let mut taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
     taker
-      .recover_from_swap()
+      .recover_active_swap()
       .map_err(|e| napi::Error::from_reason(format!("Recover error: {:?}", e)))?;
     Ok(())
   }
 
   #[napi]
   pub fn fetch_all_makers(&self) -> Result<Vec<String>> {
-    let mut taker = self
+    let taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
@@ -540,7 +608,7 @@ impl Taker {
 
   #[napi]
   pub fn fetch_offers(&self) -> Result<OfferBook> {
-    let mut taker = self
+    let taker = self
       .inner
       .lock()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
