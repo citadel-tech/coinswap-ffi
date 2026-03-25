@@ -212,19 +212,25 @@ fn test_taker_complete_flow() {
     let fetch_offers_result = taker.fetch_offers();
     println!("Fetch offers result: {:?}", fetch_offers_result);
 
-    println!("\nTesting do_coinswap...");
+    println!("\nTesting prepare_coinswap + start_coinswap...");
     let swap_params = SwapParams {
+        protocol: Some("Legacy".to_string()),
         send_amount: 50_000,
         maker_count: 2,
+        tx_count: Some(1),
+        required_confirms: Some(1),
         manually_selected_outpoints: None,
+        preferred_makers: None,
     };
-    let swap_report = taker
-        .do_coinswap(swap_params)
-        .expect("'do_coinswap' should succeed");
-    let report = swap_report.expect("'do_coinswap' should return a swap report");
+    let swap_id = taker
+        .prepare_coinswap(swap_params)
+        .expect("'prepare_coinswap' should succeed");
+    let report = taker
+        .start_coinswap(swap_id)
+        .expect("'start_coinswap' should succeed");
     println!("Swap completed successfully!");
     println!("Swap Report: {:?}", report);
-    println!("✓ 'do_coinswap' test passed");
+    println!("✓ 'prepare_coinswap' and 'start_coinswap' tests passed");
 
     taker.sync_and_save().unwrap();
 
