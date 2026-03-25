@@ -172,16 +172,22 @@ def main():
         # Perform coinswap
         print("\n💱 Initiating coinswap...")
         swap_params = SwapParams(
+            protocol="Legacy",
             send_amount=500000,
             maker_count=2,
-            manually_selected_outpoints=None
+            tx_count=1,
+            required_confirms=1,
+            manually_selected_outpoints=None,
+            preferred_makers=None,
         )
         print(f"Swap Parameters:")
         print(f"  Send Amount: {swap_params.send_amount} sats")
         print(f"  Maker Count: {swap_params.maker_count}")
+        print(f"  Protocol: {swap_params.protocol}")
 
         print("\n🔄 Executing coinswap (this may take a while)...")
-        result = taker.do_coinswap(swap_params=swap_params)
+        swap_id = taker.prepare_coinswap(swap_params=swap_params)
+        result = taker.start_coinswap(swap_id=swap_id)
         assert result is not None, "Coinswap should return a swap report"
 
         print(f"\n✅ Coinswap completed successfully!")
