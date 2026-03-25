@@ -76,7 +76,7 @@ jobs:
         run: |
           chmod +x ffi-docker-setup
           ./ffi-docker-setup setup
-          ./ffi-docker-setup start --run-all
+          ./ffi-docker-setup start
 
       - name: Check Docker status
         run: |
