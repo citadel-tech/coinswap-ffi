@@ -6,7 +6,7 @@ import time
 bindings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'coinswap', 'native', 'linux-x86_64'))
 sys.path.insert(0, bindings_path)
 
-from coinswap import TaprootTaker, TaprootSwapParams, RpcConfig, AddressType
+from coinswap import Taker, SwapParams, RpcConfig, AddressType
 
 def cleanup_test_wallets():
     """Clean up test wallet directories before running tests"""
@@ -90,9 +90,9 @@ def main():
             wallet_name=wallet_name,
         )
 
-        print("\nInitializing Taproot Taker...")
+        print("\nInitializing Taker...")
         
-        taker = TaprootTaker.init(
+        taker = Taker.init(
             data_dir=None,
             wallet_file_name=wallet_name,
             rpc_config=rpc_config,
@@ -101,7 +101,7 @@ def main():
             zmq_addr="tcp://127.0.0.1:28332",
             password=None,
         )
-        print("✓ Taproot Taker initialized successfully")
+        print("✓ Taker initialized successfully")
         
         # Setup logging after initialization
         print("\nSetting up logging...")
@@ -202,12 +202,14 @@ def main():
 
         # Perform taproot coinswap
         print("\n💱 Initiating taproot coinswap...")
-        swap_params = TaprootSwapParams(
+        swap_params = SwapParams(
+            protocol="Taproot",
             send_amount=500000,
             maker_count=2,
             tx_count=3,
             required_confirms=1,
             manually_selected_outpoints=None,
+            preferred_makers=None,
         )
         
         print(f"Swap Parameters:")
@@ -215,9 +217,11 @@ def main():
         print(f"  Maker Count: {swap_params.maker_count}")
         print(f"  TX Count: {swap_params.tx_count}")
         print(f"  Required Confirms: {swap_params.required_confirms}")
+        print(f"  Protocol: {swap_params.protocol}")
 
         print("\n🔄 Executing taproot coinswap (this may take a while)...")
-        swap_report = taker.do_coinswap(swap_params=swap_params)
+        swap_id = taker.prepare_coinswap(swap_params=swap_params)
+        swap_report = taker.start_coinswap(swap_id=swap_id)
         assert swap_report is not None, "Taproot coinswap should return a swap report"
 
         print("\n✅ Swap completed successfully!")
@@ -236,7 +240,7 @@ def main():
         print(f"  Maker Addresses:")
         for i, addr in enumerate(swap_report.maker_addresses, 1):
             print(f"    {i}. {addr}")
-        print("✓ 'do_coinswap' test passed")
+        print("✓ 'prepare_coinswap' and 'start_coinswap' test passed")
 
         # Final balance check
         print("\n📊 Final balances after swap...")
