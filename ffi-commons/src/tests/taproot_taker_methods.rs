@@ -6,7 +6,7 @@
 //! Based on BDK-FFI test patterns.
 
 use crate::{
-    taproot_taker::{TaprootSwapParams, TaprootTaker},
+    taker::{SwapParams, Taker},
     tests::docker_helpers::{self, DockerBitcoind},
 };
 use bitcoin::Amount;
@@ -21,12 +21,12 @@ fn main() {
     // cleanup_wallet();
 }
 
-fn setup_bitcoind_and_taproot_taker(wallet_name: &str) -> (Arc<TaprootTaker>, DockerBitcoind) {
+fn setup_bitcoind_and_taproot_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
     let bitcoind = DockerBitcoind::connect().expect("Failed to connect to Docker bitcoind");
 
     let rpc_config = docker_helpers::get_docker_rpc_config(wallet_name);
 
-    let taker = TaprootTaker::init(
+    let taker = Taker::init(
         None,
         Some(wallet_name.to_string()),
         Some(rpc_config),
@@ -216,21 +216,25 @@ fn test_taproot_taker_complete_flow() {
     let fetch_offers_result = taker.fetch_offers();
     println!("Fetch offers result: {:?}", fetch_offers_result);
 
-    println!("\nTesting do_coinswap...");
-    let swap_params = TaprootSwapParams {
+    println!("\nTesting prepare_coinswap + start_coinswap...");
+    let swap_params = SwapParams {
+        protocol: Some("Taproot".to_string()),
         send_amount: 500_000,
         maker_count: 2,
         tx_count: Some(3),
         required_confirms: Some(1),
         manually_selected_outpoints: None,
+        preferred_makers: None,
     };
-    let swap_report = taker
-        .do_coinswap(swap_params)
-        .expect("'do_coinswap' should succeed");
-    let report = swap_report.expect("'do_coinswap' should return a swap report");
+    let swap_id = taker
+        .prepare_coinswap(swap_params)
+        .expect("'prepare_coinswap' should succeed");
+    let report = taker
+        .start_coinswap(swap_id)
+        .expect("'start_coinswap' should succeed");
     println!("Swap completed successfully!");
     println!("Swap Report: {:?}", report);
-    println!("✓ 'do_coinswap' test passed");
+    println!("✓ 'prepare_coinswap' and 'start_coinswap' tests passed");
 
     taker.sync_and_save().unwrap();
 
