@@ -39,7 +39,6 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
     let protocol = match params.protocol.as_deref().unwrap_or("Legacy") {
       "Legacy" | "legacy" => ProtocolVersion::Legacy,
       "Taproot" | "taproot" => ProtocolVersion::Taproot,
-      "Unified" | "unified" => ProtocolVersion::Legacy,
       other => {
         return Err(napi::Error::from_reason(format!(
           "Invalid protocol: {} (expected legacy, taproot, or unified)",

@@ -11,20 +11,27 @@ from coinswap import Taker, SwapParams, RpcConfig, AddressType
 def cleanup_test_wallets():
     """Clean up test wallet directories before running tests"""
     import shutil
-    
-    # Clean up local wallet directory
-    coinswap_dir = os.path.expanduser("~/.coinswap")
-    if os.path.exists(coinswap_dir):
-        try:
-            shutil.rmtree(coinswap_dir)
-            print(f"✓ Cleaned up local wallet directory")
-        except Exception as e:
-            print(f"Warning: Could not clean {coinswap_dir}: {e}")
+    wallet_name = "python_taproot_wallet"
+
+    wallets_dir = os.path.expanduser("~/.coinswap/taker/wallets")
+    if os.path.isdir(wallets_dir):
+        for entry in os.listdir(wallets_dir):
+            if not entry.startswith(wallet_name):
+                continue
+            wallet_path = os.path.join(wallets_dir, entry)
+            try:
+                if os.path.isdir(wallet_path):
+                    shutil.rmtree(wallet_path)
+                else:
+                    os.remove(wallet_path)
+                print(f"✓ Cleaned up {wallet_path}")
+            except Exception as e:
+                print(f"Warning: Could not clean {wallet_path}: {e}")
     
     # Unload wallet from Docker bitcoind
     try:
         subprocess.run(
-            ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', '-rpcuser=user', '-rpcpassword=password', 'unloadwallet', 'python_taproot_wallet'],
+            ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', '-rpcuser=user', '-rpcpassword=password', 'unloadwallet', wallet_name],
             capture_output=True,
             text=True,
             check=False
@@ -36,13 +43,13 @@ def cleanup_test_wallets():
     # Remove the python_taproot_wallet wallet from the Docker container's bitcoin folder
     try:
         result = subprocess.run(
-            ['docker', 'exec', 'coinswap-bitcoind', 'rm', '-rf', '/home/bitcoin/.bitcoin/wallets/python_taproot_wallet'],
+            ['docker', 'exec', 'coinswap-bitcoind', 'rm', '-rf', f'/home/bitcoin/.bitcoin/wallets/{wallet_name}'],
             capture_output=True,
             text=True,
             check=False
         )
         if result.returncode == 0:
-            print("✓ Removed python_taproot_wallet wallet from Docker container")
+            print(f"✓ Removed {wallet_name} wallet from Docker container")
         else:
             print("⚠ Failed to remove wallet from Docker container (may not exist)")
     except Exception:

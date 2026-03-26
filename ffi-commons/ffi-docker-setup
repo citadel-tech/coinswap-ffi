@@ -410,7 +410,7 @@ start_block_mining() {
         fi
     fi
     
-    print_info "Starting automatic block mining (every 3 seconds)..."
+    print_info "Starting automatic block mining (every 5 seconds)..."
     
     (
         while true; do
@@ -418,7 +418,7 @@ start_block_mining() {
                 break
             fi
             mine_blocks
-            sleep 3
+            sleep 5
         done
     ) &
     
@@ -457,7 +457,7 @@ show_help() {
     echo "  stop                Stop the Coinswap stack and block mining"
     echo "  restart             Restart the Coinswap stack"
     echo "  fund-makers         Manually fund maker wallets (done automatically on start)"
-    echo "  mine [N]            Manually mine N blocks (auto-mining runs every 3s)"
+    echo "  mine [N]            Manually mine N blocks (auto-mining runs every 5s)"
     echo "  start-mining        Start automatic block mining"
     echo "  stop-mining         Stop automatic block mining"
     echo "  logs [service]      Show logs (bitcoind, tor, makerdN)"

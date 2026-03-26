@@ -6,7 +6,8 @@ export declare class Taker {
   static initNativeLogging(): void
   /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
   static fetchMempoolFees(): FeeRates
-  doCoinswap(swapParams: SwapParams): SwapReport | null
+  prepareCoinswap(swapParams: SwapParams): string
+  startCoinswap(swapId: string): SwapReport
   syncOfferbookAndWait(): void
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
@@ -22,36 +23,7 @@ export declare class Taker {
   syncAndSave(): void
   displayOffer(makerOffer: Offer): string
   /** Recover from a failed swap */
-  recoverFromSwap(): void
-  fetchAllMakers(): Array<string>
-  fetchOffers(): OfferBook
-  static isWalletEncrypted(walletPath: string): boolean
-}
-
-export declare class TaprootTaker {
-  constructor(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig | undefined | null, controlPort: number | undefined | null, torAuthPassword: string | undefined | null, zmqAddr: string, password?: string | undefined | null)
-  static setupLogging(dataDir: string | undefined | null, level: string): void
-  static initNativeLogging(): void
-  /** Fetch fee estimates from Mempool.space API with automatic fallback to Esplora */
-  static fetchMempoolFees(): FeeRates
-  /** Execute a Taproot coinswap */
-  doCoinswap(swapParams: TaprootSwapParams): SwapReport | null
-  syncOfferbookAndWait(): void
-  getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
-  getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
-  getNextExternalAddress(addressType: AddressType): Address
-  getName(): string
-  listAllUtxoSpendInfo(): Array<[ListUnspentResultEntry, UtxoSpendInfo]>
-  backup(destinationPath: string, password?: string | undefined | null): void
-  static restoreWalletGuiApp(dataDir: string | undefined | null, walletFileName: string | undefined | null, rpcConfig: RpcConfig, backupFile: string, password?: string | undefined | null): void
-  lockUnspendableUtxos(): void
-  sendToAddress(address: string, amount: number, feeRate?: number | undefined | null, manuallySelectedOutpoints?: Array<OutPoint> | undefined | null): Txid
-  /** Get wallet balances */
-  getBalances(): Balances
-  syncAndSave(): void
-  displayOffer(makerOffer: Offer): string
-  /** Recover from a failed swap */
-  recoverFromSwap(): void
+  recoverActiveSwap(): void
   fetchAllMakers(): Array<string>
   fetchOffers(): OfferBook
   static isWalletEncrypted(walletPath: string): boolean
@@ -212,9 +184,13 @@ export interface SignedAmountSats {
 }
 
 export interface SwapParams {
+  protocol?: string
   sendAmount: number
   makerCount: number
+  txCount?: number
+  requiredConfirms?: number
   manuallySelectedOutpoints?: Array<OutPoint>
+  preferredMakers?: Array<string>
 }
 
 export interface SwapReport {
@@ -288,23 +264,6 @@ export declare const enum TakerError {
   Network = 2,
   General = 3,
   IO = 4
-}
-
-/**
- * Swap parameters for Taproot (V2) protocol
- * Note: V2 has additional parameters compared to V1
- */
-export interface TaprootSwapParams {
-  /** Amount to send in satoshis */
-  sendAmount: number
-  /** Number of makers to use in the swap */
-  makerCount: number
-  /** Number of transaction splits (V2 specific) */
-  txCount?: number
-  /** Required confirmations for funding transactions (V2 specific) */
-  requiredConfirms?: number
-  /** User selected UTXOs (optional, for manual UTXO selection) */
-  manuallySelectedOutpoints?: Array<OutPoint>
 }
 
 export interface Txid {
