@@ -11,16 +11,25 @@ from coinswap import Taker, SwapParams, RpcConfig, AddressType
 def cleanup_test_wallets():
     """Clean up test wallet directories before running tests"""
     import shutil
+
+    wallet_name = "python_legacy_wallet"
+
+    wallets_dir = os.path.expanduser("~/.coinswap/taker/wallets")
+    if os.path.isdir(wallets_dir):
+        for entry in os.listdir(wallets_dir):
+            if not entry.startswith(wallet_name):
+                continue
+            wallet_path = os.path.join(wallets_dir, entry)
+            try:
+                if os.path.isdir(wallet_path):
+                    shutil.rmtree(wallet_path)
+                else:
+                    os.remove(wallet_path)
+                print(f"✓ Cleaned up {wallet_path}")
+            except Exception as e:
+                print(f"Warning: Could not clean {wallet_path}: {e}")
     
-    coinswap_taker_dir = os.path.expanduser("~/.coinswap/taker")
-    if os.path.exists(coinswap_taker_dir):
-        try:
-            shutil.rmtree(coinswap_taker_dir)
-            print(f"✓ Cleaned up {coinswap_taker_dir}")
-        except Exception as e:
-            print(f"Warning: Could not clean {coinswap_taker_dir}: {e}")
-    
-    bitcoin_wallet_dir = os.path.expanduser("~/.bitcoin/regtest/wallets/python_legacy_wallet")
+    bitcoin_wallet_dir = os.path.expanduser(f"~/.bitcoin/regtest/wallets/{wallet_name}")
     if os.path.exists(bitcoin_wallet_dir):
         try:
             shutil.rmtree(bitcoin_wallet_dir)
@@ -30,7 +39,7 @@ def cleanup_test_wallets():
     
     try:
         subprocess.run(
-            ['bitcoin-cli', '-regtest', 'unloadwallet', 'python_legacy_wallet'],
+            ['bitcoin-cli', '-regtest', 'unloadwallet', wallet_name],
             capture_output=True,
             text=True,
             check=False

@@ -11,17 +11,23 @@ require 'coinswap'
 
 def cleanup_test_wallets
   """Clean up test wallet directories before running tests"""
-  coinswap_taker_dir = File.expand_path("~/.coinswap/taker")
-  if File.exist?(coinswap_taker_dir)
-    begin
-      FileUtils.rm_rf(coinswap_taker_dir)
-      puts "✓ Cleaned up #{coinswap_taker_dir}"
-    rescue => e
-      puts "Warning: Could not clean #{coinswap_taker_dir}: #{e.message}"
+  wallet_name = "ruby_test_wallet"
+  wallets_dir = File.expand_path("~/.coinswap/taker/wallets")
+  if Dir.exist?(wallets_dir)
+    Dir.children(wallets_dir).each do |entry|
+      next unless entry.start_with?(wallet_name)
+
+      wallet_path = File.join(wallets_dir, entry)
+      begin
+        FileUtils.rm_rf(wallet_path)
+        puts "✓ Cleaned up #{wallet_path}"
+      rescue => e
+        puts "Warning: Could not clean #{wallet_path}: #{e.message}"
+      end
     end
   end
   
-  bitcoin_wallet_dir = File.expand_path("~/.bitcoin/regtest/wallets/ruby_test_wallet")
+  bitcoin_wallet_dir = File.expand_path("~/.bitcoin/regtest/wallets/#{wallet_name}")
   if File.exist?(bitcoin_wallet_dir)
     begin
       FileUtils.rm_rf(bitcoin_wallet_dir)
@@ -32,7 +38,7 @@ def cleanup_test_wallets
   end
   
   begin
-    system('bitcoin-cli', '-regtest', 'unloadwallet', 'ruby_test_wallet',
+    system('bitcoin-cli', '-regtest', 'unloadwallet', wallet_name,
            out: File::NULL, err: File::NULL)
   rescue
     # Ignore errors

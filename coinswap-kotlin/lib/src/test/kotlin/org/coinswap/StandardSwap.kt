@@ -195,9 +195,13 @@ class StandardSwap {
             // Perform a coinswap
             println("\n� Initiating coinswap...")
             val swapParams = SwapParams(
+                protocol = "Legacy",
                 sendAmount = 500000u,  // 500,000 sats (same as Python test)
                 makerCount = 2u,
-                manuallySelectedOutpoints = null
+                txCount = null,
+                requiredConfirms = null,
+                manuallySelectedOutpoints = null,
+                preferredMakers = null,
             )
             println("Swap Parameters:")
             println("  Send Amount: ${swapParams.sendAmount} sats")

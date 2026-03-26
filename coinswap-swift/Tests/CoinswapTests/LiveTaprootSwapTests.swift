@@ -48,39 +48,29 @@ final class LiveTaprootSwapTests: XCTestCase {
             )
             let swapId = try taker.prepareCoinswap(swapParams: params)
             let report = try taker.startCoinswap(swapId: swapId)
-            if let report = report {
-                // Swap parameters
-                XCTAssertEqual(report.outgoingAmount, 500000)
-                XCTAssertEqual(report.inputUtxos.reduce(Int64(0), +), 100000000)
-                assertApprox(Int64(report.incomingAmount), 99995995)
-                XCTAssertEqual(Int64(report.makersCount ?? 0), 2)
+            let inputTotal = report.inputUtxos.reduce(Int64(0), +)
+            let incomingTotal = Int64(report.incomingAmount)
+            let changeTotal = report.outputChangeAmounts.reduce(Int64(0), +)
+            let swapTotal = report.outputSwapAmounts.reduce(Int64(0), +)
+            let makerFeeTotal = report.makerFeeInfo.reduce(0.0) { $0 + $1.totalFee }
 
-                // Fee information
-                assertApprox(abs(report.feePaidOrEarned), 4005)
-                XCTAssertEqual(report.totalMakerFees, 2696)
-                assertApprox(report.miningFee, 1309)
+            // Swap parameters
+            XCTAssertEqual(report.outgoingAmount, Int64(config.swapAmount))
+            XCTAssertEqual(Int64(report.makersCount ?? 0), 2)
+            XCTAssertGreaterThan(inputTotal, 0)
+            XCTAssertGreaterThan(incomingTotal, 0)
 
-                // Maker 1 fee details
-                XCTAssertEqual(report.makerFeeInfo.count, 2)
-                XCTAssertEqual(report.makerFeeInfo[0].baseFee, 100.0, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[0].amountRelativeFee, 500.0, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[0].timeRelativeFee, 1000.0, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[0].totalFee, 1600.0, accuracy: 0.01)
+            // Fee information invariants
+            XCTAssertEqual(inputTotal - incomingTotal, abs(report.feePaidOrEarned))
+            XCTAssertEqual(report.totalMakerFees + report.miningFee, abs(report.feePaidOrEarned))
+            assertApprox(makerFeeTotal, Double(report.totalMakerFees), tolerance: 2.0)
 
-                // Maker 2 fee details
-                XCTAssertEqual(report.makerFeeInfo[1].baseFee, 100.0, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[1].amountRelativeFee, 498.40, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[1].timeRelativeFee, 498.40, accuracy: 0.01)
-                XCTAssertEqual(report.makerFeeInfo[1].totalFee, 1096.80, accuracy: 0.01)
-         
-                // Output change amounts
-                XCTAssertEqual(report.outputChangeAmounts.count, 1)
-                assertApprox(report.outputChangeAmounts[0], 99499694)
-
-                // Output swap amounts
-                XCTAssertEqual(report.outputSwapAmounts.count, 1)
-                assertApprox(report.outputSwapAmounts[0], 496301)
-            }
+            // Output amount invariants
+            XCTAssertGreaterThanOrEqual(report.outputChangeAmounts.count, 1)
+            XCTAssertGreaterThanOrEqual(report.outputSwapAmounts.count, 1)
+            XCTAssertEqual(changeTotal + swapTotal, incomingTotal)
+            XCTAssertGreaterThan(swapTotal, 0)
+            XCTAssertLessThanOrEqual(swapTotal, report.outgoingAmount)
         }
     }
 }

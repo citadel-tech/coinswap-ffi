@@ -42,20 +42,45 @@ fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
 
 fn cleanup_wallet() {
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
-    // Clean up wallet directory
-    let mut wallet_dir = PathBuf::from(env!("HOME"));
-    wallet_dir.push(".coinswap");
-    // wallet_dir.push("taker");
+    fn remove_wallet_entries(base_dir: &Path, wallet_name: &str) {
+        if !base_dir.exists() {
+            return;
+        }
 
-    if wallet_dir.exists() {
-        let _ = fs::remove_dir_all(&wallet_dir);
-        println!("✓ Cleaned up local wallet directory");
+        let Ok(entries) = fs::read_dir(base_dir) else {
+            return;
+        };
+
+        for entry in entries.flatten() {
+            let entry_name = entry.file_name();
+            let entry_name = entry_name.to_string_lossy();
+            if !entry_name.starts_with(wallet_name) {
+                continue;
+            }
+
+            let path = entry.path();
+            if path.is_dir() {
+                let _ = fs::remove_dir_all(&path);
+            } else {
+                let _ = fs::remove_file(&path);
+            }
+            println!("✓ Removed local wallet entry: {}", path.display());
+        }
     }
 
+    let wallet_name = "test-taker";
+
+    let mut coinswap_dir = PathBuf::from(env!("HOME"));
+    coinswap_dir.push(".coinswap");
+    remove_wallet_entries(&coinswap_dir, wallet_name);
+
+    let taker_dir = coinswap_dir.join("taker");
+    remove_wallet_entries(&taker_dir, wallet_name);
+
     if let Ok(bitcoind) = DockerBitcoind::connect() {
-        let _ = bitcoind.client.unload_wallet(Some("test-taker"));
+        let _ = bitcoind.client.unload_wallet(Some(wallet_name));
         println!("✓ Unloaded wallet from Docker bitcoind");
     }
 

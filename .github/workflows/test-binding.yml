@@ -93,14 +93,14 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           echo "Running Taker method tests..."
-          cargo test taker_methods -- --nocapture
+          cargo test tests::taker_methods::main -- --nocapture --exact
         continue-on-error: false
 
       - name: Run Taker method test - taproot (P2TR)
         working-directory: ./ffi-commons
         run: |
           echo "Running Taproot taker method tests..."
-          cargo test taproot_taker_methods -- --nocapture
+          cargo test tests::taproot_taker_methods::main -- --nocapture --exact
         continue-on-error: false
 
       - name: Cleanup Docker environment
