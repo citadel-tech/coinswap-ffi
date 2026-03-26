@@ -47,6 +47,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Cache SwiftPM build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.swiftpm/
+            coinswap-swift/.build/
+          key: ${{ runner.os }}-swiftpm-${{ hashFiles('coinswap-swift/Package.swift', 'coinswap-swift/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-swiftpm-
+
       - name: Setup Docker on macOS
         uses: douglascamata/setup-docker-macos-action@v1.1.0
         with:
@@ -61,7 +71,12 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          ./ffi-docker-setup setup
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+            echo "Using prebuilt Docker images"
+          else
+            echo "Prebuilt image pull failed; falling back to local image build"
+            ./ffi-docker-setup setup
+          fi
           ./ffi-docker-setup start
 
       - name: Check Docker containers status
@@ -88,7 +103,7 @@ jobs:
           docker logs coinswap-makerd4 --tail 30 || true
 
           echo -e "\n=== Host Port Connectivity ==="
-          for i in {1..30}; do
+          for i in {1..20}; do
             all_ok=true
             for port in 18442 28332 9051; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
@@ -96,8 +111,8 @@ jobs:
             if $all_ok; then
               echo "All ports forwarded to host!"; break
             fi
-            echo "Retry $i/30..."
-            sleep 5
+            echo "Retry $i/20..."
+            sleep 2
           done
           if ! $all_ok; then
             echo "Port forwarding failed. Colima status:"
@@ -113,7 +128,7 @@ jobs:
         run: sudo -E swift test --filter LiveStandardSwapTests/testLiveTakerFlow
 
       - name: "Run Swift live taproot swap test"
-        run: sudo -E swift test --filter LiveTaprootSwapTests/testLiveTaprootTakerFlow
+        run: sudo -E swift test --skip-build --filter LiveTaprootSwapTests/testLiveTaprootTakerFlow
 
       - name: Cleanup Docker environment
         if: always()

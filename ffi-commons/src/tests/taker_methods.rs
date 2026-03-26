@@ -79,6 +79,9 @@ fn cleanup_wallet() {
     let taker_dir = coinswap_dir.join("taker");
     remove_wallet_entries(&taker_dir, wallet_name);
 
+    let taker_wallets_dir = taker_dir.join("wallets");
+    remove_wallet_entries(&taker_wallets_dir, wallet_name);
+
     if let Ok(bitcoind) = DockerBitcoind::connect() {
         let _ = bitcoind.client.unload_wallet(Some(wallet_name));
         println!("✓ Unloaded wallet from Docker bitcoind");
