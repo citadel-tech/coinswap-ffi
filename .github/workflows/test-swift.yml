@@ -77,7 +77,7 @@ jobs:
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start
+          ./ffi-docker-setup start 4
 
       - name: Check Docker containers status
         run: |

@@ -59,7 +59,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Cache Kotlin FFI build artifacts
+        id: cache-kotlin-ffi-build
+        uses: actions/cache@v4
+        with:
+          path: |
+            coinswap-kotlin/lib/src/main/jniLibs/x86_64/
+            coinswap-kotlin/lib/src/main/kotlin/
+          key: ${{ runner.os }}-kotlin-ffi-build-${{ hashFiles('ffi-commons/Cargo.lock', 'ffi-commons/Cargo.toml', 'ffi-commons/src/**', 'ffi-commons/uniffi.toml', 'coinswap-kotlin/build-scripts/development/build-dev-linux-jvm.sh', 'coinswap-kotlin/lib/build.gradle.kts') }}
+
       - name: "Build Android library"
+        if: steps.cache-kotlin-ffi-build.outputs.cache-hit != 'true'
         working-directory: ./coinswap-kotlin
         run: |
           chmod +x build-scripts/development/build-dev-linux-jvm.sh
@@ -75,8 +85,13 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          ./ffi-docker-setup setup
-          ./ffi-docker-setup start
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+            echo "Using prebuilt Docker images"
+          else
+            echo "Prebuilt image pull failed; falling back to local image build"
+            ./ffi-docker-setup setup
+          fi
+          ./ffi-docker-setup start 4
 
       - name: Check Docker status
         run: |
@@ -91,6 +106,19 @@ jobs:
           docker logs coinswap-makerd3 --tail 20 || true
           echo -e "\n=== Taproot Maker4 ==="
           docker logs coinswap-makerd4 --tail 20 || true
+
+          echo -e "\n=== Host Port Connectivity ==="
+          for i in {1..20}; do
+            all_ok=true
+            for port in 18442 28332 9051; do
+              nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
+            done
+            if $all_ok; then
+              echo "All ports forwarded to host!"; break
+            fi
+            echo "Retry $i/20..."
+            sleep 2
+          done
 
       - name: Run Kotlin Standard Swap Test (P2WPKH)
         working-directory: ./coinswap-kotlin
