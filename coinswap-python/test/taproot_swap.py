@@ -157,7 +157,7 @@ def main():
         assert initial_balances.swap == 0, "Initial swap balance should be zero"
         assert initial_balances.fidelity == 0, "Initial fidelity balance should be zero"
         
-        print(f"Initial Balances:")
+        print("Initial Balances:")
         print(f"  Spendable: {initial_balances.spendable} sats")
         print(f"  Regular: {initial_balances.regular} sats")
         print(f"  Swap: {initial_balances.swap} sats")
@@ -178,7 +178,7 @@ def main():
         
         assert updated_balances.spendable == expected_amount, f"Spendable balance should be {expected_amount} SATS"
         
-        print(f"Updated Balances:")
+        print("Updated Balances:")
         print(f"  Spendable: {updated_balances.spendable} sats")
         print(f"  Regular: {updated_balances.regular} sats")
         print(f"  Swap: {updated_balances.swap} sats")
@@ -219,7 +219,7 @@ def main():
             preferred_makers=None,
         )
         
-        print(f"Swap Parameters:")
+        print("Swap Parameters:")
         print(f"  Send Amount: {swap_params.send_amount} sats")
         print(f"  Maker Count: {swap_params.maker_count}")
         print(f"  TX Count: {swap_params.tx_count}")
@@ -232,7 +232,7 @@ def main():
         assert swap_report is not None, "Taproot coinswap should return a swap report"
 
         print("\n✅ Swap completed successfully!")
-        print(f"\nSwap Report:")
+        print("\nSwap Report:")
         outgoing_amount = getattr(swap_report, "outgoing_amount", getattr(swap_report, "target_amount", None))
         fee_value = getattr(swap_report, "fee_paid_or_earned", getattr(swap_report, "total_fee", None))
         total_fee_paid = abs(fee_value) if fee_value is not None else None
@@ -244,7 +244,7 @@ def main():
         print(f"  Mining Fee: {swap_report.mining_fee} sats")
         print(f"  Fee Percentage: {swap_report.fee_percentage:.4f}%")
         print(f"  Number of Makers Used: {swap_report.makers_count}")
-        print(f"  Maker Addresses:")
+        print("  Maker Addresses:")
         for i, addr in enumerate(swap_report.maker_addresses, 1):
             print(f"    {i}. {addr}")
         print("✓ 'prepare_coinswap' and 'start_coinswap' test passed")
@@ -253,7 +253,7 @@ def main():
         print("\n📊 Final balances after swap...")
         taker.sync_and_save()
         final_balances = taker.get_balances()
-        print(f"Final Balances:")
+        print("Final Balances:")
         print(f"  Spendable: {final_balances.spendable} sats")
         print(f"  Regular: {final_balances.regular} sats")
         print(f"  Swap: {final_balances.swap} sats")
