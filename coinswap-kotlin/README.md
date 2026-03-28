@@ -206,7 +206,7 @@ report.feePaidOrEarned                                // negative when paid, pos
 report.fundingTxids                                   // funding txids grouped by hop
 report.recoveryTxids                                  // recovery txids, if any
 report.timelock                                       // contract timelock in blocks
-report.makersCount                                    // maker hop count used in the swap
+report.makerCount                                     // maker hop count used in the swap
 report.makerAddresses                                 // maker addresses used in the route
 report.totalMakerFees                                 // aggregate maker fees in sats
 report.miningFee                                      // mining fees in sats
