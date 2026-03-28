@@ -2,25 +2,24 @@
 
 # Coinswap Swift
 
-**Swift bindings for the Coinswap Bitcoin privacy protocol**
+Swift bindings for the Coinswap Bitcoin privacy protocol
 
 </div>
 
 ## Overview
 
-Swift bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enabling native iOS and macOS integration with the Bitcoin coinswap protocol. Built using [UniFFI](https://mozilla.github.io/uniffi-rs/).
+`coinswap-swift` packages the shared UniFFI taker API as a Swift Package backed by `coinswap_ffi.xcframework`.
 
-## Quick Start
+## Supported Platforms
 
-### Prerequisites
+| Platform | Support |
+| --- | --- |
+| iOS | arm64 devices, iOS simulator arm64/x86_64 |
+| macOS | arm64 and x86_64 |
 
-- Swift 5.7+
-- Xcode 14+ (for iOS/macOS development)
-- Generated bindings (see [Building](#building))
+The Swift package declares iOS 13+ and macOS 10.15+ deployment targets.
 
-### Building
-
-Use the xcframework scripts in this folder:
+## Build and Package
 
 ```bash
 # Dev build (fast, debug; builds host arch + iOS device + iOS simulator)
@@ -31,6 +30,7 @@ bash ./build-xcframework-ci.sh
 
 # Release build (release-smaller profile; builds all Apple targets)
 bash ./build-xcframework.sh
+swift build
 ```
 
 Outputs for production build:
@@ -41,8 +41,7 @@ Outputs for production build:
 - Each platform slice has the aforementioned C header and static lib files.
 
 ### Installation
-
-4. Add the package to your app:
+Add the package to your app:
 
 Xcode: File > Add Packages... and select the `coinswap-swift` folder.
 
@@ -53,210 +52,205 @@ Package.swift:
 
 Then depend on `Coinswap` and `import Coinswap` in your app.
 
-#### iOS and macOS
-
-Use the generated `coinswap_ffi.xcframework` and the Swift package in this repo.
-
-### Basic Usage
+## Basic Usage
 
 ```swift
 import Foundation
+import Coinswap
 
-// Initialize a Taker
+// Bitcoin Core RPC settings used by the taker.
+let rpcConfig = RpcConfig(
+    url: "http://127.0.0.1:18442",                 // Bitcoin Core RPC endpoint
+    username: "user",                              // Bitcoin Core RPC username
+    password: "password",                          // Bitcoin Core RPC password
+    walletName: "taker_wallet"                     // Bitcoin Core wallet name
+)
+
+// Create or load the taker wallet.
 let taker = try Taker.`init`(
-    dataDir: "/path/to/data",
-    walletFileName: "taker_wallet",
-    rpcConfig: RPCConfig(
-        url: "http://localhost:18442",
-        user: "user",
-        password: "password",
-        walletName: "taker_wallet"
-    ),
-    controlPort: 9051,
-    torAuthPassword: nil,
-    zmqAddr: "tcp://localhost:28332",
-    password: "your_secure_password"
+    dataDir: "/path/to/data",                      // taker data directory; nil uses the default taker dir
+    walletFileName: "taker_wallet",                // taker wallet file to load or create
+    rpcConfig: rpcConfig,                            // Bitcoin Core RPC settings
+    controlPort: 9051,                               // Tor control port
+    torAuthPassword: "coinswap",                   // Tor control password
+    zmqAddr: "tcp://127.0.0.1:28332",              // Bitcoin Core ZMQ endpoint
+    password: ""                                    // optional wallet encryption password
 )
 
-// Setup logging
-try taker.setupLogging(dataDir: "/path/to/data")
-
-// Sync wallet
+// Configure logging, sync wallet state, and wait for the offer book.
+try taker.setupLogging(
+    dataDir: "/path/to/data",                      // directory used for file logging
+    logLevel: "info"                               // trace | debug | info | warn | error
+)
 try taker.syncAndSave()
+try taker.syncOfferbookAndWait()
 
-// Get balances
+// Inspect balances and derive a new receive address.
 let balances = try taker.getBalances()
-print("Total Balance: \(balances.total) sats")
-
-// Get a new receiving address
-let address = try taker.getNextExternalAddress(addressType: .p2wpkh)
-print("Receive to: \(address.value)")
-
-// Wait for offerbook to sync
-print("Waiting for offerbook synchronization...")
-while try taker.isOfferbookSyncing() {
-    print("Offerbook sync in progress...")
-    Thread.sleep(forTimeInterval: 2.0) 
-}
-print("Offerbook synchronized!")
-
-
-// Manual offerbook sync in case the syncing doesn't initialize
-try taker.runOfferSyncNow()
-
-// Perform a coinswap
-let swapParams = SwapParams(
-    sendAmount: 1_000_000, // 0.01 BTC in sats
-    makerCount: 2,
-    manuallySelectedOutpoints: nil
+let receiveAddress = try taker.getNextExternalAddress(
+    addressType: AddressType(
+        addrType: "P2WPKH"                         // external address format to derive
+    )
 )
 
-if let report = try taker.doCoinswap(swapParams: swapParams) {
-    print("Swap completed!")
-}
+print("regular: \(balances.regular) sats")
+print("swap: \(balances.swap) sats")
+print("contract: \(balances.contract) sats")
+print("fidelity: \(balances.fidelity) sats")
+print("spendable: \(balances.spendable) sats")
+print("receive to: \(receiveAddress.address)")
+
+// Build the swap request exactly as the taker API expects it.
+let swapParams = SwapParams(
+    protocol: nil,                                  // optional protocol hint; nil uses the backend default
+    sendAmount: 1_000_000,                          // total sats to swap
+    makerCount: 2,                                  // number of maker hops
+    txCount: 1,                                     // number of funding transaction splits
+    requiredConfirms: 1,                            // minimum funding confirmations
+    manuallySelectedOutpoints: nil,                 // optional explicit wallet UTXOs
+    preferredMakers: nil                            // optional maker addresses to prefer
+)
+
+// Prepare the swap first, then start it with the returned swap id.
+let swapId = try taker.prepareCoinswap(
+    swapParams: swapParams                          // fully populated swap request
+)
+let report = try taker.startCoinswap(
+    swapId: swapId                                  // identifier returned by prepareCoinswap
+)
+
+print("swap id: \(report.swapId)")
+print("status: \(report.status)")
+print("outgoing amount: \(report.outgoingAmount) sats")
+print("fee paid: \(abs(report.feePaidOrEarned)) sats")
 ```
 
 ## API Reference
 
-### Taker Class
-
-Initialize and manage a coinswap taker:
+### RpcConfig
 
 ```swift
-// Initialize
+let rpcConfig = RpcConfig(
+    url: rpcUrl,                                    // Bitcoin Core RPC endpoint
+    username: rpcUsername,                          // Bitcoin Core RPC username
+    password: rpcPassword,                          // Bitcoin Core RPC password
+    walletName: walletName                          // Bitcoin Core wallet name
+)
+```
+
+### SwapParams
+
+```swift
+let swapParams = SwapParams(
+    protocol: protocolHint,                         // optional protocol hint string
+    sendAmount: sendAmountSats,                     // total sats to swap
+    makerCount: makerCount,                         // number of maker hops
+    txCount: txCount,                               // number of funding transaction splits
+    requiredConfirms: requiredConfirms,             // minimum funding confirmations
+    manuallySelectedOutpoints: outpoints,           // optional explicit wallet UTXOs
+    preferredMakers: preferredMakers                // optional maker addresses to prefer
+)
+```
+
+### Taker
+
+```swift
 let taker = try Taker.`init`(
-    dataDir: String?,
-    walletFileName: String?,
-    rpcConfig: RPCConfig?,
-    controlPort: UInt16?,
-    torAuthPassword: String?,
-    zmqAddr: String,
-    password: String?
+    dataDir: dataDir,                               // taker data directory
+    walletFileName: walletFileName,                 // taker wallet file to load or create
+    rpcConfig: rpcConfig,                           // Bitcoin Core RPC settings
+    controlPort: controlPort,                       // Tor control port
+    torAuthPassword: torAuthPassword,               // Tor control password
+    zmqAddr: zmqAddr,                               // Bitcoin Core ZMQ endpoint
+    password: password                              // optional wallet encryption password
 )
 
-// Wallet operations
-let balances = try taker.getBalances()
-let address = try taker.getNextExternalAddress(addressType: AddressType)
-let txs = try taker.getTransactions(count: UInt32?, skip: UInt32?)
-let utxos = try taker.listAllUtxoSpendInfo()
-let txid = try taker.sendToAddress(
-    address: String,
-    amount: Int64,
-    feeRate: Double?,
-    manuallySelectedOutpoints: [OutPoint]?
-)
-
-// Swap operations
-let report = try taker.doCoinswap(swapParams: SwapParams)
-let offers = try taker.fetchOffers()
-let syncing = try taker.isOfferbookSyncing()
-
-// Maintenance
-try taker.syncAndSave()
-try taker.backup(destinationPath: String, password: String?)
-try taker.recoverFromSwap()
+try taker.setupLogging(dataDir: dataDir, logLevel: logLevel)                           // configure taker logging
+let swapId = try taker.prepareCoinswap(swapParams: swapParams)                         // prepare a swap and return the swap id
+let report = try taker.startCoinswap(swapId: swapId)                                   // execute a prepared swap
+let txs = try taker.getTransactions(count: count, skip: skip)                          // recent wallet transactions
+let internal = try taker.getNextInternalAddresses(count: count, addressType: addressType) // derive internal HD addresses
+let external = try taker.getNextExternalAddress(addressType: addressType)              // derive an external receive address
+let utxos = try taker.listAllUtxoSpendInfo()                                           // wallet UTXOs plus spend metadata
+try taker.backup(destinationPath: destinationPath, password: backupPassword)           // write a wallet backup JSON file
+try taker.lockUnspendableUtxos()                                                       // lock fidelity and live-contract UTXOs
+let txid = try taker.sendToAddress(address: address, amount: amount, feeRate: feeRate, manuallySelectedOutpoints: outpoints) // send sats to an external address
+let balances = try taker.getBalances()                                                 // read wallet balances
+try taker.syncAndSave()                                                                // sync wallet state and persist it
+try taker.syncOfferbookAndWait()                                                       // block until the offer book is synchronized
+let offerBook = try taker.fetchOffers()                                                // read the current offer book
+let renderedOffer = try taker.displayOffer(makerOffer: offer)                          // format a maker offer for display
+let walletName = try taker.getWalletName()                                             // read the wallet name
+try taker.recoverActiveSwap()                                                          // resume recovery for a failed active swap
+let makers = try taker.fetchAllMakers()                                                // read maker addresses across all states
 ```
 
-### Data Types
+### AddressType, Balances, and SwapReport
 
 ```swift
-struct SwapParams {
-    let sendAmount: UInt64        // Amount to swap in satoshis
-    let makerCount: UInt32         // Number of makers (hops)
-    let manuallySelectedOutpoints: [OutPoint]?
-}
+let addressType = AddressType(
+    addrType: "P2WPKH"                         // external address format to derive
+)
 
-struct Balances {
-    let regular: Int64             // Regular wallet balance in sats
-    let swap: Int64                // Swap balance in sats
-    let contract: Int64            // Contract balance in sats
-    let spendable: Int64           // Spendable balance in sats
-}
+balances.regular                                // single-signature seed balance in sats
+balances.swap                                   // swap-coin balance in sats
+balances.contract                               // live contract balance in sats
+balances.fidelity                               // fidelity bond balance in sats
+balances.spendable                              // regular + swap balance in sats
 
-struct SwapReport {
-    let swapId: String             // Unique swap identifier
-    let swapDurationSeconds: Double // Duration of swap in seconds
-    let targetAmount: Int64        // Target swap amount in sats
-    let totalInputAmount: Int64    // Total input amount in sats
-    let totalOutputAmount: Int64   // Total output amount in sats
-    let makersCount: UInt32        // Number of makers in swap
-    let makerAddresses: [String]   // List of maker addresses
-    let totalFundingTxs: Int64     // Total number of funding transactions
-    let fundingTxidsByHop: [[String]] // Funding TXIDs grouped by hop
-    let totalFee: Int64            // Total fees paid in sats
-    let totalMakerFees: Int64      // Total maker fees in sats
-    let miningFee: Int64           // Mining fees in sats
-    let feePercentage: Double      // Fee as percentage of amount
-    let makerFeeInfo: [MakerFeeInfo] // Detailed fee info per maker
-    let inputUtxos: [Int64]        // Input UTXO amounts
-    let outputChangeAmounts: [Int64]    // Change output amounts
-    let outputSwapAmounts: [Int64]      // Swap output amounts
-    let outputChangeUtxos: [UtxoWithAddress] // Change UTXOs with addresses
-    let outputSwapUtxos: [UtxoWithAddress]   // Swap UTXOs with addresses
-}
-
-enum AddressType {
-    case p2wpkh  // Native SegWit (bech32)
-    case p2tr    // Taproot (bech32m)
-}
+report.swapId                                   // unique swap identifier
+report.role                                     // report creator, usually Taker
+report.status                                   // swap terminal state
+report.swapDurationSeconds                      // execution duration in seconds
+report.recoveryDurationSeconds                  // recovery duration in seconds
+report.startTimestamp                           // unix start timestamp
+report.endTimestamp                             // unix end timestamp
+report.network                                  // bitcoin network name
+report.errorMessage                             // error detail, if present
+report.incomingAmount                           // sats received by the taker
+report.outgoingAmount                           // sats sent by the taker
+report.feePaidOrEarned                          // negative when paid, positive when earned
+report.fundingTxids                             // funding txids grouped by hop
+report.recoveryTxids                            // recovery txids, if any
+report.timelock                                 // contract timelock in blocks
+report.makersCount                              // maker hop count used in the swap
+report.makerAddresses                           // maker addresses used in the route
+report.totalMakerFees                           // aggregate maker fees in sats
+report.miningFee                                // mining fees in sats
+report.feePercentage                            // total fee as a percentage of amount
+report.makerFeeInfo                             // per-maker fee breakdown
+report.inputUtxos                               // input UTXO amounts in sats
+report.outputChangeAmounts                      // output change amounts in sats
+report.outputSwapAmounts                        // output swap amounts in sats
+report.outputChangeUtxos                        // change outputs with amount and address
+report.outputSwapUtxos                          // swap outputs with amount and address
 ```
 
-## Examples
+## Testing
 
-Live integration tests are in [Tests/CoinswapTests](Tests/CoinswapTests):
-- [LiveStandardSwapTests.swift](Tests/CoinswapTests/LiveStandardSwapTests.swift)
-- [LiveTaprootSwapTests.swift](Tests/CoinswapTests/LiveTaprootSwapTests.swift)
-- [LiveTestSupport.swift](Tests/CoinswapTests/LiveTestSupport.swift)
-
-To test them, fire up the docker setup in ```../ffi-commons``` folder:
 ```bash
-./ffi-docker-setup help 
-./ffi-docker-setup start  (Starts tor, 2 legacy makers, regtest bitcoind)
-./ffi-docker-setup start --run-all  (Starts tor, 2 legacy makers and 2 taproot makers, regtest bitcoind)
+cd ../ffi-commons
+./ffi-docker-setup setup
+./ffi-docker-setup start 4
+
+cd ../coinswap-swift
+swift test
+
+cd ../ffi-commons
 ./ffi-docker-setup stop
 ```
-Alternatively, you can set them up locally and toggle the ports in the [LiveTaprootSwapTests.swift](Tests/CoinswapTests/LiveTaprootSwapTests.swift)
 
-While testing, you may encounter warnings like "ld: warning: object file (...) was built for newer 'macOS' version (X.X) than being linked (14.0)". This occurs because the library is built with a minimum deployment target of macOS 14.0 for broad compatibility, but the build environment may be running a newer macOS version. These warnings are harmless and do not affect the functionality or performance of the library.
+## Requirements
 
-## Error Handling
-
-All operations that can fail throw `TakerError`:
-
-```swift
-do {
-    let balances = try taker.getBalances()
-    print("Balance: \(balances.total)")
-} catch TakerError.General(let msg) {
-    print("General error: \(msg)")
-} catch TakerError.Wallet(let msg) {
-    print("Wallet error: \(msg)")
-} catch TakerError.Network(let msg) {
-    print("Network error: \(msg)")
-} catch {
-    print("Unknown error: \(error)")
-}
-```
-
-## Cross-Compilation
-
-Prefer the xcframework script, which handles targets and combines slices:
-
-```bash
-bash ./build-xcframework.sh
-```
-
-It builds all Apple targets, then uses `lipo` to merge:
-- macOS arm64 + x86_64 -> a universal macOS static library
-- iOS simulator arm64 + x86_64 -> a universal simulator static library
-
-Those combined slices are packaged into `coinswap_ffi.xcframework` alongside the iOS device (arm64) slice.
+- Xcode 14+.
+- Swift 5.7+.
+- Bitcoin Core with RPC enabled, fully synced, non-pruned, and `-txindex` enabled.
+- Tor daemon for live taker workflows.
 
 ## Support
 
 - [Main Coinswap Repository](https://github.com/citadel-tech/coinswap)
-- [FFI Commons](../ffi-commons) - Build and binding generation
-- [Coinswap Documentation](https://github.com/citadel-tech/coinswap/docs)
+- [FFI Commons](../ffi-commons)
 
 ## License
 

@@ -2,287 +2,242 @@
 
 # Coinswap Kotlin
 
-**Kotlin bindings for the Coinswap Bitcoin privacy protocol**
+Kotlin bindings for the Coinswap Bitcoin privacy protocol
 
 </div>
 
 ## Overview
 
-Kotlin bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enabling native Android and JVM integration with the Bitcoin coinswap privacy protocol. Built using [UniFFI](https://mozilla.github.io/uniffi-rs/).
+`coinswap-kotlin` packages the shared UniFFI taker API for Android and JVM consumers.
 
-## Quick Start
+## Supported Platforms
 
-### Prerequisites
+| Target | Notes |
+| --- | --- |
+| Android `arm64-v8a` | Release packaging supported from Linux, macOS, and Windows host scripts |
+| Android `armeabi-v7a` | Release packaging supported from Linux, macOS, and Windows host scripts |
+| Android `x86_64` | Development and emulator/test support |
+| JVM/Desktop | Host-native library loading through the `lib` module |
 
-- Kotlin 1.8+
-- JDK 11+ (for JVM) or Android SDK 24+ (for Android)
-- Generated bindings (see [Building](#building))
+## Build and Package
 
-### Building
-
-Generate the Kotlin bindings from the UniFFI core:
+### Development builds
 
 ```bash
-cd ../ffi-commons
-chmod +x create_bindings.sh
-./create_bindings.sh
+# Linux host, native JVM test build
+bash ./build-scripts/development/build-dev-linux-jvm.sh
+
+# Linux host, Android x86_64 emulator build
+bash ./build-scripts/development/build-dev-linux-x86_64.sh
 ```
 
-This generates:
-- `lib/src/main/kotlin/org/coinswap/coinswap.kt` - Kotlin binding classes
-- `libcoinswap_ffi.so` - Native library (Linux)
-- `libcoinswap_ffi.dylib` - Native library (macOS)
+### Release builds
 
-### Installation
-
-#### Android
-
-1. Copy the generated files to your Android project:
 ```bash
-# Copy Kotlin bindings
-cp lib/src/main/kotlin/org/coinswap/coinswap.kt app/src/main/java/org/coinswap/
+# Linux host
+bash ./build-scripts/release/build-release-linux-arm64_v8a.sh
+bash ./build-scripts/release/build-release-linux-armeabi-v7a.sh
 
-# Copy native libraries for each architecture
-cp target/aarch64-linux-android/release/libcoinswap_ffi.so app/src/main/jniLibs/arm64-v8a/
-cp target/armv7-linux-androideabi/release/libcoinswap_ffi.so app/src/main/jniLibs/armeabi-v7a/
-cp target/x86_64-linux-android/release/libcoinswap_ffi.so app/src/main/jniLibs/x86_64/
+# macOS host
+bash ./build-scripts/release/build-release-macos-arm64_v8a.sh
+bash ./build-scripts/release/build-release-macos-armeabi-v7a.sh
 ```
 
-2. Add to your `build.gradle.kts`:
-```kotlin
-android {
-    sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs("src/main/jniLibs")
-        }
-    }
-}
+### Package the library
+
+```bash
+./gradlew :lib:assembleRelease
+./gradlew :lib:publishToMavenLocal -PlocalBuild=true
 ```
 
-#### JVM/Desktop
-
-Add the library to your project's library path:
-
-```kotlin
-System.setProperty("java.library.path", "/path/to/coinswap-kotlin")
-```
-
-### Basic Usage
+## Basic Usage
 
 ```kotlin
 import org.coinswap.*
 
-// Initialize a Taker
+// Bitcoin Core RPC settings used by the taker.
+val rpcConfig = RpcConfig(
+    url = "http://127.0.0.1:18442",              // Bitcoin Core RPC endpoint
+    username = "user",                           // Bitcoin Core RPC username
+    password = "password",                       // Bitcoin Core RPC password
+    walletName = "taker_wallet",                 // Bitcoin Core wallet name
+)
+
+// Create or load the taker wallet.
 val taker = Taker.init(
-    dataDir = "/path/to/data",
-    walletFileName = "taker_wallet",
-    rpcConfig = RpcConfig(
-        // regtest
-        url = "localhost:18442",
-        username = "user",
-        password = "password",
-        walletName = "taker_wallet"
-    ),
-    controlPort = 9051u,
-    torAuthPassword = "your_tor_password",
-    zmqAddr = "tcp://localhost:28332",
-    // backup and restore
-    password = "your_secure_password"
+    dataDir = "/path/to/data",                   // taker data directory; null uses the default taker dir
+    walletFileName = "taker_wallet",             // taker wallet file to load or create
+    rpcConfig = rpcConfig,                         // Bitcoin Core RPC settings
+    controlPort = 9051u,                           // Tor control port
+    torAuthPassword = "coinswap",                // Tor control password
+    zmqAddr = "tcp://127.0.0.1:28332",           // Bitcoin Core ZMQ endpoint
+    password = "",                               // optional wallet encryption password
 )
 
-// Setup logging
-taker.setupLogging(dataDir = "/path/to/data", logLevel = "info")
-
-// Sync wallet
+// Configure logging, sync wallet state, and wait for the offer book.
+taker.setupLogging(
+    dataDir = "/path/to/data",                   // directory used for file logging
+    logLevel = "info",                           // trace | debug | info | warn | error
+)
 taker.syncAndSave()
+taker.syncOfferbookAndWait()
 
-// Get balances
+// Inspect balances and derive a new receive address.
 val balances = taker.getBalances()
-println("Total Balance: ${balances.spendable} sats")
-
-// Get a new receiving address
-val address = taker.getNextExternalAddress(AddressType("P2WPKH"))
-println("Receive to: ${address.address}")
-
-// Wait for offerbook to sync
-println("Waiting for offerbook synchronization...")
-while (taker.isOfferbookSyncing()) {
-    println("Offerbook sync in progress...")
-    Thread.sleep(2000) // Wait 2 seconds before checking again
-}
-println("Offerbook synchronized!")
-
-// Perform a coinswap
-val swapParams = SwapParams(
-    sendAmount = 1000000u, // 0.01 BTC in sats
-    makerCount = 2u,
-    manuallySelectedOutpoints = null
+val receiveAddress = taker.getNextExternalAddress(
+    AddressType(addrType = "P2WPKH"),            // external address format to derive
 )
 
-val report = taker.doCoinswap(swapParams)
-report?.let {
-    println("Swap completed!")
-    println("Swap ID: ${it.swapId}")
-    println("Target Amount: ${it.targetAmount} sats")
-    println("Total Fee: ${it.totalFee} sats")
-}
+println("regular: ${balances.regular} sats")
+println("swap: ${balances.swap} sats")
+println("contract: ${balances.contract} sats")
+println("fidelity: ${balances.fidelity} sats")
+println("spendable: ${balances.spendable} sats")
+println("receive to: ${receiveAddress.address}")
+
+// Build the swap request exactly as the taker API expects it.
+val swapParams = SwapParams(
+    protocol = null,                              // optional protocol hint; null uses the backend default
+    sendAmount = 1_000_000u,                      // total sats to swap
+    makerCount = 2u,                              // number of maker hops
+    txCount = 1u,                                 // number of funding transaction splits
+    requiredConfirms = 1u,                        // minimum funding confirmations
+    manuallySelectedOutpoints = null,             // optional explicit wallet UTXOs
+    preferredMakers = null,                       // optional maker addresses to prefer
+)
+
+// Prepare the swap first, then start it with the returned swap id.
+val swapId = taker.prepareCoinswap(
+    swapParams,                                   // fully populated swap request
+)
+val report = taker.startCoinswap(
+    swapId,                                       // identifier returned by prepareCoinswap
+)
+
+println("swap id: ${report.swapId}")
+println("status: ${report.status}")
+println("outgoing amount: ${report.outgoingAmount} sats")
+println("fee paid: ${kotlin.math.abs(report.feePaidOrEarned)} sats")
 ```
 
 ## API Reference
 
-### Taker Class
-
-Initialize and manage a coinswap taker:
+### RpcConfig
 
 ```kotlin
-// Initialize
+val rpcConfig = RpcConfig(
+    url = rpcUrl,                                 // Bitcoin Core RPC endpoint
+    username = rpcUsername,                       // Bitcoin Core RPC username
+    password = rpcPassword,                       // Bitcoin Core RPC password
+    walletName = walletName,                      // Bitcoin Core wallet name
+)
+```
+
+### SwapParams
+
+```kotlin
+val swapParams = SwapParams(
+    protocol = protocolHint,                      // optional protocol hint string
+    sendAmount = sendAmountSats,                  // total sats to swap
+    makerCount = makerCount,                      // number of maker hops
+    txCount = txCount,                            // number of funding transaction splits
+    requiredConfirms = requiredConfirms,          // minimum funding confirmations
+    manuallySelectedOutpoints = outpoints,        // optional explicit wallet UTXOs
+    preferredMakers = preferredMakers,            // optional maker addresses to prefer
+)
+```
+
+### Taker
+
+```kotlin
 val taker = Taker.init(
-    dataDir: String?,
-    walletFileName: String?,
-    rpcConfig: RPCConfig?,
-    controlPort: UShort?,
-    torAuthPassword: String?,
-    zmqAddr: String,
-    password: String?
+    dataDir = dataDir,                            // taker data directory
+    walletFileName = walletFileName,              // taker wallet file to load or create
+    rpcConfig = rpcConfig,                        // Bitcoin Core RPC settings
+    controlPort = controlPort,                    // Tor control port
+    torAuthPassword = torAuthPassword,            // Tor control password
+    zmqAddr = zmqAddr,                            // Bitcoin Core ZMQ endpoint
+    password = password,                          // optional wallet encryption password
 )
 
-// Wallet operations
-taker.getBalances(): Balances
-taker.getNextExternalAddress(addressType: AddressType): Address
-taker.getTransactions(count: UInt?, skip: UInt?): List<ListTransactionResult>
-taker.listAllUtxoSpendInfo(): List<TotalUtxoInfo>
-taker.sendToAddress(address: String, amount: Long, feeRate: Double?, 
-                    manuallySelectedOutpoints: List<OutPoint>?): Txid
-
-// Swap operations
-taker.doCoinswap(swapParams: SwapParams): SwapReport?
-taker.fetchOffers(): OfferBook
-taker.isOfferbookSyncing(): Boolean
-
-// Maintenance
-taker.syncAndSave()
-taker.backup(destinationPath: String, password: String?)
-taker.recoverFromSwap()
+taker.setupLogging(dataDir = dataDir, logLevel = logLevel)                            // configure taker logging
+val swapId = taker.prepareCoinswap(swapParams)                                         // prepare a swap and return the swap id
+val report = taker.startCoinswap(swapId)                                               // execute a prepared swap
+val txs = taker.getTransactions(count = count, skip = skip)                            // recent wallet transactions
+val internal = taker.getNextInternalAddresses(count = count, addressType = addressType) // derive internal HD addresses
+val external = taker.getNextExternalAddress(addressType = addressType)                 // derive an external receive address
+val utxos = taker.listAllUtxoSpendInfo()                                               // wallet UTXOs plus spend metadata
+taker.backup(destinationPath = destinationPath, password = backupPassword)             // write a wallet backup JSON file
+taker.lockUnspendableUtxos()                                                           // lock fidelity and live-contract UTXOs
+val txid = taker.sendToAddress(address, amount, feeRate, outpoints)                    // send sats to an external address
+val balances = taker.getBalances()                                                     // read wallet balances
+taker.syncAndSave()                                                                    // sync wallet state and persist it
+taker.syncOfferbookAndWait()                                                           // block until the offer book is synchronized
+val offerBook = taker.fetchOffers()                                                    // read the current offer book
+val renderedOffer = taker.displayOffer(offer)                                          // format a maker offer for display
+val walletName = taker.getWalletName()                                                 // read the wallet name
+taker.recoverActiveSwap()                                                              // resume recovery for a failed active swap
+val makers = taker.fetchAllMakers()                                                    // read maker addresses across all states
 ```
 
-### Data Types
+### AddressType, Balances, and SwapReport
 
 ```kotlin
-data class SwapParams(
-    val sendAmount: ULong,        // Amount to swap in satoshis
-    val makerCount: UInt,          // Number of makers (hops)
-    val manuallySelectedOutpoints: List<OutPoint>?
-)
+val addressType = AddressType(addrType = "P2WPKH")    // external address format to derive
 
-data class Balances(
-    val regular: Long,             // Regular wallet balance in sats
-    val swap: Long,                // Swap balance in sats
-    val contract: Long,            // Contract balance in sats
-    val spendable: Long            // Spendable balance in sats
-)
+balances.regular                                      // single-signature seed balance in sats
+balances.swap                                         // swap-coin balance in sats
+balances.contract                                     // live contract balance in sats
+balances.fidelity                                     // fidelity bond balance in sats
+balances.spendable                                    // regular + swap balance in sats
 
-data class SwapReport(
-    val swapId: String,            // Unique swap identifier
-    val swapDurationSeconds: Double, // Duration of swap in seconds
-    val targetAmount: Long,        // Target swap amount in sats
-    val totalInputAmount: Long,    // Total input amount in sats
-    val totalOutputAmount: Long,   // Total output amount in sats
-    val makersCount: UInt,         // Number of makers in swap
-    val makerAddresses: List<String>, // List of maker addresses
-    val totalFundingTxs: Long,     // Total number of funding transactions
-    val fundingTxidsByHop: List<List<String>>, // Funding TXIDs grouped by hop
-    val totalFee: Long,            // Total fees paid in sats
-    val totalMakerFees: Long,      // Total maker fees in sats
-    val miningFee: Long,           // Mining fees in sats
-    val feePercentage: Double,     // Fee as percentage of amount
-    val makerFeeInfo: List<MakerFeeInfo>, // Detailed fee info per maker
-    val inputUtxos: List<Long>,    // Input UTXO amounts
-    val outputChangeAmounts: List<Long>,    // Change output amounts
-    val outputSwapAmounts: List<Long>,      // Swap output amounts
-    val outputChangeUtxos: List<UtxoWithAddress>, // Change UTXOs with addresses
-    val outputSwapUtxos: List<UtxoWithAddress>    // Swap UTXOs with addresses
-)
-
-enum class AddressType {
-    P2WPKH,  // Native SegWit (bech32)
-    P2TR     // Taproot (bech32m)
-}
+report.swapId                                         // unique swap identifier
+report.role                                           // report creator, usually Taker
+report.status                                         // swap terminal state
+report.swapDurationSeconds                            // execution duration in seconds
+report.recoveryDurationSeconds                        // recovery duration in seconds
+report.startTimestamp                                 // unix start timestamp
+report.endTimestamp                                   // unix end timestamp
+report.network                                        // bitcoin network name
+report.errorMessage                                   // error detail, if present
+report.incomingAmount                                 // sats received by the taker
+report.outgoingAmount                                 // sats sent by the taker
+report.feePaidOrEarned                                // negative when paid, positive when earned
+report.fundingTxids                                   // funding txids grouped by hop
+report.recoveryTxids                                  // recovery txids, if any
+report.timelock                                       // contract timelock in blocks
+report.makerCount                                     // maker hop count used in the swap
+report.makerAddresses                                 // maker addresses used in the route
+report.totalMakerFees                                 // aggregate maker fees in sats
+report.miningFee                                      // mining fees in sats
+report.feePercentage                                  // total fee as a percentage of amount
+report.makerFeeInfo                                   // per-maker fee breakdown
+report.inputUtxos                                     // input UTXO amounts in sats
+report.outputChangeAmounts                            // output change amounts in sats
+report.outputSwapAmounts                              // output swap amounts in sats
+report.outputChangeUtxos                              // change outputs with amount and address
+report.outputSwapUtxos                                // swap outputs with amount and address
 ```
-
-## Examples
-
-Complete examples are available in the [`test/`](test/) directory:
-- [`AndroidExample.kt`](test/AndroidExample.kt) - Android integration with coroutines
 
 ## Testing
 
-The project includes comprehensive test suites in Kotlin:
-
-### Running Tests
-
 ```bash
-# Run all tests
 ./gradlew test
-
-# Run Taproot/Legacy swap tests
-./gradlew :lib:test --tests "coinswap.StandardSwap"
-./gradlew :lib:test --tests "coinswap.TaprootSwap"
 ```
 
-See the [CI workflow](.github/workflows/test-kotlin.yml) for complete test setup.
+If you need live end-to-end infrastructure, bring up the shared regtest environment from `../ffi-commons` first.
 
 ## Requirements
 
-### Android
-- Minimum SDK: 24 (Android 7.0)
-- Target SDK: 34+
-- Permissions: `INTERNET`, `ACCESS_NETWORK_STATE`
-
-### JVM
-- JDK 11 or higher
-- Native library in `java.library.path`
-
-### Bitcoin Setup
-- Bitcoin Core with RPC enabled
-- Synced, non-pruned node with `-txindex`
-- Tor daemon running for privacy
-
-## Error Handling
-
-All operations that can fail throw `TakerError`:
-
-```kotlin
-try {
-    val balances = taker.getBalances()
-    println("Balance: ${balances.total}")
-} catch (e: TakerError.General) {
-    println("General error: ${e.msg}")
-} catch (e: TakerError.Wallet) {
-    println("Wallet error: ${e.msg}")
-} catch (e: TakerError.Network) {
-    println("Network error: ${e.msg}")
-}
-```
-
-## Cross-Compilation
-
-Build for Android architectures:
-
-```bash
-# Add Android targets
-rustup target add aarch64-linux-android x86_64-linux-android
-
-# Build for all Android architectures
-cd ../ffi-commons
-cargo build --release --target aarch64-linux-android
-cargo build --release --target x86_64-linux-android
-```
+- Kotlin 1.8+.
+- JDK 11+.
+- Android SDK 24+ and Android NDK for native Android builds.
+- Bitcoin Core with RPC enabled and Tor for live integration testing.
 
 ## Support
 
 - [Main Coinswap Repository](https://github.com/citadel-tech/coinswap)
-- [FFI Commons](../ffi-commons) - Build and binding generation
-- [Coinswap Documentation](https://github.com/citadel-tech/coinswap/docs)
+- [FFI Commons](../ffi-commons)
 
 ## License
 
