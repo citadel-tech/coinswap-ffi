@@ -2,7 +2,7 @@
 
 # Coinswap FFI Commons
 
-**Core UniFFI binding generator for multi-language Coinswap bindings**
+Shared Rust and UniFFI core for the Coinswap language bindings
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Rust 1.75+](https://img.shields.io/badge/rustc-1.75%2B-lightgrey.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
@@ -11,143 +11,102 @@
 
 ## Overview
 
-This is the core UniFFI binding generator for the [Coinswap protocol](https://github.com/citadel-tech/coinswap). It uses [Mozilla's UniFFI](https://mozilla.github.io/uniffi-rs/) to generate Foreign Function Interface (FFI) bindings for multiple programming languages from a single Rust codebase.
+`ffi-commons` contains the Rust crate, UniFFI configuration, and helper tooling shared by the Kotlin, Swift, Python, and Ruby bindings. It is the source of truth for the exported taker API, data types, and generated foreign-language surfaces.
 
-**Generated Language Bindings:**
-- **[coinswap-kotlin](../coinswap-kotlin)** - Android & JVM
-- **[coinswap-swift](../coinswap-swift)** - iOS & macOS
-- **[coinswap-python](../coinswap-python)** - Cross-platform Python
-- **[coinswap-ruby](../coinswap-ruby)** - Ruby applications
+In normal use, you should build from the language package you are shipping. Each package owns the supported build scripts for staging native artifacts and regenerating bindings.
 
-## Supported Languages
+## Downstream Bindings
 
-Language bindings are generated and placed in their respective directories:
+| Binding | Output directory | Runtime targets |
+| --- | --- | --- |
+| [coinswap-kotlin](../coinswap-kotlin) | `../coinswap-kotlin/lib/src/main/` | Android `arm64-v8a`, `armeabi-v7a`, `x86_64`, JVM/Desktop |
+| [coinswap-swift](../coinswap-swift) | `../coinswap-swift/Sources/` and `../coinswap-swift/coinswap_ffi.xcframework` | iOS arm64, iOS simulator arm64/x86_64, macOS arm64/x86_64 |
+| [coinswap-python](../coinswap-python) | `../coinswap-python/src/coinswap/` | Linux x86_64/aarch64, macOS x86_64/arm64, Windows amd64 |
+| [coinswap-ruby](../coinswap-ruby) | `../coinswap-ruby/` | Linux x86_64/aarch64, macOS x86_64/arm64 |
 
-| Language | Directory | Platform | Status |
-|----------|-----------|----------|--------|
-| **Kotlin** | [coinswap-kotlin](../coinswap-kotlin) | Android, JVM | ✅ Production Ready |
-| **Swift** | [coinswap-swift](../coinswap-swift) | iOS, macOS | ✅ Production Ready |
-| **Python** | [coinswap-python](../coinswap-python) | Linux, macOS, Windows | ✅ Production Ready |
-| **Ruby** | [coinswap-ruby](../coinswap-ruby) | Linux, macOS | ✅ Production Ready |
+## Supported Build Model
 
-## Building Bindings
+The supported workflow is package-local:
 
-### Generate All Language Bindings
+- Kotlin builds are driven from `coinswap-kotlin/build-scripts/` and then packaged with Gradle.
+- Swift builds are driven from `coinswap-swift/build-xcframework-dev.sh`, `build-xcframework-ci.sh`, or `build-xcframework.sh`.
+- Python builds are driven from `coinswap-python/build-scripts/` and then packaged with `python -m build`.
+- Ruby builds are driven from `coinswap-ruby/build-scripts/`.
 
-```bash
-git clone https://github.com/citadel-tech/coinswap-ffi.git
-cd coinswap-ffi/ffi-commons
-chmod +x create_bindings.sh
-./create_bindings.sh
-```
+This keeps target selection, output layout, and packaging concerns next to the language consumer instead of centralizing them in a single monolithic script.
 
-This will:
-1. Build the core Rust library (`libcoinswap_ffi`)
-2. Generate bindings for all supported languages
-3. Place generated files in their respective language directories:
-   - Kotlin: `../coinswap-kotlin/lib/src/main/kotlin/org/coinswap/`
-   - Swift: `../coinswap-swift/`
-   - Python: `../coinswap-python/`
-   - Ruby: `../coinswap-ruby/`
+## Direct Core Development
 
-### Using Generated Bindings
-
-After generation, refer to each language's README for usage instructions:
-- [Kotlin Quick Start](../coinswap-kotlin/README.md)
-- [Swift Quick Start](../coinswap-swift/README.md)
-- [Python Quick Start](../coinswap-python/README.md)
-- [Ruby Quick Start](../coinswap-ruby/README.md)
-
-## Development
+Work directly in `ffi-commons` when you are changing the exported Rust API, UniFFI schema, or shared build logic.
 
 ### Prerequisites
 
-- Rust 1.75.0+
-- UniFFI CLI: `cargo install uniffi-bindgen`
-- Target language toolchain (Android SDK, Xcode, Python, Ruby)
+- Rust 1.75.0 or newer.
+- `cargo run --bin uniffi-bindgen` available from this workspace.
+- Platform toolchains for the targets you intend to build.
 
-### Cross-compilation
-
-#### Android
+### Example: Build a Shared Library Directly
 
 ```bash
-# Add targets
-rustup target add aarch64-linux-android
-rustup target add armv7-linux-androideabi
-rustup target add x86_64-linux-android
-
-# Build
-cargo build --release --target aarch64-linux-android
+cd ffi-commons
+rustup target add x86_64-unknown-linux-gnu
+cargo build --package coinswap-ffi --profile release-smaller --target x86_64-unknown-linux-gnu
 ```
 
-#### iOS
+### Example: Generate Bindings Manually
 
 ```bash
-# Add targets
-rustup target add aarch64-apple-ios
-rustup target add x86_64-apple-ios  # Simulator
-rustup target add aarch64-apple-ios-sim  # M1 Simulator
-
-# Build
-cargo build --release --target aarch64-apple-ios
+cd ffi-commons
+cargo run --bin uniffi-bindgen generate \
+   --library ./target/x86_64-unknown-linux-gnu/release-smaller/libcoinswap_ffi.so \
+   --language python \
+   --out-dir ../coinswap-python/src/coinswap/native/linux-x86_64 \
+   --no-format
 ```
 
-## Requirements
+The package-local scripts wrap these steps and place outputs in the paths expected by each binding.
 
-See [Coinswap documentation](https://github.com/citadel-tech/coinswap/docs) for setup.
-
-## Platform-Specific Notes
+## Target Notes
 
 ### Android
-- Minimum SDK: 24 (Android 7.0)
-- Target SDK: 34+
-- Native libraries: `arm64-v8a`, `armeabi-v7a`, `x86_64`
-- Permissions: Internet, Network State
 
-### iOS
-- Minimum iOS: 13.0
-- Architectures: arm64, x86_64 (simulator)
-- Frameworks: CoinswapFFI.xcframework
-- Capabilities: Network access
+- Minimum SDK: 24.
+- Primary ABIs: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
+- Requires Android NDK for native builds.
+
+### Apple Platforms
+
+- Swift packaging targets iOS 13+ and macOS 10.15+.
+- XCFramework builds combine device and simulator slices for the Apple consumers.
 
 ### Python
-- Python 3.8+
-- Works with PyPy
-- No additional dependencies
+
+- Packaged native resources are staged under `src/coinswap/native/<platform>/`.
+- The Python package metadata declares Linux, macOS, and Windows native resources.
 
 ### Ruby
-- Ruby 2.7+
-- FFI gem (auto-installed)
 
-## Performance
+- Generated Ruby bindings live at the package root as `coinswap.rb`.
+- Native libraries are staged next to the binding for direct FFI loading.
 
-UniFFI introduces minimal overhead:
-- Function calls: < 1ms
-- Data serialization: < 5ms
-- Wallet operations: Near-native speed
-- Swap execution: Network-bound (30-120s)
+## Docker Test Environment
 
-## Troubleshooting
+`ffi-docker-setup` provisions the local regtest environment used by the live integration flows:
 
-### Library not found
+```bash
+cd ffi-commons
+./ffi-docker-setup setup
+./ffi-docker-setup start 4
+./ffi-docker-setup stop
+```
 
-Ensure the compiled library is in the correct location:
-- Linux: `LD_LIBRARY_PATH`
-- macOS: `DYLD_LIBRARY_PATH`
-- Android: `jniLibs/`
-- iOS: Embedded in framework
-
-## Contributing
-
-Contributions welcome! See [main repository](https://github.com/citadel-tech/coinswap) for guidelines.
+`start 4` brings up Bitcoin Core, Tor, and four maker services for end-to-end taker testing.
 
 ## Resources
 
 - [UniFFI Documentation](https://mozilla.github.io/uniffi-rs/)
 - [Coinswap Protocol](https://gist.github.com/chris-belcher/9144bd57a91c194e332fb5ca371d0964)
 - [Coinswap Implementation](https://github.com/citadel-tech/coinswap)
-- [Android Development](https://developer.android.com/)
-- [iOS Development](https://developer.apple.com/)
 
 ## Support
 

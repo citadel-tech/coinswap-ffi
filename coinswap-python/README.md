@@ -2,263 +2,227 @@
 
 # Coinswap Python
 
-**Python bindings for the Coinswap Bitcoin privacy protocol**
+Python bindings for the Coinswap Bitcoin privacy protocol
 
 </div>
 
 ## Overview
 
-Python bindings for [Coinswap](https://github.com/citadel-tech/coinswap), enabling cross-platform integration with the Bitcoin coinswap privacy protocol. Built using [UniFFI](https://mozilla.github.io/uniffi-rs/).
+`coinswap-python` packages the shared UniFFI taker API for Python applications.
 
-## Quick Start
+## Supported Platforms
 
-### Prerequisites
+| Runtime platform | Native resource directory |
+| --- | --- |
+| Linux x86_64 | `src/coinswap/native/linux-x86_64/` |
+| Linux aarch64 | `src/coinswap/native/linux-aarch64/` |
+| macOS x86_64 | `src/coinswap/native/darwin-x86_64/` |
+| macOS arm64 | `src/coinswap/native/darwin-arm64/` |
+| Windows amd64 | `src/coinswap/native/win-amd64/` |
 
-- Python 3.8 or higher
-- pip or poetry for package management
-- Generated bindings (see [Building](#building))
-
-### Building
-
-Generate the Python bindings from the UniFFI core:
-
-```bash
-cd ../ffi-commons
-chmod +x create_bindings.sh
-./create_bindings.sh
-```
-
-This generates:
-- `coinswap.py` - Python binding module
-- `libcoinswap_ffi.so` - Native library (Linux)
-- `libcoinswap_ffi.dylib` - Native library (macOS)
-- `coinswap_ffi.dll` - Native library (Windows)
-
-### Installation
-
-#### Option 1: Direct Usage
-
-Add the coinswap-python directory to your Python path:
-
-```python
-import sys
-sys.path.append('/path/to/coinswap-ffi/coinswap-python')
-
-import coinswap
-```
-
-#### Option 2: Virtual Environment
+## Build and Package
 
 ```bash
-cd coinswap-python
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install --upgrade pip
+# Linux host
+bash ./build-scripts/development/build-dev-linux-x86_64.sh
+
+# macOS host
+bash ./build-scripts/development/build-dev-macos-x86_64.sh
+
+# Release artifacts
+bash ./build-scripts/release/build-release-linux-x86_64.sh
+bash ./build-scripts/release/build-release-linux-aarch64.sh
+bash ./build-scripts/release/build-release-macos-x86_64.sh
+bash ./build-scripts/release/build-release-macos-aarch64.sh
 ```
 
-Then use the module:
+To build a wheel or source distribution:
 
-```python
-import coinswap
+```bash
+python -m pip install --upgrade build
+python -m build
 ```
 
-### Basic Usage
+## Basic Usage
 
 ```python
-import coinswap
+from coinswap import AddressType, RpcConfig, SwapParams, Taker
 
-# Initialize a Taker
-taker = coinswap.Taker.init(
-    data_dir="/path/to/data",
-    wallet_file_name="taker_wallet",
-    rpc_config=coinswap.RPCConfig(
-        url="http://localhost:18442",
-        user="user",
-        password="password",
-        wallet_name="taker_wallet"
-    ),
-    control_port=9051,
-    tor_auth_password="your_tor_auth_pass",
-    zmq_addr="tcp://localhost:28332",
-    password="your_secure_password"
+# Bitcoin Core RPC settings used by the taker.
+rpc_config = RpcConfig(
+    url="http://127.0.0.1:18442",             # Bitcoin Core RPC endpoint
+    username="user",                          # Bitcoin Core RPC username
+    password="password",                      # Bitcoin Core RPC password
+    wallet_name="taker_wallet",               # Bitcoin Core wallet name
 )
 
-# Setup logging
-taker.setup_logging(data_dir="/path/to/data")
+# Create or load the taker wallet.
+taker = Taker.init(
+    data_dir="/path/to/data",                 # taker data directory; None uses the default taker dir
+    wallet_file_name="taker_wallet",          # taker wallet file to load or create
+    rpc_config=rpc_config,                     # Bitcoin Core RPC settings
+    control_port=9051,                         # Tor control port
+    tor_auth_password="coinswap",             # Tor control password
+    zmq_addr="tcp://127.0.0.1:28332",         # Bitcoin Core ZMQ endpoint
+    password="",                              # optional wallet encryption password
+)
 
-# Sync wallet
+# Configure logging, sync wallet state, and wait for the offer book.
+taker.setup_logging(
+    data_dir="/path/to/data",                 # directory used for file logging
+    log_level="Info",                         # Trace | Debug | Info | Warn | Error
+)
 taker.sync_and_save()
+taker.sync_offerbook_and_wait()
 
-# Get balances
+# Inspect balances and derive a new receive address.
 balances = taker.get_balances()
-print(f"Total Balance: {balances.total} sats")
-
-# Get a new receiving address
-address = taker.get_next_external_address(
-    address_type=coinswap.AddressType.P2WPKH
-)
-print(f"Receive to: {address.value}")
-
-# Wait for offerbook to sync
-print("Waiting for offerbook synchronization...")
-while taker.is_offerbook_syncing():
-    print("Offerbook sync in progress...")
-    import time
-    time.sleep(2)
-print("Offerbook synchronized!")
-
-# Perform a coinswap
-swap_params = coinswap.SwapParams(
-    send_amount=1_000_000,  # 0.01 BTC in sats
-    maker_count=2,
-    manually_selected_outpoints=None
+receive_address = taker.get_next_external_address(
+    address_type=AddressType(addr_type="P2WPKH"),  # external address format to derive
 )
 
-report = taker.do_coinswap(swap_params=swap_params)
-if report:
-    print("Swap completed!")
-    print(f"Amount swapped: {report.amount_swapped} sats")
-    print(f"Routing fee paid: {report.routing_fees_paid} sats")
+print(f"regular: {balances.regular} sats")
+print(f"swap: {balances.swap} sats")
+print(f"contract: {balances.contract} sats")
+print(f"fidelity: {balances.fidelity} sats")
+print(f"spendable: {balances.spendable} sats")
+print(f"receive to: {receive_address.address}")
+
+# Build the swap request exactly as the taker API expects it.
+swap_params = SwapParams(
+    protocol=None,                             # optional protocol hint; None uses the backend default
+    send_amount=1_000_000,                     # total sats to swap
+    maker_count=2,                             # number of maker hops
+    tx_count=1,                                # number of funding transaction splits
+    required_confirms=1,                       # minimum funding confirmations
+    manually_selected_outpoints=None,          # optional explicit wallet UTXOs
+    preferred_makers=None,                     # optional maker addresses to prefer
+)
+
+# Prepare the swap first, then start it with the returned swap id.
+swap_id = taker.prepare_coinswap(
+    swap_params=swap_params,                   # fully populated swap request
+)
+report = taker.start_coinswap(
+    swap_id=swap_id,                           # identifier returned by prepare_coinswap
+)
+
+print(f"swap id: {report.swap_id}")
+print(f"status: {report.status}")
+print(f"outgoing amount: {report.outgoing_amount} sats")
+print(f"fee paid: {abs(report.fee_paid_or_earned)} sats")
 ```
 
 ## API Reference
 
-### Taker Class
-
-Initialize and manage a coinswap taker:
+### RpcConfig
 
 ```python
-# Initialize
-taker = coinswap.Taker.init(
-    data_dir: str | None,
-    wallet_file_name: str | None,
-    rpc_config: RPCConfig | None,
-    control_port: int | None,
-    tor_auth_password: str | None,
-    zmq_addr: str,
-    password: str | None
+rpc_config = RpcConfig(
+    url=rpc_url,                               # Bitcoin Core RPC endpoint
+    username=rpc_username,                     # Bitcoin Core RPC username
+    password=rpc_password,                     # Bitcoin Core RPC password
+    wallet_name=wallet_name,                   # Bitcoin Core wallet name
 )
-
-# Wallet operations
-balances = taker.get_balances()
-address = taker.get_next_external_address(address_type: AddressType)
-transactions = taker.get_transactions(count: int | None, skip: int | None)
-utxos = taker.list_all_utxo_spend_info()
-txid = taker.send_to_address(
-    address: str,
-    amount: int,
-    fee_rate: float | None,
-    manually_selected_outpoints: list[OutPoint] | None
-)
-
-# Swap operations
-report = taker.do_coinswap(swap_params: SwapParams)
-offers = taker.fetch_offers()
-is_syncing = taker.is_offerbook_syncing()
-
-# Maintenance
-taker.sync_and_save()
-taker.backup(destination_path: str, password: str | None)
-taker.recover_from_swap()
 ```
 
-### Data Types
+### SwapParams
 
 ```python
-from dataclasses import dataclass
-from enum import Enum
-
-@dataclass
-class SwapParams:
-    send_amount: int              # Amount to swap in satoshis
-    maker_count: int              # Number of makers (hops)
-    manually_selected_outpoints: list[OutPoint] | None
-
-@dataclass
-class Balances:
-    regular: int                  # Regular wallet balance in sats
-    swap: int                     # Swap balance in sats
-    contract: int                 # Contract balance in sats
-    spendable: int                # Spendable balance in sats
-
-@dataclass
-class SwapReport:
-    swap_id: str                  # Unique swap identifier
-    swap_duration_seconds: float  # Duration of swap in seconds
-    target_amount: int            # Target swap amount in sats
-    total_input_amount: int       # Total input amount in sats
-    total_output_amount: int      # Total output amount in sats
-    makers_count: int             # Number of makers in swap
-    maker_addresses: list[str]    # List of maker addresses
-    total_funding_txs: int        # Total number of funding transactions
-    funding_txids_by_hop: list[list[str]]  # Funding TXIDs grouped by hop
-    total_fee: int                # Total fees paid in sats
-    total_maker_fees: int         # Total maker fees in sats
-    mining_fee: int               # Mining fees in sats
-    fee_percentage: float         # Fee as percentage of amount
-    maker_fee_info: list[MakerFeeInfo]  # Detailed fee info per maker
-    input_utxos: list[int]        # Input UTXO amounts
-    output_change_amounts: list[int]    # Change output amounts
-    output_swap_amounts: list[int]      # Swap output amounts
-    output_change_utxos: list[UtxoWithAddress]  # Change UTXOs with addresses
-    output_swap_utxos: list[UtxoWithAddress]    # Swap UTXOs with addresses
-
-class AddressType(Enum):
-    P2WPKH = "P2WPKH"            # Native SegWit (bech32)
-    P2TR = "P2TR"                # Taproot (bech32m)
+swap_params = SwapParams(
+    protocol=protocol_hint,                    # optional protocol hint string
+    send_amount=send_amount_sats,              # total sats to swap
+    maker_count=maker_count,                   # number of maker hops
+    tx_count=tx_count,                         # number of funding transaction splits
+    required_confirms=required_confirms,       # minimum funding confirmations
+    manually_selected_outpoints=outpoints,     # optional explicit wallet UTXOs
+    preferred_makers=preferred_makers,         # optional maker addresses to prefer
+)
 ```
 
-## Examples
-
-Complete example are available in the [`test/`](test/) directory:
-- [`coinswap.py`](test/coinswap.py) - Full wallet implementation
-
-## Error Handling
-
-All operations that can fail raise `TakerError`:
+### Taker
 
 ```python
-import coinswap
+taker = Taker.init(
+    data_dir=data_dir,                         # taker data directory
+    wallet_file_name=wallet_file_name,         # taker wallet file to load or create
+    rpc_config=rpc_config,                     # Bitcoin Core RPC settings
+    control_port=control_port,                 # Tor control port
+    tor_auth_password=tor_auth_password,       # Tor control password
+    zmq_addr=zmq_addr,                         # Bitcoin Core ZMQ endpoint
+    password=password,                         # optional wallet encryption password
+)
 
-try:
-    balances = taker.get_balances()
-    print(f"Balance: {balances.total}")
-except coinswap.TakerError as e:
-    # Handle all taker errors
-    print(f"Error: {e}")
-except Exception as e:
-    # Handle unexpected errors
-    print(f"Unexpected error: {e}")
+taker.setup_logging(data_dir=data_dir, log_level=log_level)                             # configure taker logging
+swap_id = taker.prepare_coinswap(swap_params=swap_params)                               # prepare a swap and return the swap id
+report = taker.start_coinswap(swap_id=swap_id)                                          # execute a prepared swap
+txs = taker.get_transactions(count=count, skip=skip)                                    # recent wallet transactions
+internal = taker.get_next_internal_addresses(count=count, address_type=address_type)    # derive internal HD addresses
+external = taker.get_next_external_address(address_type=address_type)                   # derive an external receive address
+utxos = taker.list_all_utxo_spend_info()                                                # wallet UTXOs plus spend metadata
+taker.backup(destination_path=destination_path, password=backup_password)               # write a wallet backup JSON file
+taker.lock_unspendable_utxos()                                                          # lock fidelity and live-contract UTXOs
+txid = taker.send_to_address(address, amount, fee_rate, outpoints)                      # send sats to an external address
+balances = taker.get_balances()                                                         # read wallet balances
+taker.sync_and_save()                                                                   # sync wallet state and persist it
+taker.sync_offerbook_and_wait()                                                         # block until the offer book is synchronized
+offerbook = taker.fetch_offers()                                                        # read the current offer book
+rendered_offer = taker.display_offer(offer)                                             # format a maker offer for display
+wallet_name = taker.get_wallet_name()                                                   # read the wallet name
+taker.recover_active_swap()                                                             # resume recovery for a failed active swap
+makers = taker.fetch_all_makers()                                                       # read maker addresses across all states
+```
+
+### AddressType, Balances, and SwapReport
+
+```python
+address_type = AddressType(addr_type="P2WPKH")   # external address format to derive
+
+balances.regular                                 # single-signature seed balance in sats
+balances.swap                                    # swap-coin balance in sats
+balances.contract                                # live contract balance in sats
+balances.fidelity                                # fidelity bond balance in sats
+balances.spendable                               # regular + swap balance in sats
+
+report.swap_id                                   # unique swap identifier
+report.role                                      # report creator, usually Taker
+report.status                                    # swap terminal state
+report.swap_duration_seconds                     # execution duration in seconds
+report.recovery_duration_seconds                 # recovery duration in seconds
+report.start_timestamp                           # unix start timestamp
+report.end_timestamp                             # unix end timestamp
+report.network                                   # bitcoin network name
+report.error_message                             # error detail, if present
+report.incoming_amount                           # sats received by the taker
+report.outgoing_amount                           # sats sent by the taker
+report.fee_paid_or_earned                        # negative when paid, positive when earned
+report.funding_txids                             # funding txids grouped by hop
+report.recovery_txids                            # recovery txids, if any
+report.timelock                                  # contract timelock in blocks
+report.makers_count                              # maker hop count used in the swap
+report.maker_addresses                           # maker addresses used in the route
+report.total_maker_fees                          # aggregate maker fees in sats
+report.mining_fee                                # mining fees in sats
+report.fee_percentage                            # total fee as a percentage of amount
+report.maker_fee_info                            # per-maker fee breakdown
+report.input_utxos                               # input UTXO amounts in sats
+report.output_change_amounts                     # output change amounts in sats
+report.output_swap_amounts                       # output swap amounts in sats
+report.output_change_utxos                       # change outputs with amount and address
+report.output_swap_utxos                         # swap outputs with amount and address
 ```
 
 ## Requirements
 
-- Python 3.8 or higher
-- Works with CPython and PyPy
-- Bitcoin Core with RPC enabled
-- Synced, non-pruned node with `-txindex`
-- Tor daemon for privacy
-
-## Docs (local)
-
-```bash
-cd coinswap-python
-bash ./build-scripts/development/build-dev-linux-x86_64.sh
-pip install pdoc
-pdoc coinswap -d google --output-directory docs
-```
-
-To browse interactively:
-
-```bash
-pdoc coinswap -d google
-```
+- Python 3.8 or newer.
+- CPython or PyPy.
+- Bitcoin Core with RPC enabled, fully synced, non-pruned, and `-txindex` enabled.
+- Tor daemon for live taker workflows.
 
 ## Support
 
 - [Main Coinswap Repository](https://github.com/citadel-tech/coinswap)
-- [FFI Commons](../ffi-commons) - Build and binding generation
-- [Coinswap Documentation](https://github.com/citadel-tech/coinswap/docs)
+- [FFI Commons](../ffi-commons)
 
 ## License
 

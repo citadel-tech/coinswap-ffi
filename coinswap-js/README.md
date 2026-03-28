@@ -1,8 +1,8 @@
 <div align="center">
 
-# Coinswap NAPI
+# Coinswap JS
 
-**Node.js bindings for the Coinswap Bitcoin privacy protocol**
+Node.js bindings for the Coinswap Bitcoin privacy protocol
 
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
@@ -11,9 +11,19 @@
 
 ## Overview
 
-Coinswap NAPI provides high-performance Node.js bindings for the [Coinswap protocol](https://github.com/citadel-tech/coinswap), enabling JavaScript and TypeScript applications to perform trustless, privacy-preserving Bitcoin atomic swaps. Built with [NAPI-RS](https://napi.rs) for native performance and cross-platform compatibility.
+`coinswap-js` exposes the Coinswap taker API to Node.js and TypeScript through N-API.
 
-> **See it in action:** Check out [taker-app](https://github.com/citadel-tech/taker-app) - a reference GUI application built with these bindings that demonstrates wallet management, swap execution, and market analytics.
+## Platform Support
+
+Prebuilt targets are configured for:
+
+| Platform | Architectures |
+| --- | --- |
+| Linux | x64, arm64, arm64 musl |
+| macOS | x64, arm64 |
+| Windows | x64, arm64 |
+| FreeBSD | x64 |
+| Android | arm64 |
 
 ## Installation
 
@@ -25,207 +35,206 @@ yarn add coinswap-js
 pnpm add coinswap-js
 ```
 
-## Quick Start
-
-### Create a New Wallet
-
-```typescript
-import { Taker } from 'coinswap-js';
-
-// Configure RPC connection to Bitcoin Core
-const rpcConfig = {
-  url: 'http://127.0.0.1:38332',
-  username: 'user',
-  password: 'password'
-  walletName: 'my_wallet'
-};
-
-// Create a new wallet
-const taker = await Taker.init(
-  null,                    // data_dir (defaults to ~/.coinswap/taker)
-  'taker_wallet',             // wallet name
-  rpcConfig,
-  [control_port],
-  null,               // Tor Auth Password
-  [zmq_addr]
-  'secure_password'     // password for encryption
-);
-
-console.log('Wallet created successfully!');
-```
-
-### Restore from Backup
-
-```typescript
-import { Taker } from 'coinswap-js';
-
-const backupPath = './backups/wallet_backup.json';
-const password = 'secure_password';
-
-await Taker.restoreWallet(
-  null,              // data_dir
-  'restored_wallet', // wallet name
-  rpcConfig,
-  backupPath,       //.json backup file
-  password
-);
-```
-
-### Query Wallet Balance
-
-```typescript
-const balances = await taker.getBalances();
-
-console.log(`Seed Balance: ${balances.seedBalance} sats`);
-console.log(`Swap Balance: ${balances.swapBalance} sats`);
-console.log(`Live Balance: ${balances.liveBalance} sats`);
-console.log(`Fidelity Bonds: ${balances.fidelityBalance} sats`);
-```
-
-### Fetch Maker Offers
-
-```typescript
-const offerBook = await taker.fetchOffers();
-
-console.log(`Found ${offerBook.offers.length} makers`);
-console.log(`Total Liquidity: ${offerBook.totalOfferAmount} sats`);
-console.log(`Average Maker Fee: ${offerBook.avgMakerFee.toFixed(2)}%`);
-console.log(`Online Makers: ${offerBook.onlineMakers}`);
-
-// Filter offers
-const filteredOffers = offerBook.offers.filter(offer => 
-  offer.minSize <= 1_000_000 && offer.maxSize >= 1_000_000
-);
-```
-
-### Execute a Coinswap
-
-```typescript
-const swapParams = {
-  sendAmount: 1_000_000,  // 0.01 BTC in satoshis
-  makerCount: 3,          // Route through 3 makers
-  manuallySelectedOutpoints: null  // Auto UTXO selection
-};
-
-console.log('Starting coinswap...');
-const swapReport = await taker.doSwap(swapParams);
-
-console.log(`Swap completed in ${swapReport.swapDurationSeconds}s`);
-console.log(`Total Fee: ${swapReport.totalFee} sats (${swapReport.feePercentage.toFixed(2)}%)`);
-console.log(`Makers Used: ${swapReport.makersCount}`);
-console.log(`Funding Txs: ${swapReport.totalFundingTxs}`);
-
-// Detailed maker fees
-swapReport.makerFeeInfo.forEach((maker, index) => {
-  console.log(`Maker ${index + 1}: ${maker.makerAddress}`);
-  console.log(`  Total Fee: ${maker.totalFee} sats`);
-});
-```
-
-## Platform Support
-
-Pre-built binaries are available for:
-
-| Platform | Architecture               | Status |
-| -------- | -------------------------- | ------ |
-| Linux    | x64, ARM64                 | ✅      |
-| macOS    | x64 (Intel), ARM64 (M1/M2) | ✅      |
-| Windows  | x64, ARM64                 | ✅      |
-| FreeBSD  | x64                        | ✅      |
-| Android  | ARM64                      | ✅      |
-
-## Build from Source
-
-### Prerequisites
-
-- Rust 1.75.0 or higher
-- Node.js 18.0.0 or higher
-- Build tools: `build-essential`, `automake`, `libtool` (Linux)
-
-### Build Steps
+## Build and Package
 
 ```bash
-# Clone repository
-git clone https://github.com/citadel-tech/coinswap-ffi.git
-cd coinswap-ffi/coinswap-js
-
-# Install dependencies
+cd coinswap-js
 yarn install
+yarn build
+```
 
-# Build native module
-yarn run build
+For a debug build:
 
-# Build for all platforms (requires cross-compilation setup)
-yarn run build:release
+```bash
+yarn build:debug
+```
+
+For CI or release automation, the package uses the standard `napi prepublish -t npm` flow wired into `prepublishOnly`.
+
+## Basic Usage
+
+```typescript
+import {
+  AddressType,
+  Taker,
+  type RpcConfig,
+  type SwapParams,
+} from 'coinswap-js'
+
+// Bitcoin Core RPC settings used by the taker.
+const rpcConfig: RpcConfig = {
+  url: 'http://127.0.0.1:18442',          // Bitcoin Core RPC endpoint
+  username: 'user',                       // Bitcoin Core RPC username
+  password: 'password',                   // Bitcoin Core RPC password
+  walletName: 'taker_wallet',             // Bitcoin Core wallet name
+}
+
+// Create or load the taker wallet.
+const taker = new Taker(
+  null,                                   // null uses the default taker data directory
+  'taker_wallet',                         // taker wallet file to load or create
+  rpcConfig,                              // Bitcoin Core RPC settings
+  9051,                                   // Tor control port
+  'coinswap',                             // Tor control password
+  'tcp://127.0.0.1:28332',                // Bitcoin Core ZMQ endpoint
+  '',                                     // optional wallet encryption password
+)
+
+// Configure logging, sync wallet state, and wait for the offer book.
+Taker.setupLogging(
+  null,                                   // null writes logs under the default taker directory
+  'info',                                 // trace | debug | info | warn | error
+)
+taker.syncAndSave()
+taker.syncOfferbookAndWait()
+
+// Inspect balances and derive a new receive address.
+const balances = taker.getBalances()
+const receiveAddress = taker.getNextExternalAddress(
+  AddressType.P2WPKH,                     // external address format to derive
+)
+
+console.log(`regular: ${balances.regular} sats`)
+console.log(`swap: ${balances.swap} sats`)
+console.log(`contract: ${balances.contract} sats`)
+console.log(`fidelity: ${balances.fidelity} sats`)
+console.log(`spendable: ${balances.spendable} sats`)
+console.log(`receive to: ${receiveAddress.address}`)
+
+// Build the swap request exactly as the taker API expects it.
+const swapParams: SwapParams = {
+  protocol: undefined,                    // optional protocol hint; omit to use the backend default
+  sendAmount: 1_000_000,                  // total sats to swap
+  makerCount: 2,                          // number of maker hops
+  txCount: 1,                             // number of funding transaction splits
+  requiredConfirms: 1,                    // minimum funding confirmations
+  manuallySelectedOutpoints: undefined,   // optional explicit wallet UTXOs
+  preferredMakers: undefined,             // optional maker addresses to prefer
+}
+
+// Prepare the swap first, then start it with the returned swap id.
+const swapId = taker.prepareCoinswap(swapParams)
+const report = taker.startCoinswap(
+  swapId,                                 // identifier returned by prepareCoinswap
+)
+
+console.log(`swap id: ${report.swapId}`)
+console.log(`status: ${report.status}`)
+console.log(`outgoing amount: ${report.outgoingAmount} sats`)
+console.log(`fee paid: ${Math.abs(report.feePaidOrEarned)} sats`)
+```
+
+## API Reference
+
+### RpcConfig
+
+```typescript
+const rpcConfig: RpcConfig = {
+  url: rpcUrl,                            // Bitcoin Core RPC endpoint
+  username: rpcUsername,                  // Bitcoin Core RPC username
+  password: rpcPassword,                  // Bitcoin Core RPC password
+  walletName: walletName,                 // Bitcoin Core wallet name
+}
+```
+
+### SwapParams
+
+```typescript
+const swapParams: SwapParams = {
+  protocol: protocolHint,                 // optional protocol hint string
+  sendAmount: sendAmountSats,             // total sats to swap
+  makerCount: makerCount,                 // number of maker hops
+  txCount: txCount,                       // number of funding transaction splits
+  requiredConfirms: requiredConfirms,     // minimum funding confirmations
+  manuallySelectedOutpoints: outpoints,   // optional explicit wallet UTXOs
+  preferredMakers: preferredMakers,       // optional maker addresses to prefer
+}
+```
+
+### Taker
+
+```typescript
+const taker = new Taker(
+  dataDir,                                // taker data directory
+  walletFileName,                         // taker wallet file to load or create
+  rpcConfig,                              // Bitcoin Core RPC settings
+  controlPort,                            // Tor control port
+  torAuthPassword,                        // Tor control password
+  zmqAddr,                                // Bitcoin Core ZMQ endpoint
+  password,                               // optional wallet encryption password
+)
+
+Taker.setupLogging(dataDir, logLevel)                                     // configure taker logging
+const swapId = taker.prepareCoinswap(swapParams)                          // prepare a swap and return the swap id
+const report = taker.startCoinswap(swapId)                                // execute a prepared swap
+const txs = taker.getTransactions(count, skip)                            // recent wallet transactions
+const internal = taker.getNextInternalAddresses(count, addressType)       // derive internal HD addresses
+const external = taker.getNextExternalAddress(addressType)                // derive an external receive address
+const utxos = taker.listAllUtxoSpendInfo()                                // wallet UTXOs plus spend metadata
+taker.backup(destinationPath, password)                                   // write a wallet backup JSON file
+taker.lockUnspendableUtxos()                                              // lock fidelity and live-contract UTXOs
+const txid = taker.sendToAddress(address, amount, feeRate, outpoints)     // send sats to an external address
+const balances = taker.getBalances()                                      // read wallet balances
+taker.syncAndSave()                                                       // sync wallet state and persist it
+taker.syncOfferbookAndWait()                                              // block until the offer book is synchronized
+const offerBook = taker.fetchOffers()                                     // read the current offer book
+const renderedOffer = taker.displayOffer(offer)                           // format a maker offer for display
+const walletName = taker.getName()                                        // read the wallet name
+taker.recoverActiveSwap()                                                 // resume recovery for a failed active swap
+const makers = taker.fetchAllMakers()                                     // read maker addresses across all states
+```
+
+### AddressType, Balances, and SwapReport
+
+```typescript
+const addressType = AddressType.P2WPKH             // external address format to derive
+
+balances.regular                                   // single-signature seed balance in sats
+balances.swap                                      // swap-coin balance in sats
+balances.contract                                  // live contract balance in sats
+balances.fidelity                                  // fidelity bond balance in sats
+balances.spendable                                 // regular + swap balance in sats
+
+report.swapId                                      // unique swap identifier
+report.role                                        // report creator, usually Taker
+report.status                                      // swap terminal state
+report.swapDurationSeconds                         // execution duration in seconds
+report.recoveryDurationSeconds                     // recovery duration in seconds
+report.startTimestamp                              // unix start timestamp
+report.endTimestamp                                // unix end timestamp
+report.network                                     // bitcoin network name
+report.errorMessage                                // error detail, if present
+report.incomingAmount                              // sats received by the taker
+report.outgoingAmount                              // sats sent by the taker
+report.feePaidOrEarned                             // negative when paid, positive when earned
+report.fundingTxids                                // funding txids grouped by hop
+report.recoveryTxids                               // recovery txids, if any
+report.timelock                                    // contract timelock in blocks
+report.makersCount                                 // maker hop count used in the swap
+report.makerAddresses                              // maker addresses used in the route
+report.totalMakerFees                              // aggregate maker fees in sats
+report.miningFee                                   // mining fees in sats
+report.feePercentage                               // total fee as a percentage of amount
+report.makerFeeInfo                                // per-maker fee breakdown
+report.inputUtxos                                  // input UTXO amounts in sats
+report.outputChangeAmounts                         // output change amounts in sats
+report.outputSwapAmounts                           // output swap amounts in sats
+report.outputChangeUtxos                           // change outputs with amount and address
+report.outputSwapUtxos                             // swap outputs with amount and address
 ```
 
 ## Requirements
 
-See the [main Coinswap documentation](https://github.com/citadel-tech/coinswap/blob/master/docs/) for setup instructions.
+- Node.js 18 or newer.
+- Rust 1.75.0 or newer when building from source.
+- Bitcoin Core with RPC enabled, fully synced, non-pruned, and `-txindex` enabled.
+- Tor daemon for maker discovery and routing.
 
-## Examples & Reference Applications
+## Reference Application
 
-### Taker App (GUI Reference Implementation)
-
-The [taker-app](../taker-app) is a full-featured desktop application that demonstrates production usage of these bindings. It includes:
-
-- Complete wallet management interface
-- Real-time swap execution with progress tracking
-- Market analytics and maker discovery
-- UTXO visualization and control
-- Transaction history and reporting
-
-Use it as a reference for building your own applications or as a testing environment for the bindings.
-
-```bash
-# Run the taker app
-cd ../taker-app
-npm install
-npm start
-```
-
-## Performance
-
-NAPI bindings provide near-native performance:
-- Wallet operations: < 10ms
-- UTXO queries: < 50ms
-- Swap execution: 30-120s (depends on maker count and network)
-
-## Troubleshooting
-
-### Module not found
-
-Ensure native binaries are built:
-```bash
-npm run build
-```
-
-### RPC connection errors
-
-Check Bitcoin Core is running and RPC credentials are correct:
-```bash
-bitcoin-cli -signet getblockchaininfo
-```
-
-### Tor connection issues
-
-Verify Tor daemon is running:
-```bash
-systemctl status tor
-```
-
-## Contributing
-
-Contributions welcome! Please see the [main repository](https://github.com/citadel-tech/coinswap) for guidelines.
-
-## Resources
-
-- [Coinswap Protocol](https://gist.github.com/chris-belcher/9144bd57a91c194e332fb5ca371d0964)
-- [Coinswap Implementation](https://github.com/citadel-tech/coinswap)
-- [NAPI-RS Documentation](https://napi.rs)
-- [Bitcoin Core RPC](https://developer.bitcoin.org/reference/rpc/)
+[taker-app](https://github.com/citadel-tech/taker-app) is the primary desktop reference implementation for this binding and demonstrates wallet management, maker discovery, swap execution, analytics, and UTXO control.
 
 ## Support
 
-- GitHub Issues: [Report bugs](https://github.com/citadel-tech/coinswap-ffi/issues)
-- Community: [Discussions](https://discord.gg/K9BX4EGn)
+- GitHub Issues: [coinswap-ffi/issues](https://github.com/citadel-tech/coinswap-ffi/issues)
+- Discussions: [citadel-tech/coinswap](https://github.com/citadel-tech/coinswap/discussions)
