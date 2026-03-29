@@ -119,7 +119,7 @@ def main():
         print("\n📡 Attempting to fetch offers from makers...")
         try:
             offerbook = taker.fetch_offers()
-            print(f"✓ Successfully fetched offers")
+            print("✓ Successfully fetched offers")
             print(f"  Total makers found: {len(offerbook.makers)}")
             
             if len(offerbook.makers) > 0:
@@ -137,7 +137,7 @@ def main():
                         print(f"    Protocol: {maker.protocol.protocol_type}")
                     
                     if maker.offer:
-                        print(f"    Offer Details:")
+                        print("    Offer Details:")
                         print(f"      Base Fee: {maker.offer.base_fee} sats")
                         print(f"      Amount Relative Fee: {maker.offer.amount_relative_fee_pct}%")
                         print(f"      Time Relative Fee: {maker.offer.time_relative_fee_pct}%")
@@ -146,7 +146,7 @@ def main():
                         print(f"      Min Size: {maker.offer.min_size} sats")
                         print(f"      Max Size: {maker.offer.max_size} sats")
                     else:
-                        print(f"    Offer: None (no offer available)")
+                        print("    Offer: None (no offer available)")
             else:
                 print("\n⚠️  No makers found in offerbook")
                 
@@ -172,7 +172,7 @@ def main():
 
         print("\nGetting updated balances...")
         balances = taker.get_balances()
-        print(f"Updated Balances:")
+        print("Updated Balances:")
         print(f"  Spendable: {balances.spendable} sats")
         print(f"  Regular: {balances.regular} sats")
         print(f"  Swap: {balances.swap} sats")
@@ -189,7 +189,7 @@ def main():
             manually_selected_outpoints=None,
             preferred_makers=None,
         )
-        print(f"Swap Parameters:")
+        print("Swap Parameters:")
         print(f"  Send Amount: {swap_params.send_amount} sats")
         print(f"  Maker Count: {swap_params.maker_count}")
         print(f"  Protocol: {swap_params.protocol}")
@@ -199,8 +199,8 @@ def main():
         result = taker.start_coinswap(swap_id=swap_id)
         assert result is not None, "Coinswap should return a swap report"
 
-        print(f"\n✅ Coinswap completed successfully!")
-        print(f"\nSwap Report:")
+        print("\n✅ Coinswap completed successfully!")
+        print("\nSwap Report:")
         outgoing_amount = getattr(result, "outgoing_amount", getattr(result, "target_amount", None))
         fee_value = getattr(result, "fee_paid_or_earned", getattr(result, "total_fee", None))
         total_fee_paid = abs(fee_value) if fee_value is not None else None
@@ -212,7 +212,7 @@ def main():
         print(f"  Mining Fee: {result.mining_fee} sats")
         print(f"  Fee Percentage: {result.fee_percentage:.4f}%")
         print(f"  Number of Makers Used: {result.makers_count}")
-        print(f"  Maker Addresses:")
+        print("  Maker Addresses:")
         for i, addr in enumerate(result.maker_addresses, 1):
             print(f"    {i}. {addr}")
 
@@ -220,7 +220,7 @@ def main():
         print("\n📊 Final balances after coinswap...")
         taker.sync_and_save()
         final_balances = taker.get_balances()
-        print(f"Final Balances:")
+        print("Final Balances:")
         print(f"  Spendable: {final_balances.spendable} sats")
         print(f"  Regular: {final_balances.regular} sats")
         print(f"  Swap: {final_balances.swap} sats")
