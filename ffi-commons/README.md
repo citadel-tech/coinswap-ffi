@@ -11,7 +11,7 @@ Shared Rust and UniFFI core for the Coinswap language bindings
 
 ## Overview
 
-`ffi-commons` contains the Rust crate, UniFFI configuration, and helper tooling shared by the Kotlin, Swift, Python, and Ruby bindings. It is the source of truth for the exported taker API, data types, and generated foreign-language surfaces.
+`ffi-commons` contains the Rust crate, UniFFI configuration, and helper tooling shared by the Kotlin, Swift, Python, Ruby, and React Native bindings. It is the source of truth for the exported taker API, data types, and generated foreign-language surfaces.
 
 In normal use, you should build from the language package you are shipping. Each package owns the supported build scripts for staging native artifacts and regenerating bindings.
 
@@ -23,6 +23,7 @@ In normal use, you should build from the language package you are shipping. Each
 | [coinswap-swift](../coinswap-swift) | `../coinswap-swift/Sources/` and `../coinswap-swift/coinswap_ffi.xcframework` | iOS arm64, iOS simulator arm64/x86_64, macOS arm64/x86_64 |
 | [coinswap-python](../coinswap-python) | `../coinswap-python/src/coinswap/` | Linux x86_64/aarch64, macOS x86_64/arm64, Windows amd64 |
 | [coinswap-ruby](../coinswap-ruby) | `../coinswap-ruby/` | Linux x86_64/aarch64, macOS x86_64/arm64 |
+| [coinswap-react-native](../coinswap-react-native) | `../coinswap-react-native/android/src/main/` and `../coinswap-react-native/ios/` | Android `arm64-v8a`, `x86_64`; iOS arm64, iOS simulator arm64/x86_64 |
 
 ## Supported Build Model
 
@@ -32,6 +33,7 @@ The supported workflow is package-local:
 - Swift builds are driven from `coinswap-swift/build-xcframework-dev.sh`, `build-xcframework-ci.sh`, or `build-xcframework.sh`.
 - Python builds are driven from `coinswap-python/build-scripts/` and then packaged with `python -m build`.
 - Ruby builds are driven from `coinswap-ruby/build-scripts/`.
+- React Native TurboModule builds are driven from `coinswap-react-native/build-scripts/`.
 
 This keeps target selection, output layout, and packaging concerns next to the language consumer instead of centralizing them in a single monolithic script.
 
@@ -88,6 +90,13 @@ The package-local scripts wrap these steps and place outputs in the paths expect
 
 - Generated Ruby bindings live at the package root as `coinswap.rb`.
 - Native libraries are staged next to the binding for direct FFI loading.
+
+### React Native (TurboModule)
+
+- JavaScript surface and TurboModule spec live under `coinswap-react-native/src/`.
+- Android native bridge and JNI libraries are staged under `coinswap-react-native/android/src/main/`.
+- iOS native bridge and `coinswap_ffi.xcframework` are staged under `coinswap-react-native/ios/`.
+- Live Legacy and Taproot swap tests are provided in `coinswap-react-native/__tests__/` and use the shared docker regtest stack.
 
 ## Docker Test Environment
 

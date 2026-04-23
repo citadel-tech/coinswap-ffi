@@ -1,0 +1,58 @@
+buildscript {
+  ext {
+    kotlinVersion = findProperty('CoinswapReactNative_kotlinVersion') ?: '1.9.24'
+  }
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+  }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+  namespace 'org.coinswap.reactnative'
+  compileSdkVersion Integer.parseInt((findProperty('CoinswapReactNative_compileSdkVersion') ?: '34').toString())
+
+  defaultConfig {
+    minSdkVersion Integer.parseInt((findProperty('CoinswapReactNative_minSdkVersion') ?: '24').toString())
+    targetSdkVersion Integer.parseInt((findProperty('CoinswapReactNative_targetSdkVersion') ?: '34').toString())
+    consumerProguardFiles 'consumer-rules.pro'
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = '17'
+  }
+
+  sourceSets {
+    main {
+      java.srcDirs += ['src/main/java']
+      jniLibs.srcDirs = ['src/main/jniLibs']
+    }
+  }
+
+  lintOptions {
+    disable 'GradleCompatible'
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+  implementation 'net.java.dev.jna:jna:5.13.0'
+}
