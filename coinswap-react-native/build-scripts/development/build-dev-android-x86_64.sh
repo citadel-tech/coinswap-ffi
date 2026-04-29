@@ -3,11 +3,23 @@
 set -euo pipefail
 
 if [ -z "${ANDROID_NDK_ROOT:-}" ]; then
-  echo "Error: ANDROID_NDK_ROOT is not defined in your environment"
+  if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/ndk" ]; then
+    ANDROID_NDK_ROOT=$(ls -d "$ANDROID_HOME/ndk/"*/ 2>/dev/null | sort -V | tail -1)
+    ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT%/}"
+  elif [ -d "$HOME/Library/Android/sdk/ndk" ]; then
+    ANDROID_NDK_ROOT=$(ls -d "$HOME/Library/Android/sdk/ndk/"*/ 2>/dev/null | sort -V | tail -1)
+    ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT%/}"
+  fi
+fi
+
+if [ -z "${ANDROID_NDK_ROOT:-}" ]; then
+  echo "Error: ANDROID_NDK_ROOT is not defined and could not be auto-detected."
+  echo "Set ANDROID_NDK_ROOT to your NDK path, e.g.: export ANDROID_NDK_ROOT=\$HOME/Library/Android/sdk/ndk/<version>"
   exit 1
 fi
 
-PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+if [ "$(uname -s)" = "Darwin" ]; then NDK_HOST="darwin-x86_64"; else NDK_HOST="linux-x86_64"; fi
+PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$NDK_HOST/bin:$PATH"
 LIB_NAME="libcoinswap_ffi.so"
 COMPILATION_TARGET="x86_64-linux-android"
 RESOURCE_DIR="x86_64"
