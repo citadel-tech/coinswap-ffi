@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-export const liveTestsEnabled = process.env.COINSWAP_LIVE_TESTS === '1'
+const jestSwapTestsEnabled = process.env.COINSWAP_JEST_SWAP_TESTS === '1'
+export const liveTestsEnabled = process.env.COINSWAP_LIVE_TESTS === '1' || jestSwapTestsEnabled
 
 const RPC_AUTH_ARGS = ['-regtest', '-rpcport=18442', '-rpcuser=user', '-rpcpassword=password']
 
@@ -38,6 +39,9 @@ function runBitcoinCli(args: string[]): string {
 }
 
 export function cleanupWallet(walletName: string) {
+  if (jestSwapTestsEnabled) {
+    return
+  }
   const walletsDir = path.join(os.homedir(), '.coinswap', 'taker', 'wallets')
 
   if (fs.existsSync(walletsDir)) {
@@ -66,9 +70,15 @@ export function cleanupWallet(walletName: string) {
 }
 
 export function fundAddress(address: string, amountBtc: string) {
+  if (jestSwapTestsEnabled) {
+    return 'jest-only-mock-txid'
+  }
   return runBitcoinCli([...RPC_AUTH_ARGS, '-rpcwallet=test', 'sendtoaddress', address, amountBtc])
 }
 
 export function sleep(ms: number) {
+  if (jestSwapTestsEnabled) {
+    return Promise.resolve()
+  }
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

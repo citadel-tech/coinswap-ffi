@@ -20,16 +20,18 @@ fi
 
 if [ "$(uname -s)" = "Darwin" ]; then NDK_HOST="darwin-x86_64"; else NDK_HOST="linux-x86_64"; fi
 PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$NDK_HOST/bin:$PATH"
+export CC_armv7_linux_androideabi="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$NDK_HOST/bin/armv7a-linux-androideabi24-clang"
+export CXX_armv7_linux_androideabi="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$NDK_HOST/bin/armv7a-linux-androideabi24-clang++"
 LIB_NAME="libcoinswap_ffi.so"
-COMPILATION_TARGET="aarch64-linux-android"
-RESOURCE_DIR="arm64-v8a"
+COMPILATION_TARGET="armv7-linux-androideabi"
+RESOURCE_DIR="armeabi-v7a"
 
 cd ../ffi-commons || exit
 
 rustup target add "$COMPILATION_TARGET"
 
-CC="aarch64-linux-android24-clang" \
-CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="aarch64-linux-android24-clang" \
+CC="armv7a-linux-androideabi24-clang" \
+CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="armv7a-linux-androideabi24-clang" \
 cargo build --profile release-smaller --target "$COMPILATION_TARGET"
 
 mkdir -p ../coinswap-react-native/android/src/main/jniLibs/$RESOURCE_DIR/

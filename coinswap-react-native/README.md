@@ -85,3 +85,19 @@ COINSWAP_LIVE_TESTS=1 yarn test:live
 ```
 
 These tests require the shared regtest docker stack from `ffi-commons`.
+
+## Expo Plugin
+
+This package also ships an Expo config plugin at [app.plugin.js](app.plugin.js) that mirrors the Fedimint-style setup flow.
+
+In an Expo app, you can enable it with:
+
+```json
+{
+  "expo": {
+    "plugins": ["coinswap-react-native"]
+  }
+}
+```
+
+The plugin keeps the package ready for AndroidX and the new React Native architecture, and it is where future binary-artifact download logic would live if we start publishing prebuilt RN outputs.
