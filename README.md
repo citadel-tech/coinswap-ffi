@@ -8,7 +8,7 @@ Language bindings for the Coinswap protocol
 
 ## Overview
 
-Coinswap FFI packages the Coinswap taker API for JavaScript, Kotlin, Swift, Python, and Ruby. All bindings are backed by the same Rust implementation, so each language follows the same operational model: initialize a taker, sync wallet state and the offer book, inspect balances and UTXOs, execute swaps, and recover or back up state.
+Coinswap FFI packages the Coinswap taker API for JavaScript, Kotlin, Swift, Python, Ruby, and React Native. All bindings are backed by the same Rust implementation, so each language follows the same operational model: initialize a taker, sync wallet state and the offer book, inspect balances and UTXOs, execute swaps, and recover or back up state.
 
 ## Repository Layout
 
@@ -19,6 +19,7 @@ Coinswap FFI packages the Coinswap taker API for JavaScript, Kotlin, Swift, Pyth
 | [coinswap-swift](./coinswap-swift) | Swift Package and XCFramework for Apple platforms | iOS arm64, iOS simulator arm64/x86_64, macOS arm64/x86_64 | `build-xcframework*.sh` |
 | [coinswap-python](./coinswap-python) | Python package generated with UniFFI | Linux x86_64/aarch64, macOS x86_64/arm64, Windows amd64 | `build-scripts/` plus `python -m build` |
 | [coinswap-ruby](./coinswap-ruby) | Ruby FFI binding generated with UniFFI | Linux x86_64/aarch64, macOS x86_64/arm64 | `build-scripts/` |
+| [coinswap-react-native](./coinswap-react-native) | React Native TurboModule wrapper over UniFFI-generated native bindings | Android `arm64-v8a`, `x86_64`; iOS arm64, iOS simulator arm64/x86_64 | `build-scripts/` |
 | [ffi-commons](./ffi-commons) | Shared Rust crate and UniFFI generation core | Rust build targets used by the bindings above | Consumed by package-local scripts |
 
 ## Build Workflow
@@ -53,12 +54,17 @@ Run the appropriate script under `coinswap-python/build-scripts/`, then build th
 
 Run the appropriate script under `coinswap-ruby/build-scripts/` to regenerate `coinswap.rb` and the native library for the target platform.
 
+### React Native
+
+Run the appropriate script under `coinswap-react-native/build-scripts/` to regenerate native bindings and stage Android/iOS artifacts.
+
 See the language-specific READMEs for the exact host and target combinations:
 - [coinswap-js](./coinswap-js/README.md)
 - [coinswap-kotlin](./coinswap-kotlin/README.md)
 - [coinswap-swift](./coinswap-swift/README.md)
 - [coinswap-python](./coinswap-python/README.md)
 - [coinswap-ruby](./coinswap-ruby/README.md)
+- [coinswap-react-native](./coinswap-react-native/README.md)
 - [ffi-commons](./ffi-commons/README.md)
 
 ## Use Cases
@@ -86,6 +92,7 @@ The [taker-app](https://github.com/citadel-tech/taker-app) is the primary deskto
 - Xcode 14+ and Swift 5.7+ for `coinswap-swift`.
 - Python 3.8+ for `coinswap-python`.
 - Ruby 2.7+ for `coinswap-ruby`.
+- React Native 0.76+ and Xcode/Android SDK toolchains for `coinswap-react-native`.
 
 ## Documentation
 
