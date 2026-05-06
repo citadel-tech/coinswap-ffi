@@ -1,0 +1,29 @@
+rust:
+  directory: ../ffi-commons
+  manifestPath: Cargo.toml
+
+bindings:
+  outDir: ./src/generated
+  uniffiToml: ../ffi-commons/uniffi.toml
+
+android:
+  targets:
+    - arm64-v8a
+    - armeabi-v7a
+    - x86_64
+  apiLevel: 24
+  jniLibs: src/main/jniLibs
+
+ios:
+  targets:
+    - aarch64-apple-ios
+    - aarch64-apple-ios-sim
+    - x86_64-apple-ios
+
+turboModule:
+  outDir: ./cpp
+  tsDir: ./src
+
+# Protect hand-written files from being overwritten by `ubrn generate`
+noOverwrite:
+  - src/index.ts
