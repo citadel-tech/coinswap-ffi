@@ -1,65 +1,83 @@
-import {
-  getNativeCoinswapModule,
-  isNativeCoinswapAvailable,
-  type Address,
-  type Balances,
-  type RpcConfig,
-  type SwapParams,
-  type SwapReport,
-  type TakerInitConfig,
-} from './NativeCoinswap'
+// Run `npm run ubrn:generate` to populate src/generated/ with real bindings.
+// The stub at src/generated/coinswap.ts keeps TypeScript happy until then.
+import { Taker, AddressType as GeneratedAddressType } from './generated/coinswap'
+export type { RpcConfig, Balances, SwapReport, Address, SwapParams } from './generated/coinswap'
 
-export { isNativeCoinswapAvailable }
-export type { Address, Balances, RpcConfig, SwapParams, SwapReport, TakerInitConfig }
-
+// Our public AddressType constants — converted to a GeneratedAddressType instance at call sites.
 export const AddressType = {
   P2WPKH: 'P2WPKH',
   P2TR: 'P2TR',
 } as const
-
 export type AddressType = (typeof AddressType)[keyof typeof AddressType]
 
-export class CoinswapTaker {
-  private readonly takerId: string
+export type TakerInitConfig = {
+  dataDir?: string | null
+  walletFileName?: string | null
+  rpcConfig?: import('./generated/coinswap').RpcConfig | null
+  controlPort?: number | null
+  torAuthPassword?: string | null
+  zmqAddr: string
+  password?: string | null
+}
 
-  private constructor(takerId: string) {
-    this.takerId = takerId
+export function isNativeCoinswapAvailable(): boolean {
+  try {
+    return typeof Taker !== 'undefined'
+  } catch {
+    return false
   }
+}
 
-  static async setupLogging(dataDir: string | null, level: string): Promise<void> {
-    await getNativeCoinswapModule().setupLogging(dataDir, level)
+// CoinswapTaker wraps the generated Taker, preserving the existing config-object init API.
+export class CoinswapTaker {
+  private constructor(private readonly taker: Taker) {}
+
+  static async setupLogging(dataDir: string | null | undefined, level: string): Promise<void> {
+    await Taker.setupLogging(dataDir ?? undefined, level)
   }
 
   static async init(config: TakerInitConfig): Promise<CoinswapTaker> {
-    const takerId = await getNativeCoinswapModule().createTaker(config)
-    return new CoinswapTaker(takerId)
+    const taker = await Taker.init(
+      config.dataDir ?? undefined,
+      config.walletFileName ?? undefined,
+      config.rpcConfig ?? undefined,
+      config.controlPort ?? undefined,
+      config.torAuthPassword ?? undefined,
+      config.zmqAddr,
+      config.password ?? undefined,
+    )
+    return new CoinswapTaker(taker)
   }
 
   async dispose(): Promise<void> {
-    await getNativeCoinswapModule().disposeTaker(this.takerId)
+    this.taker[Symbol.dispose]?.()
   }
 
   async syncOfferbookAndWait(): Promise<void> {
-    await getNativeCoinswapModule().syncOfferbookAndWait(this.takerId)
+    await this.taker.syncOfferbookAndWait()
   }
 
   async syncAndSave(): Promise<void> {
-    await getNativeCoinswapModule().syncAndSave(this.takerId)
+    await this.taker.syncAndSave()
   }
 
-  async getBalances(): Promise<Balances> {
-    return getNativeCoinswapModule().getBalances(this.takerId)
+  async getBalances(): Promise<import('./generated/coinswap').Balances> {
+    return this.taker.getBalances()
   }
 
-  async getNextExternalAddress(addressType: AddressType): Promise<Address> {
-    return getNativeCoinswapModule().getNextExternalAddress(this.takerId, addressType)
+  async getNextExternalAddress(
+    addressType: AddressType,
+  ): Promise<import('./generated/coinswap').Address> {
+    return this.taker.getNextExternalAddress(new GeneratedAddressType(addressType))
   }
 
-  async prepareCoinswap(swapParams: SwapParams): Promise<string> {
-    return getNativeCoinswapModule().prepareCoinswap(this.takerId, swapParams)
+  async prepareCoinswap(
+    swapParams: import('./generated/coinswap').SwapParams,
+  ): Promise<string> {
+    return this.taker.prepareCoinswap(swapParams)
   }
 
-  async startCoinswap(swapId: string): Promise<SwapReport> {
-    return getNativeCoinswapModule().startCoinswap(this.takerId, swapId)
+  async startCoinswap(swapId: string): Promise<import('./generated/coinswap').SwapReport> {
+    return this.taker.startCoinswap(swapId)
   }
 }
