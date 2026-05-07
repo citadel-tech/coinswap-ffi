@@ -310,8 +310,8 @@ impl From<csFidelityBond> for FidelityBond {
   fn from(bond: csFidelityBond) -> Self {
     Self {
       outpoint: OutPoint {
-        txid: "".to_string(),
-        vout: 0,
+        txid: bond.outpoint().txid.to_string(),
+        vout: bond.outpoint().vout,
       },
       amount: Amount::from(bond.amount),
       lock_time: LockTime::from(bond.lock_time),
@@ -321,7 +321,7 @@ impl From<csFidelityBond> for FidelityBond {
       },
       conf_height: None,
       cert_expiry: None,
-      is_spent: false,
+      is_spent: bond.is_spent(),
     }
   }
 }
@@ -564,20 +564,20 @@ impl From<csSwapReport> for SwapReport {
     Self {
       swap_id: report.swap_id,
       role: report.role.to_string(),
-      status: "Success".to_string(),
+      status: report.status.to_string(),
       swap_duration_seconds: report.swap_duration_seconds,
-      recovery_duration_seconds: 0.0,
+      recovery_duration_seconds: report.recovery_duration_seconds,
       start_timestamp: report.start_timestamp as i64,
       end_timestamp: report.end_timestamp as i64,
-      network: String::new(),
-      error_message: None,
+      network: report.network,
+      error_message: report.error_message,
       incoming_amount: report.incoming_amount as i64,
       outgoing_amount: report.outgoing_amount as i64,
       fee_paid_or_earned: report.fee_paid_or_earned,
-      incoming_contract_txid: None,
-      outgoing_contract_txid: None,
+      incoming_contract_txid: report.incoming_contract_txid,
+      outgoing_contract_txid: report.outgoing_contract_txid,
       funding_txids: report.funding_txids,
-      recovery_txids: None,
+      recovery_txids: report.recovery_txids,
       timelock: report.timelock,
       makers_count: report.makers_count.map(|count| count as u32),
       maker_addresses: report.maker_addresses,
