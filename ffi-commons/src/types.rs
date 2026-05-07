@@ -23,7 +23,7 @@ use coinswap::{
         AddressType as csAddressType, Balances as CoinswapBalances, FidelityBond as csFidelityBond,
         RPCConfig as CoinswapRPCConfig,
         ffi::{
-            MakerFeeInfo as csMakerFeeInfo, SwapReport as csSwapReport,
+            MakerFeeInfo as csMakerFeeInfo, TakerReport as csTakerReport,
             restore_wallet_gui_app as cs_restore_wallet_gui_app,
         },
     },
@@ -130,7 +130,7 @@ impl From<CoinswapBalances> for Balances {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, Debug, uniffi::Record)]
 pub struct OutPoint {
     pub txid: Txid,
     pub vout: u32,
@@ -204,7 +204,7 @@ impl From<csAmount> for Amount {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, Debug, uniffi::Record)]
 pub struct Txid {
     pub value: String,
 }
@@ -341,20 +341,31 @@ impl From<csFidelityProof> for FidelityProof {
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FidelityBond {
+    pub outpoint: OutPoint,
     pub amount: Amount,
     pub lock_time: LockTime,
     pub pubkey: PublicKey,
+    pub conf_height: Option<u32>,
+    pub cert_expiry: Option<u32>,
+    pub is_spent: bool,
 }
 
 impl From<csFidelityBond> for FidelityBond {
     fn from(bond: csFidelityBond) -> Self {
         Self {
+            outpoint: OutPoint {
+                txid: bond.outpoint().txid.into(),
+                vout: bond.outpoint().vout,
+            },
             amount: Amount::from(bond.amount),
             lock_time: LockTime::from(bond.lock_time),
             pubkey: PublicKey {
                 compressed: true,
                 inner: vec![],
             },
+            conf_height: None,
+            cert_expiry: None,
+            is_spent: bond.is_spent(),
         }
     }
 }
@@ -624,27 +635,27 @@ pub struct UtxoWithAddress {
     pub address: String,
 }
 
-impl From<csSwapReport> for SwapReport {
-    fn from(report: csSwapReport) -> Self {
+impl From<csTakerReport> for SwapReport {
+    fn from(report: csTakerReport) -> Self {
         Self {
             swap_id: report.swap_id,
-            role: report.role.to_string(),
+            role: "Taker".to_string(),
             status: report.status.to_string(),
             swap_duration_seconds: report.swap_duration_seconds,
-            recovery_duration_seconds: report.recovery_duration_seconds,
+            recovery_duration_seconds: 0.0,
             start_timestamp: report.start_timestamp as i64,
             end_timestamp: report.end_timestamp as i64,
             network: report.network.to_string(),
             error_message: report.error_message,
             incoming_amount: report.incoming_amount as i64,
             outgoing_amount: report.outgoing_amount as i64,
-            fee_paid_or_earned: report.fee_paid_or_earned,
+            fee_paid_or_earned: -(report.fee_paid as i64),
             incoming_contract_txid: report.incoming_contract_txid,
             outgoing_contract_txid: report.outgoing_contract_txid,
             funding_txids: report.funding_txids,
-            recovery_txids: report.recovery_txids,
-            timelock: report.timelock,
-            makers_count: report.makers_count.map(|count| count as u32),
+            recovery_txids: None,
+            timelock: 0,
+            makers_count: Some(report.makers_count as u32),
             maker_addresses: report.maker_addresses,
             total_maker_fees: report.total_maker_fees as i64,
             mining_fee: report.mining_fee as i64,
