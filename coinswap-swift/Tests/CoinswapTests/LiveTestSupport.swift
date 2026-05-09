@@ -30,7 +30,7 @@ struct LiveTestConfig {
         self.performSwap = true
         self.swapAmount = 500000
         self.bitcoinNetwork = "regtest"
-        self.fundingWallet = "funding"
+        self.fundingWallet = "test"
         self.bitcoinRpcPort = "18442"
         self.fundAmount = "1.0"
     }
@@ -53,14 +53,20 @@ private func resolveExecutable(_ name: String) throws -> String {
     process.standardOutput = pipe
     process.standardError = Pipe()
     try process.run()
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
     guard process.terminationStatus == 0 else {
         throw NSError(domain: "CoinswapLiveTests", code: 1, userInfo: [
             NSLocalizedDescriptionKey: "Could not locate \(name) on PATH via xcrun -f"
         ])
     }
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    return (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let resolvedPath = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !resolvedPath.isEmpty else {
+        throw NSError(domain: "CoinswapLiveTests", code: 1, userInfo: [
+            NSLocalizedDescriptionKey: "\(name) not found in PATH. Ensure Bitcoin Core is installed and available via 'which \(name)'"
+        ])
+    }
+    return resolvedPath
 }
 
 /// Writes a temporary bitcoin.conf file containing the RPC credentials and returns its path.
@@ -74,6 +80,7 @@ private func writeTempBitcoinConf(config: LiveTestConfig) throws -> URL {
     rpcpassword=\(config.rpcConfig.password)
     """
     try contents.write(to: confURL, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: confURL.path)
     return confURL
 }
 
@@ -130,10 +137,10 @@ func runProcess(executablePath: String, args: [String]) throws {
     process.standardError = pipe
 
     try process.run()
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
 
     if process.terminationStatus != 0 {
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8) ?? ""
         throw NSError(domain: "CoinswapLiveTests", code: Int(process.terminationStatus), userInfo: [
             NSLocalizedDescriptionKey: "Command failed: \(executablePath) \(args.joined(separator: " "))\n\(output)"
@@ -152,6 +159,7 @@ private func bitcoinCliOutput(executablePath: String, args: [String]) throws -> 
     process.standardError = Pipe()
 
     try process.run()
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
 
     if process.terminationStatus != 0 {
@@ -159,7 +167,6 @@ private func bitcoinCliOutput(executablePath: String, args: [String]) throws -> 
             NSLocalizedDescriptionKey: "Command failed: \(executablePath) \(args.joined(separator: " "))"
         ])
     }
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
     return String(data: data, encoding: .utf8) ?? ""
 }
 
