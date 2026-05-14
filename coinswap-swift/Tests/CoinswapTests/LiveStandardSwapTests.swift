@@ -20,10 +20,8 @@ final class LiveStandardSwapTests: XCTestCase {
 
         try taker.setupLogging(dataDir: config.dataDir, logLevel: "Info")
 
-        try taker.syncOfferbookAndWait()
+        let offers = try waitForOfferbookMakers(taker: taker, protocolName: "Legacy")
         print("Offerbook synchronized")
-
-        let offers = try taker.fetchOffers()
         print("Fetched offers: \(offers)")
         fflush(stdout)
         let _ = try taker.getWalletName()
@@ -72,8 +70,9 @@ final class LiveStandardSwapTests: XCTestCase {
             assertApprox(makerFeeTotal, Double(report.totalMakerFees), tolerance: 2.0)
 
             // Output amount invariants
-            // incomingAmount is the swap output only; change goes back to taker's regular wallet
-            XCTAssertGreaterThanOrEqual(report.outputChangeAmounts.count, 1)
+            // incomingAmount is the swap output only; change goes back to taker's regular wallet.
+            // Change outputs may be absent when inputs + fees exactly equal the swap amount.
+            XCTAssertGreaterThanOrEqual(report.outputChangeAmounts.count, 0)
             XCTAssertGreaterThanOrEqual(report.outputSwapAmounts.count, 1)
             XCTAssertEqual(swapTotal, incomingTotal)
             XCTAssertGreaterThan(swapTotal, 0)

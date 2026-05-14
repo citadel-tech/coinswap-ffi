@@ -23,6 +23,8 @@ jobs:
   test:
     name: "Test Swift library"
     runs-on: macos-15-intel 
+    env:
+      COINSWAP_FUNDING_WALLET: test
     defaults:
       run:
         working-directory: ./coinswap-swift
@@ -33,6 +35,10 @@ jobs:
 
       - name: "Set up Rust"
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Disable the built-in rust-cache: our Rust workspace lives in ffi-commons/
+          # and the auto-cache fails because there is no Cargo.toml at the repo root.
+          cache: false
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
