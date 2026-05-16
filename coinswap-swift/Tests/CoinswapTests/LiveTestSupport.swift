@@ -164,6 +164,11 @@ func fundAddress(_ address: String, config: LiveTestConfig) throws {
     let dockerPath = try resolveExecutable("docker")
     let confURL = try writeTempBitcoinConf(config: config)
     defer { try? FileManager.default.removeItem(at: confURL) }
+    defer {
+        try? runProcess(executablePath: dockerPath, args: [
+            "exec", "coinswap-bitcoind", "rm", "-f", "/tmp/bitcoin.conf",
+        ])
+    }
 
     func dockerBitcoinCli(_ subArgs: [String]) throws {
         try runProcess(executablePath: dockerPath, args: [
