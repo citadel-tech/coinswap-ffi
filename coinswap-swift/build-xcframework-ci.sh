@@ -43,4 +43,4 @@ xcodebuild -create-xcframework \
     -output "./coinswap_ffi.xcframework"
 
 # Keep Swift sources clean: only .swift files should stay in the package Sources dir
-rm -rf "${SWIFT_OUT_DIR}/${HEADER_BASENAME}"
+rm -rf "${SWIFT_OUT_DIR:?}/${HEADER_BASENAME:?}"

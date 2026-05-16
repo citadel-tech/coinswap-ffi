@@ -47,14 +47,11 @@ func requireLiveTestsEnabled() throws {
 
 /// Runs a process and blocks until it exits, then returns its exit code, stdout, and stderr.
 ///
-/// - Important: `waitUntilExit()` is called **before** `readDataToEndOfFile()`, which avoids
-///   pipe-buffer deadlocks: if the child writes enough to fill the pipe, both processes would
-///   hang — the child blocked on `write(2)` and the parent blocked on `read(2)`. After
-///   `waitUntilExit()` returns, the kernel has closed the write ends, so reads drain without
-///   blocking.
-///
-/// - Note: Both stdout and stderr pipes are drained to prevent the child from blocking on
-///   a full pipe even when the caller doesn't intend to use one of the streams.
+/// Both stdout and stderr are drained **concurrently** on background queues before
+/// `waitUntilExit()` returns. This prevents pipe-buffer deadlocks: if we read
+/// sequentially and one pipe fills up (~64 KB on macOS), the child blocks on
+/// `write(2)` and can never exit, while the parent waits forever on the other
+/// pipe's `readDataToEndOfFile()`.
 private func runCapture(executablePath: String, args: [String]) throws -> (exitCode: Int32, stdout: String, stderr: String) {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executablePath)
@@ -66,10 +63,25 @@ private func runCapture(executablePath: String, args: [String]) throws -> (exitC
     process.standardError = stderrPipe
 
     try process.run()
-    process.waitUntilExit()
 
-    let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-    let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+    let group = DispatchGroup()
+    var stdoutData = Data()
+    var stderrData = Data()
+
+    group.enter()
+    DispatchQueue.global().async {
+        stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        group.leave()
+    }
+
+    group.enter()
+    DispatchQueue.global().async {
+        stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        group.leave()
+    }
+
+    group.wait()
+    process.waitUntilExit()
 
     return (
         exitCode: process.terminationStatus,
@@ -242,6 +254,15 @@ func waitForOfferbookMakers(
     protocolName: String? = nil,
     timeoutSeconds: Double = 60.0
 ) throws -> OfferBook {
+    let isMatchingMaker: (MakerOfferCandidate) -> Bool = { candidate in
+        guard candidate.state.stateType == "Good", candidate.offer != nil else {
+            return false
+        }
+        guard let protocolName else { return true }
+        let makerProtocol = candidate.protocol?.protocolType
+        return makerProtocol == protocolName || makerProtocol == "Unified"
+    }
+
     let deadline = Date().addingTimeInterval(timeoutSeconds)
     var lastOfferbook: OfferBook?
 
@@ -249,33 +270,14 @@ func waitForOfferbookMakers(
         try taker.syncOfferbookAndWait()
         let offerbook = try taker.fetchOffers()
         lastOfferbook = offerbook
-        let matchingMakers = offerbook.makers.filter { candidate in
-            guard candidate.state.stateType == "Good", candidate.offer != nil else {
-                return false
-            }
-            guard let protocolName else {
-                return true
-            }
-            let makerProtocol = candidate.protocol?.protocolType
-            return makerProtocol == protocolName || makerProtocol == "Unified"
-        }
-        if matchingMakers.count >= minimumMakers {
+        if offerbook.makers.filter(isMatchingMaker).count >= minimumMakers {
             return offerbook
         }
         Thread.sleep(forTimeInterval: 2.0)
     }
 
     let observedCount = lastOfferbook?.makers.count ?? 0
-    let observedMatchingCount = lastOfferbook?.makers.filter { candidate in
-        guard candidate.state.stateType == "Good", candidate.offer != nil else {
-            return false
-        }
-        guard let protocolName else {
-            return true
-        }
-        let makerProtocol = candidate.protocol?.protocolType
-        return makerProtocol == protocolName || makerProtocol == "Unified"
-    }.count ?? 0
+    let observedMatchingCount = lastOfferbook?.makers.filter(isMatchingMaker).count ?? 0
     throw NSError(domain: "CoinswapLiveTests", code: 1, userInfo: [
         NSLocalizedDescriptionKey: "Offerbook did not reach \(minimumMakers) good makers\(protocolName.map { " for \($0)" } ?? "") within \(Int(timeoutSeconds))s (last observed total: \(observedCount), matching: \(observedMatchingCount))"
     ])
