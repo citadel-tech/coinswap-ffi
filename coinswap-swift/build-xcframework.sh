@@ -11,6 +11,7 @@ STATIC_LIB_NAME="lib${NAME}.a"
 NEW_HEADER_DIR="../ffi-commons/target/include"
 SWIFT_OUT_DIR="../coinswap-swift/Sources/Coinswap"
 HEADER_OUT_DIR="${NEW_HEADER_DIR}/${HEADER_BASENAME}"
+MACOS_DEPLOYMENT_TARGET="10.15"
 
 cd ../ffi-commons/ || exit
 
@@ -23,8 +24,8 @@ rustup target add aarch64-apple-darwin   # mac M1
 rustup target add x86_64-apple-darwin    # mac x86_64
 
 # build coinswap-ffi rust lib for apple targets
-MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-darwin
-MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-darwin
+MACOSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-darwin
+MACOSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-darwin
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-ios
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-ios
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-ios-sim
