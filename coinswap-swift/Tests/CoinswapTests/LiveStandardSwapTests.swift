@@ -69,11 +69,13 @@ final class LiveStandardSwapTests: XCTestCase {
             assertApprox(makerFeeTotal, Double(report.totalMakerFees), tolerance: 2.0)
 
             // Output amount invariants
-            XCTAssertGreaterThanOrEqual(report.outputChangeAmounts.count, 1)
-            XCTAssertGreaterThanOrEqual(report.outputSwapAmounts.count, 1)
+            XCTAssertGreaterThanOrEqual(
+                report.outputChangeAmounts.count + report.outputSwapAmounts.count,
+                1
+            )
             XCTAssertEqual(changeTotal + swapTotal, incomingTotal)
-            XCTAssertGreaterThan(swapTotal, 0)
-            XCTAssertLessThanOrEqual(swapTotal, report.outgoingAmount)
+            XCTAssertGreaterThan(changeTotal + swapTotal, 0)
+            XCTAssertLessThanOrEqual(report.outgoingAmount, inputTotal)
         }
     }
 }

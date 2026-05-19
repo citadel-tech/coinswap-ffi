@@ -25,7 +25,7 @@ cd ../ffi-commons/ || exit
 rustup component add rust-src
 rustup target add "$MAC_TARGET" "$IOS_SIM_TARGET" "$IOS_DEVICE_TARGET"
 
-cargo build --package coinswap-ffi --target "$MAC_TARGET"
+MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --target "$MAC_TARGET"
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --target "$IOS_SIM_TARGET"
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --target "$IOS_DEVICE_TARGET"
 

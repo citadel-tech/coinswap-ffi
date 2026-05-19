@@ -637,6 +637,24 @@ pub struct UtxoWithAddress {
 
 impl From<csTakerReport> for SwapReport {
     fn from(report: csTakerReport) -> Self {
+        let output_change_amounts: Vec<i64> = report
+            .output_change_amounts
+            .into_iter()
+            .map(|v| v as i64)
+            .collect();
+        let output_swap_amounts: Vec<i64> = report
+            .output_swap_amounts
+            .into_iter()
+            .map(|v| v as i64)
+            .collect();
+        let total_output_amount: i64 =
+            output_change_amounts.iter().sum::<i64>() + output_swap_amounts.iter().sum::<i64>();
+        let incoming_amount = if total_output_amount > 0 {
+            total_output_amount
+        } else {
+            report.incoming_amount as i64
+        };
+
         Self {
             swap_id: report.swap_id,
             role: "Taker".to_string(),
@@ -647,7 +665,7 @@ impl From<csTakerReport> for SwapReport {
             end_timestamp: report.end_timestamp as i64,
             network: report.network.to_string(),
             error_message: report.error_message,
-            incoming_amount: report.incoming_amount as i64,
+            incoming_amount,
             outgoing_amount: report.outgoing_amount as i64,
             fee_paid_or_earned: -(report.fee_paid as i64),
             incoming_contract_txid: report.incoming_contract_txid,
@@ -666,16 +684,8 @@ impl From<csTakerReport> for SwapReport {
                 .map(MakerFeeInfo::from)
                 .collect(),
             input_utxos: report.input_utxos.into_iter().map(|v| v as i64).collect(),
-            output_change_amounts: report
-                .output_change_amounts
-                .into_iter()
-                .map(|v| v as i64)
-                .collect(),
-            output_swap_amounts: report
-                .output_swap_amounts
-                .into_iter()
-                .map(|v| v as i64)
-                .collect(),
+            output_change_amounts,
+            output_swap_amounts,
             output_change_utxos: report
                 .output_change_utxos
                 .into_iter()

@@ -23,8 +23,8 @@ rustup target add aarch64-apple-darwin   # mac M1
 rustup target add x86_64-apple-darwin    # mac x86_64
 
 # build coinswap-ffi rust lib for apple targets
-cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-darwin
-cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-darwin
+MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-darwin
+MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-darwin
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target x86_64-apple-ios
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-ios
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --profile release-smaller --target aarch64-apple-ios-sim
