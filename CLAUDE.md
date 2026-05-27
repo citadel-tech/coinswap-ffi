@@ -92,19 +92,24 @@ new Taker(dataDir: string | undefined | null, walletFileName: string | undefined
 1. `Taker.setupLogging(dataDir, "info")` configures taker logging.
 2. `const taker = new Taker(dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password)` creates or loads the wallet.
 3. `taker.syncAndSave()` syncs wallet state and persists it.
-4. `taker.syncOfferbookAndWait()` blocks until the offer book is synchronized.
+4. `await taker.syncOfferbookAndWaitAsync()` synchronizes the offer book on libuv's worker pool without holding the inner `Taker` mutex.
 5. `const offerBook = taker.fetchOffers()` reads all makers.
 6. `const swapId = taker.prepareCoinswap(swapParams)` prepares a route and returns a swap id.
 7. `const report = taker.startCoinswap(swapId)` executes the prepared swap.
 8. `taker.syncAndSave()` persists post-swap wallet state.
 
+Offerbook maintenance helpers:
+
+1. `await taker.pollMakerAsync(address)` fetches and verifies one maker offer on libuv's worker pool and returns `MakerOfferCandidate`.
+2. `taker.removeMaker(address)` removes a maker from the offerbook, persists to disk, and returns `true` if a matching entry was removed.
+
 **5. Threading / concurrency constraint**
 
-All Taker methods block; run inside a `worker_threads.Worker`.
+Most Taker methods block; run swap execution, wallet sync, sends, and balance-heavy flows inside a `worker_threads.Worker`. `syncOfferbookAndWaitAsync()` and `pollMakerAsync(address)` already run on libuv's worker pool and do not hold the inner `Taker` mutex.
 
 ### React Native (coinswap-react-native)
 
-<!-- `coinswap-react-native/src/generated/`, Android `.kt` / `.java` bridge files, and iOS `.swift` / `.m` / `.mm` bridge files are absent in this checkout; run `npm run ubrn:generate`, `npm run ubrn:android`, or `npm run ubrn:ios` to generate them. -->
+<!-- `coinswap-react-native/src/generated/`, `src/NativeCoinswapReactNative.ts`, `cpp/`, Android generated bridge files, `android/src/main/jniLibs/`, iOS generated bridge files, and `ios/coinswap_ffi.xcframework/` are absent until `ubrn` runs. The old `coinswap-react-native/build-scripts/` directory is deleted; use package scripts only. -->
 
 **1. Install / build**
 
@@ -115,18 +120,17 @@ cd coinswap-react-native
 npm install
 npm run ubrn:android
 npm run ubrn:ios
-cd ios
-pod install
+npm run typecheck
+npm test
 ```
 
 **2. Canonical import**
 
 ```typescript
-import { AddressType, CoinswapTaker, isNativeCoinswapAvailable } from 'coinswap-react-native'
+import { AddressType, CoinswapTaker, isNativeCoinswapAvailable, uniffiInitAsync } from 'coinswap-react-native'
 
-if (!isNativeCoinswapAvailable()) {
-  throw new Error('Coinswap TurboModule is unavailable in this runtime')
-}
+await uniffiInitAsync()
+isNativeCoinswapAvailable()
 ```
 
 **3. Constructor / initialiser**
@@ -145,14 +149,15 @@ CoinswapTaker.init(config: {
 
 **4. Minimal working call sequence**
 
-1. `await CoinswapTaker.setupLogging(dataDir, "info")` calls the generated native logger method through a Promise.
-2. `const taker = await CoinswapTaker.init(config)` calls generated `Taker.init(dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password)` through a Promise.
-3. `await taker.syncAndSave()` syncs wallet state through a Promise.
-4. `await taker.syncOfferbookAndWait()` waits for maker discovery through a Promise.
-5. `const swapId = await taker.prepareCoinswap(swapParams)` prepares the route through a Promise.
-6. `const report = await taker.startCoinswap(swapId)` executes the prepared swap through a Promise.
-7. `await taker.syncAndSave()` persists post-swap wallet state through a Promise.
-8. `await taker.dispose()` releases the native object through a Promise.
+1. `await uniffiInitAsync()` installs the TurboModule Rust crate and runs UniFFI initialization.
+2. `await CoinswapTaker.setupLogging(dataDir, "info")` calls generated `setupLogging(dataDir)` through the wrapper; `_level` is accepted by the wrapper but not passed to generated code.
+3. `const taker = await CoinswapTaker.init(config)` calls generated `Taker.init(dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password)` through a Promise.
+4. `await taker.syncAndSave()` syncs wallet state through a Promise.
+5. `await taker.syncOfferbookAndWait()` waits for maker discovery through a Promise.
+6. `const swapId = await taker.prepareCoinswap(swapParams)` prepares the route through a Promise.
+7. `const report = await taker.startCoinswap(swapId)` executes the prepared swap through a Promise.
+8. `await taker.syncAndSave()` persists post-swap wallet state through a Promise.
+9. `await taker.dispose()` calls `uniffiDestroy` on the generated object when available.
 
 **5. Threading / concurrency constraint**
 
@@ -329,9 +334,9 @@ Methods are blocking FFI calls; run wallet sync, offer discovery, and swaps outs
 
 ## react native specifics
 
-1. **Module type**: Turbo Module / JSI. `coinswap-react-native/package.json` declares `codegenConfig`, `coinswap-react-native/README.md` calls it a JSI TurboModule, `coinswap-react-native/android/build.gradle` applies `com.facebook.react` only when `newArchEnabled=true`, and `coinswap-react-native/CoinswapReactNative.podspec` depends on `ReactCommon/turbomodule/core` when `RCT_NEW_ARCH_ENABLED=1`. Turbo Module / JSI allows synchronous native calls in generated code; the checked-in wrapper exposes async Promise methods.
+1. **Module type**: Turbo Module / JSI. `coinswap-react-native/package.json` declares `codegenConfig`, `coinswap-react-native/README.md` calls it a JSI TurboModule, `coinswap-react-native/android/build.gradle` applies `com.facebook.react` only when `newArchEnabled=true`, and `coinswap-react-native/CoinswapReactNative.podspec` depends on `ReactCommon/turbomodule/core` when `RCT_NEW_ARCH_ENABLED=1`. Turbo Module / JSI allows synchronous native calls in generated code; the checked-in wrapper exposes async Promise methods and initializes native bindings with `installRustCrate()` plus `coinswapBindings.initialize()`.
 
-Generated bridge paths are absent until build. Edit `coinswap-react-native/src/index.ts`, `coinswap-react-native/ubrn.config.yaml`, build scripts, plugin files, or `ffi-commons`; do not patch generated bridge files before they exist.
+Generated bridge paths are absent until build. Edit `coinswap-react-native/src/index.ts`, `coinswap-react-native/ubrn.config.yaml`, plugin files, tests, or `ffi-commons`; do not patch generated bridge files before they exist. The deleted `coinswap-react-native/build-scripts/` path is not part of the current build model.
 
 2. **Native dependency chain**: It compiles its own Rust from `../ffi-commons`; it does not depend on the Kotlin `.aar` or Swift package. Exact source:
 
@@ -372,6 +377,8 @@ s.dependency    "uniffi-bindgen-react-native", "0.31.0-2"
 5. **Initialisation**:
 
 ```typescript
+await uniffiInitAsync()
+
 const taker = await CoinswapTaker.init({
   dataDir: null,
   walletFileName: 'my_wallet',
@@ -400,7 +407,7 @@ Generated Kotlin, Swift, Python, Ruby, and RN type files are absent in this chec
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Taker` | `Taker` | `CoinswapTaker` wrapper over generated `Taker` | `Taker` | `Taker` | `Taker` | `Coinswap::Taker` | RN generated `Taker` source absent. |
 | `RPCConfig` | `RpcConfig` | `RpcConfig` | `RpcConfig` | `RpcConfig` | `RpcConfig` | `Coinswap::RpcConfig` | JS uses camel-case `walletName`; UniFFI READMEs use language casing. |
-| `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `Coinswap::SwapParams` | Rust `send_amount: u64`; JS NAPI `sendAmount: number`; RN README says `bigint` but tests use `number`. |
+| `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `SwapParams` | `Coinswap::SwapParams` | Rust `send_amount: u64`; JS NAPI `sendAmount: number`; RN README and tests use `bigint` for amounts. |
 | `TakerError` | `TakerError` enum plus thrown `Error` | rejected Promise shape [unverified — check source] | `TakerError` [unverified — check source] | `TakerError` [unverified — check source] | `TakerError` [unverified — check source] | `Coinswap::TakerError` [unverified — check source] | Variants: `Wallet`, `Protocol`, `Network`, `General`, `IO`. |
 | `TakerBehavior` | `TakerBehavior` | not exported by wrapper | `TakerBehavior` [unverified — check source] | `TakerBehavior` [unverified — check source] | `TakerBehavior` [unverified — check source] | `Coinswap::TakerBehavior` [unverified — check source] | Not wired into `Taker.init`. |
 | `Balances` | `Balances` | `Balances` | `Balances` | `Balances` | `Balances` | `Balances` | Fields: `regular`, `swap`, `contract`, `fidelity`, `spendable`. |
@@ -435,7 +442,7 @@ Generated Kotlin, Swift, Python, Ruby, and RN type files are absent in this chec
 
 ## error handling
 
-Rust UniFFI exports `TakerError` as an error enum with `Wallet { msg }`, `Protocol { msg }`, `Network { msg }`, `General { msg }`, and `IO { msg }`. JS/NAPI methods convert failures with `napi::Error::from_reason(reason)`, so JavaScript receives thrown `Error` objects with message text prefixed by `Init error:`, `Prepare coinswap error:`, or `Failed to acquire taker lock:`. React Native checked-in wrapper methods return Promises; generated native rejection structure is absent [unverified — check source]. Kotlin, Swift, Python, and Ruby generated error class shapes are absent [unverified — check source].
+Rust UniFFI exports `TakerError` as an error enum with `Wallet { msg }`, `Protocol { msg }`, `Network { msg }`, `General { msg }`, and `IO { msg }`. JS/NAPI methods convert failures with `napi::Error::from_reason(reason)`, so JavaScript receives thrown or rejected `Error` objects with message text prefixed by `Init error:`, `Prepare coinswap error:`, `Offerbook sync error:`, `Poll maker error:`, `Remove maker error:`, or `Failed to acquire taker lock:`. React Native checked-in wrapper methods return Promises; generated native rejection structure is absent [unverified — check source]. Kotlin, Swift, Python, and Ruby generated error class shapes are absent [unverified — check source].
 
 | Error pattern | Meaning | Recoverable? | Action |
 | --- | --- | --- | --- |
@@ -451,6 +458,7 @@ Rust panics terminate the host process because `profile.release-smaller` sets `p
 
 - Use one `Taker` instance per wallet `dataDir`; two concurrent instances can corrupt wallet state.
 - [JS] Blocking methods must not run on the main thread.
+- [JS] Use `syncOfferbookAndWaitAsync()` for non-blocking offerbook sync; use `pollMakerAsync(address)` for single-maker refresh.
 - [RN] Blocking native work must not run on the UI path; the checked-in wrapper returns Promises.
 - [Python] Blocking methods must not run on the main event-loop thread.
 - Execute the call sequence: logging setup → constructor/init → `syncAndSave` → `fetchOffers` / `syncOfferbookAndWait` → `prepareCoinswap` → `startCoinswap` → `syncAndSave`.
@@ -471,6 +479,7 @@ Rust panics terminate the host process because `profile.release-smaller` sets `p
 - [JS] Detect Rust panics through Worker `exit`, not `try/catch`.
 - [Python] Hold the GIL when calling binding methods.
 - [RN] Enable `newArchEnabled=true`; the Expo plugin adds it when absent.
+- [RN] Call `uniffiInitAsync()` or a wrapper method that calls `ensureNativeBindings()` before using generated bindings directly.
 - [RN] Do not expect events; no event emitters or event names exist in checked-in source.
 - [Ruby] Do not use `do_coinswap` from `test/standard_swap.rb`; Rust exports and README use `prepare_coinswap` plus `start_coinswap`.
 
@@ -568,7 +577,7 @@ result = taker.start_coinswap(swap_id)
 | --- | --- | --- | --- |
 | `ffi-commons` | `cargo build --package coinswap-ffi --profile release-smaller --target x86_64-unknown-linux-gnu` | `cargo test` | `cargo run --bin uniffi-bindgen generate --library ./target/x86_64-unknown-linux-gnu/release-smaller/libcoinswap_ffi.so --language python --out-dir ../coinswap-python/src/coinswap/native/linux-x86_64 --no-format` |
 | `coinswap-js` | `yarn build` | `yarn test` | `node -e "const m=require('./'); console.log(typeof m.Taker)"` |
-| `coinswap-react-native` | `npm run ubrn:android`; `npm run ubrn:ios` | `COINSWAP_LIVE_TESTS=1 npm run test:live` | after build: `node -e "const m=require('./src'); console.log(typeof m.isNativeCoinswapAvailable)"` |
+| `coinswap-react-native` | `npm run ubrn:android`; `npm run ubrn:ios` | `npm test`; `COINSWAP_LIVE_TESTS=1 npm run test:live` | after build: `npm run test:native`; `npm run test:android`; `npm run test:swift` |
 | `coinswap-kotlin` | `bash ./build-scripts/release/build-release-linux-arm64_v8a.sh`; `./gradlew :lib:assembleRelease` | `./gradlew test` | after build: `./gradlew :lib:test --tests org.coinswap.StandardSwap` |
 | `coinswap-swift` | `bash ./build-xcframework.sh`; `swift build` | `swift test` | after build: `swift test --filter LiveStandardSwapTests/testLiveTakerFlow` |
 | `coinswap-python` | `bash ./build-scripts/release/build-release-linux-x86_64.sh`; `python -m build` | `python coinswap-python/test/standard_swap.py` | after build: `python -c "from coinswap import Taker; print(Taker)"` |
@@ -589,12 +598,12 @@ result = taker.start_coinswap(swap_id)
 | `ffi-commons/src/types.rs` | Public records, enums, errors, fee helpers, restore helpers, default RPC config. |
 | `coinswap-js/package.json` | NPM package metadata, Node engine, NAPI targets, scripts. |
 | `coinswap-js/index.d.ts` | Generated TypeScript API names, method signatures, object field casing. |
-| `coinswap-js/src/taker.rs` | NAPI `Taker` implementation, sync/blocking methods, thrown error strings. |
+| `coinswap-js/src/taker.rs` | NAPI `Taker` implementation, blocking wallet/swap methods, libuv async offerbook tasks, maker polling/removal, thrown/rejected error strings. |
 | `coinswap-js/src/types.rs` | NAPI object type mapping and enums. |
 | `coinswap-js/README.md` | JS install, build, usage, and API examples. |
 | `coinswap-react-native/package.json` | RN package name, peer dependencies, scripts, codegen config. |
 | `coinswap-react-native/README.md` | RN Turbo Module architecture, build commands, usage, requirements, tests. |
-| `coinswap-react-native/src/index.ts` | Checked-in JS wrapper, Promise API, native availability check, exported `AddressType`. |
+| `coinswap-react-native/src/index.ts` | Public JS wrapper, native installer initialization, UniFFI initialization, Promise API, `uniffiInitAsync`, native availability check, exported `AddressType`. |
 | `coinswap-react-native/ubrn.config.yaml` | Rust source path, generated output paths, Android/iOS targets, TurboModule config. |
 | `coinswap-react-native/CoinswapReactNative.podspec` | iOS source files, vendored framework, TurboModule dependencies. |
 | `coinswap-react-native/android/build.gradle` | Android new-architecture detection, namespace, min/target SDK, ABI filters, React dependency. |
@@ -603,11 +612,12 @@ result = taker.start_coinswap(swap_id)
 | `coinswap-react-native/react-native.config.js` | RN package import and package instance. |
 | `coinswap-react-native/plugin/withAndroid.js` | Expo plugin mutation for AndroidX and `newArchEnabled=true`. |
 | `coinswap-react-native/plugin/withBinaryArtifacts.js` | Native artifact presence checks for Android and iOS. |
-| `coinswap-react-native/build-scripts/development/build-dev-android-x86_64.sh` | RN Android x86_64 build and Kotlin generation fallback. |
-| `coinswap-react-native/build-scripts/development/build-dev-ios.sh` | RN iOS debug build and Swift/header generation fallback. |
-| `coinswap-react-native/build-scripts/release/build-release-android-arm64_v8a.sh` | RN Android arm64 release build fallback. |
-| `coinswap-react-native/build-scripts/release/build-release-android-armeabi-v7a.sh` | RN Android armv7 release build fallback. |
-| `coinswap-react-native/build-scripts/release/build-release-ios.sh` | RN iOS release XCFramework fallback build. |
+| `coinswap-react-native/tests/jest/liveTestHelpers.ts` | RN live test Docker, wallet cleanup, and funding helpers. |
+| `coinswap-react-native/tests/jest/live.standard-swap.test.ts` | RN legacy live swap call sequence and bigint expectations. |
+| `coinswap-react-native/tests/jest/live.taproot-swap.test.ts` | RN taproot live swap call sequence and bigint expectations. |
+| `coinswap-react-native/tests/jest/react-native-mock.ts` | Jest TurboModule installer mock for `CoinswapReactNative`. |
+| `coinswap-react-native/tests/native/android-smoke-test.sh` | Android generated bridge compile smoke test against stubbed RN interfaces. |
+| `coinswap-react-native/tests/native/swift-smoke-test.sh` | Swift generated binding typecheck smoke test. |
 | `coinswap-kotlin/README.md` | Kotlin build, package, usage, constructor and method examples. |
 | `coinswap-kotlin/build.gradle.kts` | Root Gradle plugin versions and aggregate `test` task. |
 | `coinswap-kotlin/lib/build.gradle.kts` | Maven coordinates, Android namespace, SDK levels, dependencies, publishing. |
