@@ -12,6 +12,15 @@ React Native JSI bindings for the Coinswap Bitcoin privacy protocol
 
 The Rust library is compiled to native code for each platform target. The JSI layer gives JavaScript direct access to the native Rust objects with no serialisation overhead — no Kotlin/Swift bridge, no JNA, no ObjC reflection.
 
+## Entrypoint (`src/index.ts`)
+
+`src/index.ts` is the public package API and runtime initializer. It:
+
+- installs the TurboModule (`installRustCrate`) once
+- runs UniFFI checksum/runtime initialization once
+- exports the ergonomic wrapper (`CoinswapTaker`) around generated bindings
+- exposes helpers like `isNativeCoinswapAvailable()` and `uniffiInitAsync()`
+
 ## Supported Targets
 
 | Platform | Target | Use |
@@ -37,9 +46,41 @@ cd coinswap-react-native
 npm install
 ```
 
+### Command Cheat Sheet
+
+```bash
+# 1) Install dependencies
+cd coinswap-react-native
+npm install
+
+# 2) Build + generate for Android
+npm run ubrn:android
+
+# 3) Build + generate for iOS
+npm run ubrn:ios
+
+# 4) Typecheck TS
+npm run typecheck
+
+# 5) Run default test suite
+#    - Jest tests (live tests are skipped unless COINSWAP_LIVE_TESTS=1)
+#    - Android native smoke test
+#    - Swift native smoke test
+npm test
+
+# 6) Run native smoke tests only
+npm run test:native
+
+# 7) Run only Android smoke test
+npm run test:android
+
+# 8) Run only Swift smoke test
+npm run test:swift
+```
+
 ### Using uniffi-bindgen-react-native (recommended)
 
-These commands compile the Rust library and generate all native glue in one step.
+These commands are the canonical build path for this package. They compile the Rust library and generate all native glue in one step.
 
 ```bash
 # Android — compiles arm64-v8a, armeabi-v7a, x86_64 and generates Java/C++ JSI code
@@ -48,8 +89,8 @@ npm run ubrn:android
 # iOS — compiles all iOS targets and generates ObjC++/C++ JSI code
 npm run ubrn:ios
 
-# Re-generate TypeScript + native glue only (no Rust recompile)
-npm run ubrn:generate
+# Re-generate TypeScript + native glue using existing Rust build artifacts
+npm run ubrn:android -- --no-cargo
 ```
 
 Generated output (all gitignored, recreated by the commands above):
@@ -65,26 +106,15 @@ Generated output (all gitignored, recreated by the commands above):
 | `ios/CoinswapReactNative.{h,mm}` | ObjC++ RN module |
 | `ios/coinswap_ffi.xcframework/` | Compiled Rust xcframework |
 
-### Using the legacy build scripts
+### Generated Folder Behavior
 
-The shell scripts in `build-scripts/` compile a single Rust target each and copy the outputs manually. They are kept as a fallback and for CI targets not yet covered by ubrn.
+It is normal for generated native files/directories to appear only after running `ubrn` commands. In this repository, many generated files are intentionally gitignored and recreated on demand:
 
-```bash
-# Android development build (x86_64 emulator)
-bash ./build-scripts/development/build-dev-android-x86_64.sh
-
-# Android release builds
-bash ./build-scripts/release/build-release-android-arm64_v8a.sh
-bash ./build-scripts/release/build-release-android-armeabi-v7a.sh
-
-# iOS development build (host arch + iOS device + iOS simulator)
-bash ./build-scripts/development/build-dev-ios.sh
-
-# iOS release build (all targets, lipo universal simulator slice)
-bash ./build-scripts/release/build-release-ios.sh
-```
-
-All scripts auto-detect the NDK host toolchain (`darwin-x86_64` on macOS, `linux-x86_64` on Linux). If `ANDROID_NDK_ROOT` is not set they fall back to `ANDROID_HOME/ndk/<latest>` or `~/Library/Android/sdk/ndk/<latest>`.
+- `src/generated/`
+- `src/NativeCoinswapReactNative.ts`
+- `cpp/generated/` and generated `cpp/*.cpp|*.h`
+- `ios/generated/`, `ios/CoinswapReactNative.{h,mm}`, `ios/coinswap_ffi.xcframework/`
+- `android/CMakeLists.txt`, `android/cpp-adapter.cpp`, generated Java/Kotlin and `jniLibs` outputs
 
 ## Basic Usage
 
@@ -260,7 +290,23 @@ The plugin applies two modifications to the host project:
 
 ## Tests
 
-Live end-to-end tests for both swap protocols are in `__tests__/`:
+### Default tests (fast)
+
+```bash
+cd coinswap-react-native
+npm run typecheck
+npm test
+```
+
+`npm test` runs:
+
+- Jest test suite (`tests/jest/`)
+- Android native bridge smoke test (`tests/native/android-smoke-test.sh`)
+- Swift bindings smoke test (`tests/native/swift-smoke-test.sh`)
+
+### Live end-to-end swap tests (regtest)
+
+Live tests for both swap protocols are in `tests/jest/` and require the docker regtest stack:
 
 ```bash
 # Start the regtest environment first
@@ -273,7 +319,21 @@ cd ../coinswap-react-native
 COINSWAP_LIVE_TESTS=1 npm run test:live
 ```
 
-Tests require the shared regtest docker stack from `ffi-commons`.
+Optional:
+
+```bash
+# If your bitcoind container name differs
+COINSWAP_DOCKER_CONTAINER=<your-container-name> COINSWAP_LIVE_TESTS=1 npm run test:live
+```
+
+### What each test command does
+
+```bash
+npm run test:android   # compile-check generated Android RN bridge classes
+npm run test:swift     # typecheck generated Swift bindings + smoke usage
+npm run test:native    # run both native smoke tests
+npm run test:live      # run live swap tests only (requires regtest infra)
+```
 
 ## Requirements
 

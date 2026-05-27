@@ -2,8 +2,8 @@ module.exports = {
   dependency: {
     platforms: {
       android: {
-        packageImportPath: 'import org.coinswap.reactnative.CoinswapPackage;',
-        packageInstance: 'new CoinswapPackage()',
+        packageImportPath: 'import org.coinswap.reactnative.CoinswapReactNativePackage;',
+        packageInstance: 'new CoinswapReactNativePackage()',
       },
       ios: {},
     },

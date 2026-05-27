@@ -5,3 +5,5 @@ coinswap-napi.linux-x64-gnu.node
 package-lock.json
 install-state.gz
 *.node
+yarn.lock
+dist

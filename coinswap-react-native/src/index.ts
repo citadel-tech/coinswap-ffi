@@ -1,9 +1,17 @@
-// Run `npm run ubrn:generate` to populate src/generated/ with real bindings.
-// The stub at src/generated/coinswap.ts keeps TypeScript happy until then.
-import { Taker, AddressType as GeneratedAddressType } from './generated/coinswap'
-export type { RpcConfig, Balances, SwapReport, Address, SwapParams } from './generated/coinswap'
+import installer from './NativeCoinswapReactNative'
+import coinswapBindings, {
+  Taker,
+  setupLogging as generatedSetupLogging,
+  type Address,
+  type Balances,
+  type RpcConfig,
+  type SwapParams,
+  type SwapReport,
+  type TakerLike,
+} from './generated/coinswap'
 
-// Our public AddressType constants — converted to a GeneratedAddressType instance at call sites.
+export type { RpcConfig, Balances, SwapReport, Address, SwapParams }
+
 export const AddressType = {
   P2WPKH: 'P2WPKH',
   P2TR: 'P2TR',
@@ -13,31 +21,68 @@ export type AddressType = (typeof AddressType)[keyof typeof AddressType]
 export type TakerInitConfig = {
   dataDir?: string | null
   walletFileName?: string | null
-  rpcConfig?: import('./generated/coinswap').RpcConfig | null
+  rpcConfig?: RpcConfig | null
   controlPort?: number | null
   torAuthPassword?: string | null
   zmqAddr: string
   password?: string | null
 }
 
-export function isNativeCoinswapAvailable(): boolean {
+let rustInstalled = false
+let bindingsInitialized = false
+
+function tryInitializeNativeBindings(): boolean {
+  if (bindingsInitialized) {
+    return true
+  }
+
   try {
-    return typeof Taker !== 'undefined'
+    if (!rustInstalled) {
+      rustInstalled = installer.installRustCrate()
+    }
+
+    if (!rustInstalled) {
+      return false
+    }
+
+    coinswapBindings.initialize()
+    bindingsInitialized = true
+    return true
   } catch {
     return false
   }
 }
 
-// CoinswapTaker wraps the generated Taker, preserving the existing config-object init API.
-export class CoinswapTaker {
-  private constructor(private readonly taker: Taker) {}
+function ensureNativeBindings(): void {
+  if (!tryInitializeNativeBindings()) {
+    throw new Error('Coinswap native bindings are unavailable. Ensure the TurboModule is installed.')
+  }
+}
 
-  static async setupLogging(dataDir: string | null | undefined, level: string): Promise<void> {
-    await Taker.setupLogging(dataDir ?? undefined, level)
+export function isNativeCoinswapAvailable(): boolean {
+  return tryInitializeNativeBindings()
+}
+
+// This keeps parity with the generated `index.web.ts` API shape.
+export async function uniffiInitAsync(): Promise<void> {
+  ensureNativeBindings()
+}
+
+export class CoinswapTaker {
+  private constructor(private readonly taker: TakerLike) {}
+
+  static async setupLogging(
+    dataDir: string | null | undefined,
+    _level: string,
+  ): Promise<void> {
+    ensureNativeBindings()
+    generatedSetupLogging(dataDir ?? undefined)
   }
 
   static async init(config: TakerInitConfig): Promise<CoinswapTaker> {
-    const taker = await Taker.init(
+    ensureNativeBindings()
+
+    const taker = Taker.init(
       config.dataDir ?? undefined,
       config.walletFileName ?? undefined,
       config.rpcConfig ?? undefined,
@@ -50,34 +95,31 @@ export class CoinswapTaker {
   }
 
   async dispose(): Promise<void> {
-    this.taker[Symbol.dispose]?.()
+    const disposable = this.taker as unknown as { uniffiDestroy?: () => void }
+    disposable.uniffiDestroy?.()
   }
 
   async syncOfferbookAndWait(): Promise<void> {
-    await this.taker.syncOfferbookAndWait()
+    this.taker.syncOfferbookAndWait()
   }
 
   async syncAndSave(): Promise<void> {
-    await this.taker.syncAndSave()
+    this.taker.syncAndSave()
   }
 
-  async getBalances(): Promise<import('./generated/coinswap').Balances> {
+  async getBalances(): Promise<Balances> {
     return this.taker.getBalances()
   }
 
-  async getNextExternalAddress(
-    addressType: AddressType,
-  ): Promise<import('./generated/coinswap').Address> {
-    return this.taker.getNextExternalAddress(new GeneratedAddressType(addressType))
+  async getNextExternalAddress(addressType: AddressType): Promise<Address> {
+    return this.taker.getNextExternalAddress({ addrType: addressType })
   }
 
-  async prepareCoinswap(
-    swapParams: import('./generated/coinswap').SwapParams,
-  ): Promise<string> {
+  async prepareCoinswap(swapParams: SwapParams): Promise<string> {
     return this.taker.prepareCoinswap(swapParams)
   }
 
-  async startCoinswap(swapId: string): Promise<import('./generated/coinswap').SwapReport> {
+  async startCoinswap(swapId: string): Promise<SwapReport> {
     return this.taker.startCoinswap(swapId)
   }
 }

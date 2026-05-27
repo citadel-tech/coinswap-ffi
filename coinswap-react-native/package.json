@@ -14,7 +14,6 @@
     "src",
     "ios",
     "android",
-    "build-scripts",
     "plugin",
     "app.plugin.js",
     "CoinswapReactNative.podspec",
@@ -22,16 +21,13 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
-    "test:live": "COINSWAP_LIVE_TESTS=1 jest __tests__/live.*.test.ts --runInBand",
+    "test": "jest --runInBand && npm run test:native",
+    "test:live": "COINSWAP_LIVE_TESTS=1 jest tests/jest/live.*.test.ts --runInBand",
+    "test:android": "bash ./tests/native/android-smoke-test.sh",
+    "test:swift": "bash ./tests/native/swift-smoke-test.sh",
+    "test:native": "npm run test:android && npm run test:swift",
     "ubrn:android": "ubrn build android --config ubrn.config.yaml --and-generate",
-    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=14.0 ubrn build ios --config ubrn.config.yaml --and-generate",
-    "ubrn:generate": "ubrn generate --config ubrn.config.yaml",
-    "build:android:dev": "bash ./build-scripts/development/build-dev-android-x86_64.sh",
-    "build:android:release": "bash ./build-scripts/release/build-release-android-arm64_v8a.sh",
-    "build:android:release:v7a": "bash ./build-scripts/release/build-release-android-armeabi-v7a.sh",
-    "build:ios:dev": "bash ./build-scripts/development/build-dev-ios.sh",
-    "build:ios:release": "bash ./build-scripts/release/build-release-ios.sh"
+    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=14.0 ubrn build ios --config ubrn.config.yaml --and-generate"
   },
   "peerDependencies": {
     "react": ">=18",

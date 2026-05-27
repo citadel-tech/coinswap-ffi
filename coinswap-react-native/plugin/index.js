@@ -2,7 +2,6 @@ const { createRunOncePlugin, withPlugins } = require('@expo/config-plugins')
 
 const { withBinaryArtifacts } = require('./withBinaryArtifacts')
 const { withCoinswapAndroid } = require('./withAndroid')
-const { withCoinswapIOS } = require('./withIOS')
 const { sdkPackage } = require('./utils')
 
 function withCoinswap(config, options) {
@@ -11,7 +10,6 @@ function withCoinswap(config, options) {
   return withPlugins(config, [
     ...(skipBinaryDownload ? [] : [withBinaryArtifacts]),
     withCoinswapAndroid,
-    withCoinswapIOS,
   ])
 }
 
