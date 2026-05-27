@@ -1,11 +1,11 @@
-import { AddressType, CoinswapTaker, isNativeCoinswapAvailable } from '../src'
+import { AddressType, CoinswapTaker, isNativeCoinswapAvailable } from '../../src'
 
 import { cleanupWallet, fundAddress, liveTestsEnabled, sleep } from './liveTestHelpers'
 
 const describeLive = liveTestsEnabled ? describe : describe.skip
 
-describeLive('React Native live standard swap (legacy)', () => {
-  const walletName = 'rn_legacy_wallet'
+describeLive('React Native live standard swap (taproot)', () => {
+  const walletName = 'rn_taproot_wallet'
 
   beforeAll(() => {
     if (!isNativeCoinswapAvailable()) {
@@ -14,7 +14,7 @@ describeLive('React Native live standard swap (legacy)', () => {
   })
 
   test(
-    'runs end-to-end legacy swap',
+    'runs end-to-end taproot swap',
     async () => {
       cleanupWallet(walletName)
 
@@ -38,28 +38,28 @@ describeLive('React Native live standard swap (legacy)', () => {
       await taker.syncOfferbookAndWait()
       await taker.syncAndSave()
 
-      const address = await taker.getNextExternalAddress(AddressType.P2WPKH)
+      const address = await taker.getNextExternalAddress(AddressType.P2TR)
       expect(address.address).toBeTruthy()
 
-      fundAddress(address.address, '1.0')
+      fundAddress(address.address, '0.42749329')
       await sleep(1_000)
       await taker.syncAndSave()
 
       const balances = await taker.getBalances()
-      expect(balances.spendable).toBeGreaterThan(0)
+      expect(balances.spendable).toBeGreaterThan(0n)
 
       const swapId = await taker.prepareCoinswap({
-        protocol: 'Legacy',
-        sendAmount: 500_000,
+        protocol: 'Taproot',
+        sendAmount: 500_000n,
         makerCount: 2,
-        txCount: 1,
+        txCount: 3,
         requiredConfirms: 1,
       })
 
       const report = await taker.startCoinswap(swapId)
       expect(report.swapId).toBe(swapId)
-      expect(report.outgoingAmount).toBe(500_000)
-      expect(report.makersCount).toBeGreaterThanOrEqual(2)
+      expect(report.outgoingAmount).toBe(500_000n)
+      expect(report.makersCount ?? 0).toBeGreaterThanOrEqual(2)
       expect(report.makerAddresses.length).toBeGreaterThanOrEqual(2)
 
       await taker.dispose()
