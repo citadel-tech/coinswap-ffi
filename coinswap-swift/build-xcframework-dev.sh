@@ -9,6 +9,7 @@ STATIC_LIB_NAME="lib${NAME}.a"
 NEW_HEADER_DIR="../coinswap-swift/Sources/CoinswapFFI/include"
 PROFILE_DIR="debug"
 SWIFT_OUT_DIR="../coinswap-swift/Sources/Coinswap"
+MACOS_DEPLOYMENT_TARGET="10.15"
 
 HOST_ARCH=$(uname -m)
 if [ "$HOST_ARCH" = "arm64" ]; then
@@ -25,7 +26,7 @@ cd ../ffi-commons/ || exit
 rustup component add rust-src
 rustup target add "$MAC_TARGET" "$IOS_SIM_TARGET" "$IOS_DEVICE_TARGET"
 
-cargo build --package coinswap-ffi --target "$MAC_TARGET"
+MACOSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" cargo build --package coinswap-ffi --target "$MAC_TARGET"
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --target "$IOS_SIM_TARGET"
 IPHONEOS_DEPLOYMENT_TARGET=14.0 cargo build --package coinswap-ffi --target "$IOS_DEVICE_TARGET"
 

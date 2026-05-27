@@ -7,6 +7,7 @@ TARGETDIR="../ffi-commons/target"
 NAME="coinswap_ffi"
 PROFILE_DIR="debug"
 SWIFT_OUT_DIR="../coinswap-swift/Sources/Coinswap"
+MACOS_DEPLOYMENT_TARGET="10.15"
 
 MAC_TARGET="x86_64-apple-darwin"
 # MAC_TARGET="aarch64-apple-darwin"
@@ -16,7 +17,7 @@ cd ../ffi-commons/ || exit
 rustup component add rust-src
 rustup target add "$MAC_TARGET"
 
-cargo build --package coinswap-ffi --target "$MAC_TARGET"
+MACOSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" cargo build --package coinswap-ffi --target "$MAC_TARGET"
 
 # # Copy dylib to Sources/CoinswapFFI
 # mkdir -p ../coinswap-swift/Sources/CoinswapFFI
