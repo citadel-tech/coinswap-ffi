@@ -4,16 +4,27 @@ require "json"
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32'
 
+repository_url = if package["repository"].is_a?(Hash)
+  package["repository"]["url"]
+else
+  package["repository"]
+end
+
+homepage = package["homepage"] || "https://github.com/Citadel-Tech/coinswap"
+authors = package["author"] || package["authors"] || "neoz.blockchain@gmail.com"
+license_value = package["license"] || "MIT"
+summary = package["description"] || "React Native TurboModule bindings for Coinswap"
+
 Pod::Spec.new do |s|
   s.name         = "CoinswapReactNative"
   s.version      = package["version"]
-  s.summary      = package["description"]
-  s.homepage     = package["homepage"]
-  s.license      = package["license"]
-  s.authors      = package["author"]
+  s.summary      = summary
+  s.homepage     = homepage
+  s.license      = license_value
+  s.authors      = authors
 
   s.platforms    = { :ios => min_ios_version_supported }
-  s.source       = { :git => "https://github.com/citadel-tech/coinswap-ffi.git", :tag => "#{s.version}" }
+  s.source       = { :git => (repository_url || "https://github.com/citadel-tech/coinswap-ffi.git"), :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}", "ios/generated/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "cpp/generated/**/*.{hpp,cpp,c,h}"
   s.vendored_frameworks = "CoinswapReactNativeFramework.xcframework"
