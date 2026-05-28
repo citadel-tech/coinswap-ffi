@@ -61,8 +61,8 @@ final class LiveTaprootSwapTests: XCTestCase {
             XCTAssertGreaterThan(incomingTotal, 0)
 
             // Fee information invariants
-            XCTAssertEqual(inputTotal - incomingTotal, abs(report.feePaidOrEarned))
-            XCTAssertEqual(report.totalMakerFees + report.miningFee, abs(report.feePaidOrEarned))
+            XCTAssertEqual(inputTotal - incomingTotal, abs(report.feePaid))
+            XCTAssertEqual(report.totalMakerFees + report.miningFee, abs(report.feePaid))
             assertApprox(makerFeeTotal, Double(report.totalMakerFees), tolerance: 2.0)
 
             // Output amount invariants

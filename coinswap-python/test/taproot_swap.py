@@ -234,7 +234,7 @@ def main():
         print("\n✅ Swap completed successfully!")
         print(f"\nSwap Report:")
         outgoing_amount = getattr(swap_report, "outgoing_amount", getattr(swap_report, "target_amount", None))
-        fee_value = getattr(swap_report, "fee_paid_or_earned", getattr(swap_report, "total_fee", None))
+        fee_value = getattr(swap_report, "fee_paid", None)
         total_fee_paid = abs(fee_value) if fee_value is not None else None
         print(f"  Swap ID: {swap_report.swap_id}")
         print(f"  Duration: {swap_report.swap_duration_seconds:.2f} seconds")

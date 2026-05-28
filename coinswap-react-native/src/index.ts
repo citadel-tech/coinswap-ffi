@@ -28,46 +28,6 @@ export type TakerInitConfig = {
   password?: string | null
 }
 
-let rustInstalled = false
-let bindingsInitialized = false
-
-function tryInitializeNativeBindings(): boolean {
-  if (bindingsInitialized) {
-    return true
-  }
-
-  try {
-    if (!rustInstalled) {
-      rustInstalled = installer.installRustCrate()
-    }
-
-    if (!rustInstalled) {
-      return false
-    }
-
-    coinswapBindings.initialize()
-    bindingsInitialized = true
-    return true
-  } catch {
-    return false
-  }
-}
-
-function ensureNativeBindings(): void {
-  if (!tryInitializeNativeBindings()) {
-    throw new Error('Coinswap native bindings are unavailable. Ensure the TurboModule is installed.')
-  }
-}
-
-export function isNativeCoinswapAvailable(): boolean {
-  return tryInitializeNativeBindings()
-}
-
-// This keeps parity with the generated `index.web.ts` API shape.
-export async function uniffiInitAsync(): Promise<void> {
-  ensureNativeBindings()
-}
-
 export class CoinswapTaker {
   private constructor(private readonly taker: TakerLike) {}
 
@@ -75,12 +35,10 @@ export class CoinswapTaker {
     dataDir: string | null | undefined,
     _level: string,
   ): Promise<void> {
-    ensureNativeBindings()
     generatedSetupLogging(dataDir ?? undefined)
   }
 
   static async init(config: TakerInitConfig): Promise<CoinswapTaker> {
-    ensureNativeBindings()
 
     const taker = Taker.init(
       config.dataDir ?? undefined,

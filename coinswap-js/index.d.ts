@@ -202,8 +202,6 @@ export interface SwapReport {
   status: string
   /** Duration of the swap in seconds */
   swapDurationSeconds: number
-  /** Duration of recovery phase in seconds */
-  recoveryDurationSeconds: number
   /** Unix start timestamp */
   startTimestamp: number
   /** Unix end timestamp */
@@ -216,18 +214,14 @@ export interface SwapReport {
   incomingAmount: number
   /** Outgoing amount in sats */
   outgoingAmount: number
-  /** Fee paid (negative) or earned (positive) */
-  feePaidOrEarned: number
+  /** Fee paid (negative) */
+  feePaid: number
   /** Incoming contract txid */
   incomingContractTxid?: string
   /** Outgoing contract txid */
   outgoingContractTxid?: string
   /** Funding transaction IDs organized by hops */
   fundingTxids: Array<Array<string>>
-  /** Recovery transaction IDs */
-  recoveryTxids?: Array<string>
-  /** Contract timelock in blocks */
-  timelock: number
   /** Number of makers involved */
   makersCount?: number
   /** List of maker addresses used */

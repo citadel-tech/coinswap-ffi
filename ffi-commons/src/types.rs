@@ -579,8 +579,6 @@ pub struct SwapReport {
     pub status: String,
     /// Duration of the swap in seconds
     pub swap_duration_seconds: f64,
-    /// Duration of recovery phase in seconds
-    pub recovery_duration_seconds: f64,
     /// Unix start timestamp
     pub start_timestamp: i64,
     /// Unix end timestamp
@@ -593,18 +591,14 @@ pub struct SwapReport {
     pub incoming_amount: i64,
     /// Outgoing amount in sats
     pub outgoing_amount: i64,
-    /// Fee paid (negative) or earned (positive)
-    pub fee_paid_or_earned: i64,
+    /// Fee paid (negative)
+    pub fee_paid: i64,
     /// Incoming contract txid
     pub incoming_contract_txid: Option<String>,
     /// Outgoing contract txid
     pub outgoing_contract_txid: Option<String>,
     /// Funding transaction IDs organized by hops
     pub funding_txids: Vec<Vec<String>>,
-    /// Recovery transaction IDs
-    pub recovery_txids: Option<Vec<String>>,
-    /// Contract timelock in blocks
-    pub timelock: u16,
     /// Number of makers involved
     pub makers_count: Option<u32>,
     /// List of maker addresses used
@@ -660,19 +654,16 @@ impl From<csTakerReport> for SwapReport {
             role: "Taker".to_string(),
             status: report.status.to_string(),
             swap_duration_seconds: report.swap_duration_seconds,
-            recovery_duration_seconds: 0.0,
             start_timestamp: report.start_timestamp as i64,
             end_timestamp: report.end_timestamp as i64,
             network: report.network.to_string(),
             error_message: report.error_message,
             incoming_amount,
             outgoing_amount: report.outgoing_amount as i64,
-            fee_paid_or_earned: -(report.fee_paid as i64),
+            fee_paid: -(report.fee_paid as i64),
             incoming_contract_txid: report.incoming_contract_txid,
             outgoing_contract_txid: report.outgoing_contract_txid,
             funding_txids: report.funding_txids,
-            recovery_txids: None,
-            timelock: 0,
             makers_count: Some(report.makers_count as u32),
             maker_addresses: report.maker_addresses,
             total_maker_fees: report.total_maker_fees as i64,
