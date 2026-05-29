@@ -4,7 +4,7 @@
 
 use crate::types::{
   Address, AddressType, Amount, Balances, FeeRates, GetTransactionResultDetail,
-  ListTransactionResult, ListUnspentResultEntry, Offer, OfferBook, OutPoint,
+  ListTransactionResult, ListUnspentResultEntry, MakerOfferCandidate, Offer, OfferBook, OutPoint,
   RPCConfig as RpcConfig, ScriptBuf, SignedAmountSats, SwapReport, Txid, UtxoSpendInfo,
   WalletTxInfo,
 };
@@ -12,14 +12,21 @@ use coinswap::{
   bitcoin::{Amount as csAmount, OutPoint as BitcoinOutPoint, Txid as csTxid},
   fee_estimation::{BlockTarget, FeeEstimator},
   protocol::ProtocolVersion,
-  taker::api::{
-    ConnectionType, SwapParams as CoinswapSwapParams, Taker as CoinswapTaker, TakerInitConfig,
+  taker::{
+    api::{
+      ConnectionType, SwapParams as CoinswapSwapParams, Taker as CoinswapTaker, TakerInitConfig,
+    },
+    offers::{MakerAddress, OfferSyncClient},
   },
   wallet::{ffi, AddressType as csAddressType, UTXOSpendInfo as csUtxoSpendInfo},
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::{path::PathBuf, str::FromStr, sync::Mutex};
+use std::{
+  path::PathBuf,
+  str::FromStr,
+  sync::{Arc, Mutex},
+};
 
 #[napi(object)]
 pub struct SwapParams {
@@ -77,7 +84,61 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
 
 #[napi]
 pub struct Taker {
-  inner: Mutex<CoinswapTaker>,
+  inner: Arc<Mutex<CoinswapTaker>>,
+  /// Clone-able client for the background offer sync service. Used by the
+  /// async sync method so it can run without holding `inner`'s Mutex, leaving
+  /// other Taker calls free to proceed concurrently.
+  offer_sync: OfferSyncClient,
+}
+
+/// AsyncTask that runs `sync_offerbook_and_wait` on libuv's worker pool so the
+/// JS event loop is not blocked. Resolves to `undefined` on success. Uses the
+/// `OfferSyncClient` directly (no `inner` Mutex), so other taker methods can
+/// run in parallel during the sync.
+pub struct SyncOfferbookTask {
+  client: OfferSyncClient,
+}
+
+impl Task for SyncOfferbookTask {
+  type Output = ();
+  type JsValue = ();
+
+  fn compute(&mut self) -> Result<Self::Output> {
+    self
+      .client
+      .sync_and_wait()
+      .map_err(|e| napi::Error::from_reason(format!("Offerbook sync error: {:?}", e)))
+  }
+
+  fn resolve(&mut self, _env: Env, _output: Self::Output) -> Result<Self::JsValue> {
+    Ok(())
+  }
+}
+
+/// AsyncTask that runs a single-maker poll on libuv's worker pool. Uses the
+/// `OfferSyncClient` directly (no `inner` Mutex), so other taker methods can
+/// run in parallel during the poll.
+pub struct PollMakerTask {
+  client: OfferSyncClient,
+  address: String,
+}
+
+impl Task for PollMakerTask {
+  type Output = coinswap::taker::offers::MakerOfferCandidate;
+  type JsValue = MakerOfferCandidate;
+
+  fn compute(&mut self) -> Result<Self::Output> {
+    let parsed = MakerAddress::try_from(self.address.clone())
+      .map_err(|e| napi::Error::from_reason(format!("Invalid maker address: {}", e)))?;
+    self
+      .client
+      .poll_maker(parsed)
+      .map_err(|e| napi::Error::from_reason(format!("Poll maker error: {:?}", e)))
+  }
+
+  fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+    Ok(MakerOfferCandidate::from(output))
+  }
 }
 
 #[napi]
@@ -112,8 +173,11 @@ impl Taker {
     let taker = CoinswapTaker::init(init_config)
       .map_err(|e| napi::Error::from_reason(format!("Init error: {:?}", e)))?;
 
+    let offer_sync = taker.offer_sync_client();
+
     Ok(Self {
-      inner: Mutex::new(taker),
+      inner: Arc::new(Mutex::new(taker)),
+      offer_sync,
     })
   }
 
@@ -205,6 +269,43 @@ impl Taker {
     taker
       .sync_offerbook_and_wait()
       .map_err(|e| napi::Error::from_reason(format!("Offerbook sync error: {:?}", e)))
+  }
+
+  /// Async variant of `sync_offerbook_and_wait`. Runs the blocking sync on
+  /// libuv's worker pool and returns a Promise that resolves when the cycle
+  /// completes. Does NOT hold the inner Taker Mutex, so other Taker methods
+  /// (getBalance, listUnspent, etc.) remain callable in parallel during the
+  /// sync. Removes the need for a separate Node `worker_thread`.
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn sync_offerbook_and_wait_async(&self) -> AsyncTask<SyncOfferbookTask> {
+    AsyncTask::new(SyncOfferbookTask {
+      client: self.offer_sync.clone(),
+    })
+  }
+
+  /// Trigger a single-maker offer fetch + fidelity verification cycle on demand.
+  /// Routes through the cloned `OfferSyncClient`, so it does NOT hold the inner
+  /// Taker Mutex — safe to call concurrently with other Taker methods.
+  /// Returns the maker's final state after the poll.
+  #[napi(ts_return_type = "Promise<MakerOfferCandidate>")]
+  pub fn poll_maker_async(&self, address: String) -> AsyncTask<PollMakerTask> {
+    AsyncTask::new(PollMakerTask {
+      client: self.offer_sync.clone(),
+      address,
+    })
+  }
+
+  /// Remove a maker from the offerbook by address. Persists to disk.
+  /// Returns `true` if a matching entry was removed, `false` otherwise.
+  #[napi]
+  pub fn remove_maker(&self, address: String) -> Result<bool> {
+    let taker = self
+      .inner
+      .lock()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+    taker
+      .remove_maker(address)
+      .map_err(|e| napi::Error::from_reason(format!("Remove maker error: {:?}", e)))
   }
 
   #[napi]

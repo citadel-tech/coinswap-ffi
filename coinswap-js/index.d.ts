@@ -9,6 +9,26 @@ export declare class Taker {
   prepareCoinswap(swapParams: SwapParams): string
   startCoinswap(swapId: string): SwapReport
   syncOfferbookAndWait(): void
+  /**
+   * Async variant of `sync_offerbook_and_wait`. Runs the blocking sync on
+   * libuv's worker pool and returns a Promise that resolves when the cycle
+   * completes. Does NOT hold the inner Taker Mutex, so other Taker methods
+   * (getBalance, listUnspent, etc.) remain callable in parallel during the
+   * sync. Removes the need for a separate Node `worker_thread`.
+   */
+  syncOfferbookAndWaitAsync(): Promise<void>
+  /**
+   * Trigger a single-maker offer fetch + fidelity verification cycle on demand.
+   * Routes through the cloned `OfferSyncClient`, so it does NOT hold the inner
+   * Taker Mutex — safe to call concurrently with other Taker methods.
+   * Returns the maker's final state after the poll.
+   */
+  pollMakerAsync(address: string): Promise<MakerOfferCandidate>
+  /**
+   * Remove a maker from the offerbook by address. Persists to disk.
+   * Returns `true` if a matching entry was removed, `false` otherwise.
+   */
+  removeMaker(address: string): boolean
   getTransactions(count?: number | undefined | null, skip?: number | undefined | null): Array<ListTransactionResult>
   getNextInternalAddresses(count: number, addressType: AddressType): Array<Address>
   getNextExternalAddress(addressType: AddressType): Address
