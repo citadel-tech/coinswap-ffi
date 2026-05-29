@@ -365,14 +365,29 @@ fund_makers() {
         local maker_name="makerd${idx}"
         local container_name="coinswap-${maker_name}"
         print_info "Funding ${maker_name}..."
-        local maker_addr
-        maker_addr=$(docker logs "$container_name" 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
+        local maker_addr=""
+        local retries=15
+        while [ $retries -gt 0 ]; do
+            maker_addr=$(
+                docker logs "$container_name" 2>&1 \
+                | grep "Send at least" \
+                | tail -1 \
+                | grep -Eo 'bcrt1[[:alnum:]]+' \
+                || true
+            )
+            if [ -n "$maker_addr" ]; then
+                break
+            fi
+            sleep 2
+            retries=$((retries - 1))
+        done
+
         if [ -n "$maker_addr" ]; then
             print_info "${maker_name} address: $maker_addr"
             docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker_addr" 1.0
             print_success "Sent 1 BTC to ${maker_name}"
         else
-            print_warning "Could not find ${maker_name} address."
+            print_warning "Could not find ${maker_name} address after waiting."
         fi
 
         # Pause between rounds so maker funding has a predictable cadence.
@@ -455,7 +470,7 @@ show_help() {
     echo "  build-bitcoin       Build the Bitcoin Mutinynet Docker image"
     echo "  start [N]           Start the full stack with N makers (default: 2)"
     echo "  stop                Stop the Coinswap stack and block mining"
-    echo "  restart             Restart the Coinswap stack"
+    echo "  restart [N]         Restart the Coinswap stack with N makers (uses previous N or default)"
     echo "  fund-makers         Manually fund maker wallets (done automatically on start)"
     echo "  mine [N]            Manually mine N blocks (auto-mining runs every 5s)"
     echo "  start-mining        Start automatic block mining"
@@ -503,7 +518,7 @@ case "$COMMAND" in
         check_docker
         build_bitcoin_image
         ;;
-    "start")
+    "start" | "restart")
         check_docker
         if [[ -n "${SUBCOMMAND_ARG:-}" ]]; then
             if ! [[ "$SUBCOMMAND_ARG" =~ ^[0-9]+$ ]] || [[ "$SUBCOMMAND_ARG" -lt 1 ]]; then
@@ -511,19 +526,25 @@ case "$COMMAND" in
                 exit 1
             fi
             NUM_MAKERS="$SUBCOMMAND_ARG"
+            echo "$NUM_MAKERS" > "$SCRIPT_DIR/.makers_count"
         else
-            NUM_MAKERS="2"
+            if [ -f "$SCRIPT_DIR/.makers_count" ]; then
+                NUM_MAKERS=$(cat "$SCRIPT_DIR/.makers_count")
+            else
+                NUM_MAKERS="2"
+            fi
         fi
+
+        if [ "$COMMAND" = "restart" ]; then
+            stop_stack
+            sleep 2
+        fi
+
         print_info "Starting with ${NUM_MAKERS} maker(s)"
         start_stack
         ;;
     "stop")
         stop_stack
-        ;;
-    "restart")
-        stop_stack
-        sleep 2
-        start_stack
         ;;
     "fund-makers")
         fund_makers
