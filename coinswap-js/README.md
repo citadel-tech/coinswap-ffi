@@ -230,6 +230,16 @@ report.outputSwapUtxos                             // swap outputs with amount a
 - Bitcoin Core with RPC enabled, fully synced, non-pruned, and `-txindex` enabled.
 - Tor daemon for maker discovery and routing.
 
+## Security
+
+The native binding loader is hardened against import-time code execution ([issue #105](https://github.com/citadel-tech/coinswap-ffi/issues/105)):
+
+- `NAPI_RS_NATIVE_LIBRARY_PATH` is **ignored by default**. To use a custom binding path in controlled environments, set `NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH=1` and provide an **absolute** path inside this package directory.
+- Optional platform binding packages are resolved via `require.resolve(..., { paths: [__dirname] })`, which does not consult `NODE_PATH`.
+- Linux musl detection uses filesystem and `process.report` only — no `ldd` subprocess at import time.
+
+After `napi build --platform` regenerates `index.js`, run `node scripts/harden-loader.js` (automatically chained by `yarn build`, `yarn preversion`, and `yarn prepublishOnly`). `yarn test` verifies the loader is hardened before running tests.
+
 ## Reference Application
 
 [taker-app](https://github.com/citadel-tech/taker-app) is the primary desktop reference implementation for this binding and demonstrates wallet management, maker discovery, swap execution, analytics, and UTXO control.

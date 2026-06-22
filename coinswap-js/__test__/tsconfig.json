@@ -2,10 +2,11 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "node",
     "outDir": "lib",
-    "rootDir": "."
+    "rootDir": ".",
+    "types": ["node"]
   },
-  "include": ["*.ts"],
+  "include": ["*.ts", "../loader-security.d.ts"],
   "exclude": ["lib"]
 }
