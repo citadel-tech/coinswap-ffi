@@ -24,16 +24,15 @@ const isMusl = () => detectMusl(readFileSync)
 
 `
 
-const ENV_REPLACEMENT = `  try {
-    const overrideBinding = tryLoadNativeLibraryPathOverride(__dirname)
-    if (overrideBinding) {
-      return overrideBinding
-    }
-  } catch (err) {
-    loadErrors.push(err)
+const ENV_REPLACEMENT = `  const overrideBinding = tryLoadNativeLibraryPathOverride(__dirname)
+  if (overrideBinding) {
+    return overrideBinding
   }
 
   if (process.platform === 'android') {`
+
+const ENV_OVERRIDE_HARDENED_TRY_CATCH =
+  /  try \{\n    const overrideBinding = tryLoadNativeLibraryPathOverride\(__dirname\)\n    if \(overrideBinding\) \{\n      return overrideBinding\n    \}\n  \} catch \(err\) \{\n    loadErrors\.push\(err\)\n  \}\n\n  if \(process\.platform === 'android'\) \{/
 
 function isFullyHardened(source) {
   const required = [
@@ -68,6 +67,8 @@ function hardenIndexJs(source) {
   }
   if (result.includes('process.env.NAPI_RS_NATIVE_LIBRARY_PATH')) {
     result = result.replace(ENV_OVERRIDE, ENV_REPLACEMENT)
+  } else if (ENV_OVERRIDE_HARDENED_TRY_CATCH.test(result)) {
+    result = result.replace(ENV_OVERRIDE_HARDENED_TRY_CATCH, ENV_REPLACEMENT)
   }
 
   let optionalBindingCount = 0

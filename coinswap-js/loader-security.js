@@ -4,11 +4,31 @@ const path = require('node:path')
 
 const { version: EXPECTED_BINDING_VERSION } = require('./package.json')
 
+function isPathInside(resolvedPath, root) {
+  const normalized = path.resolve(resolvedPath)
+  const normalizedRoot = path.resolve(root)
+  return normalized === normalizedRoot || normalized.startsWith(`${normalizedRoot}${path.sep}`)
+}
+
+function trustedNodeModulesRoots(fromDir) {
+  const roots = []
+  let dir = path.resolve(fromDir)
+  while (true) {
+    roots.push(path.join(dir, 'node_modules'))
+    const parent = path.dirname(dir)
+    if (parent === dir) {
+      break
+    }
+    dir = parent
+  }
+  return roots
+}
+
 /**
  * If platform bindings are ever published as scoped packages (e.g.
  * `@coinswap/napi-linux-x64-gnu`), update this assertion for scoped layouts.
  */
-function assertTrustedModulePath(resolvedPath, moduleName) {
+function assertTrustedModulePath(resolvedPath, moduleName, fromDir) {
   const normalized = path.normalize(resolvedPath)
   const inNodeModules = `${path.sep}node_modules${path.sep}${moduleName}${path.sep}`
   const atNodeModulesRoot = normalized.endsWith(`${path.sep}node_modules${path.sep}${moduleName}`)
@@ -18,6 +38,17 @@ function assertTrustedModulePath(resolvedPath, moduleName) {
       `[coinswap-napi] Refusing to load native binding '${moduleName}' from untrusted path.\n` +
         `  Resolved to: ${resolvedPath}\n` +
         `  Expected path to contain: node_modules${path.sep}${moduleName}\n` +
+        `  This may indicate a NODE_PATH override or an installation issue.\n` +
+        `  Try: yarn install --force`,
+    )
+  }
+
+  const trustedPackageRoots = trustedNodeModulesRoots(fromDir).map((root) => path.join(root, moduleName))
+  if (!trustedPackageRoots.some((pkgRoot) => isPathInside(normalized, pkgRoot))) {
+    throw new Error(
+      `[coinswap-napi] Refusing to load native binding '${moduleName}' from untrusted path.\n` +
+        `  Resolved to: ${resolvedPath}\n` +
+        `  Expected path under a node_modules tree reachable from: ${path.resolve(fromDir)}\n` +
         `  This may indicate a NODE_PATH override or an installation issue.\n` +
         `  Try: yarn install --force`,
     )
@@ -38,10 +69,10 @@ function enforceVersionIfRequired(bindingPackageVersion) {
 
 function requireOptionalBinding(moduleName, fromDir) {
   const bindingPath = require.resolve(moduleName, { paths: [fromDir] })
-  assertTrustedModulePath(bindingPath, moduleName)
+  assertTrustedModulePath(bindingPath, moduleName, fromDir)
 
   const pkgJsonPath = require.resolve(`${moduleName}/package.json`, { paths: [fromDir] })
-  assertTrustedModulePath(pkgJsonPath, moduleName)
+  assertTrustedModulePath(pkgJsonPath, moduleName, fromDir)
 
   enforceVersionIfRequired(require(pkgJsonPath).version)
   return require(bindingPath)

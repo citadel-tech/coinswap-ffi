@@ -9,7 +9,6 @@ import test from 'ava'
 import {
   assertTrustedModulePath,
   EXPECTED_BINDING_VERSION,
-  requireOptionalBinding,
   tryLoadNativeLibraryPathOverride,
 } from '../loader-security'
 
@@ -18,6 +17,34 @@ const hardenScript = join(packageRoot, 'scripts', 'harden-loader.js')
 const packageVersion = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')).version
 
 let tempDir: string
+
+function withEnv(overrides: Record<string, string | undefined>, fn: () => void) {
+  const keys = new Set([...Object.keys(process.env), ...Object.keys(overrides)])
+  const snapshot = new Map<string, string | undefined>()
+  for (const key of keys) {
+    snapshot.set(key, process.env[key])
+  }
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) {
+      delete process.env[key]
+    } else {
+      process.env[key] = value
+    }
+  }
+
+  try {
+    fn()
+  } finally {
+    for (const [key, value] of snapshot) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
+  }
+}
 
 test.before(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'coinswap-loader-security-'))
@@ -37,9 +64,14 @@ test('index.js passes hardening verification', (t) => {
   })
 })
 
-test('assertTrustedModulePath rejects paths outside node_modules', (t) => {
+test('assertTrustedModulePath rejects paths outside trusted node_modules roots', (t) => {
   t.throws(
-    () => assertTrustedModulePath('/tmp/fake/coinswap-napi-linux-x64-gnu/index.js', 'coinswap-napi-linux-x64-gnu'),
+    () =>
+      assertTrustedModulePath(
+        '/tmp/fake/coinswap-napi-linux-x64-gnu/index.js',
+        'coinswap-napi-linux-x64-gnu',
+        packageRoot,
+      ),
     { message: /Refusing to load native binding/ },
   )
 })
@@ -49,48 +81,41 @@ test('assertTrustedModulePath accepts hoisted node_modules layout', (t) => {
     assertTrustedModulePath(
       '/app/node_modules/coinswap-napi-linux-x64-gnu/index.js',
       'coinswap-napi-linux-x64-gnu',
+      '/app/node_modules/coinswap-napi',
     ),
   )
 })
 
-test('tryLoadNativeLibraryPathOverride ignores path without opt-in', (t) => {
+test.serial('tryLoadNativeLibraryPathOverride ignores path without opt-in', (t) => {
   const payloadPath = join(tempDir, 'payload.js')
   writeFileSync(payloadPath, 'global.__PAYLOAD_RAN = true\nmodule.exports = {}')
 
-  const previousPath = process.env.NAPI_RS_NATIVE_LIBRARY_PATH
-  const previousAllow = process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH
-  process.env.NAPI_RS_NATIVE_LIBRARY_PATH = payloadPath
-  delete process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH
-
-  t.is(tryLoadNativeLibraryPathOverride(packageRoot), null)
-
-  process.env.NAPI_RS_NATIVE_LIBRARY_PATH = previousPath
-  if (previousAllow === undefined) {
-    delete process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH
-  } else {
-    process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH = previousAllow
-  }
+  withEnv(
+    {
+      NAPI_RS_NATIVE_LIBRARY_PATH: payloadPath,
+      NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH: undefined,
+    },
+    () => {
+      t.is(tryLoadNativeLibraryPathOverride(packageRoot), null)
+    },
+  )
 })
 
-test('tryLoadNativeLibraryPathOverride rejects path outside package directory', (t) => {
+test.serial('tryLoadNativeLibraryPathOverride rejects path outside package directory', (t) => {
   const payloadPath = join(tempDir, 'outside-payload.js')
   writeFileSync(payloadPath, 'module.exports = {}')
 
-  const previousPath = process.env.NAPI_RS_NATIVE_LIBRARY_PATH
-  const previousAllow = process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH
-  process.env.NAPI_RS_NATIVE_LIBRARY_PATH = payloadPath
-  process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH = '1'
-
-  t.throws(() => tryLoadNativeLibraryPathOverride(packageRoot), {
-    message: /outside package directory/,
-  })
-
-  process.env.NAPI_RS_NATIVE_LIBRARY_PATH = previousPath
-  if (previousAllow === undefined) {
-    delete process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH
-  } else {
-    process.env.NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH = previousAllow
-  }
+  withEnv(
+    {
+      NAPI_RS_NATIVE_LIBRARY_PATH: payloadPath,
+      NAPI_RS_ALLOW_UNSAFE_NATIVE_PATH: '1',
+    },
+    () => {
+      t.throws(() => tryLoadNativeLibraryPathOverride(packageRoot), {
+        message: /outside package directory/,
+      })
+    },
+  )
 })
 
 test('import ignores NAPI_RS_NATIVE_LIBRARY_PATH without opt-in', (t) => {
@@ -117,7 +142,7 @@ test('import ignores NAPI_RS_NATIVE_LIBRARY_PATH without opt-in', (t) => {
   t.is(output.trim(), 'safe')
 })
 
-test('requireOptionalBinding ignores NODE_PATH hijack', (t) => {
+test('requireOptionalBinding ignores NODE_PATH hijack at process startup', (t) => {
   t.timeout(10_000)
   const fakeRoot = join(tempDir, 'fake-node-path')
   const fakeModuleDir = join(fakeRoot, 'coinswap-napi-linux-x64-gnu')
@@ -125,19 +150,24 @@ test('requireOptionalBinding ignores NODE_PATH hijack', (t) => {
   writeFileSync(join(fakeModuleDir, 'package.json'), JSON.stringify({ version: '1.0.0' }))
   writeFileSync(join(fakeModuleDir, 'index.js'), 'module.exports = { hijacked: true }')
 
-  const previousNodePath = process.env.NODE_PATH
-  process.env.NODE_PATH = fakeRoot
+  const loaderSecurityPath = join(packageRoot, 'loader-security.js')
+  const script = `
+    const { requireOptionalBinding } = require(${JSON.stringify(loaderSecurityPath)});
+    try {
+      requireOptionalBinding('coinswap-napi-linux-x64-gnu', ${JSON.stringify(packageRoot)});
+      console.log('FAIL');
+    } catch {
+      console.log('PASS');
+    }
+  `
 
-  t.throws(
-    () => requireOptionalBinding('coinswap-napi-linux-x64-gnu', packageRoot),
-    { message: /Refusing to load native binding|Cannot find module/ },
-  )
+  const output = execFileSync(process.execPath, ['-e', script], {
+    cwd: packageRoot,
+    env: { ...process.env, NODE_PATH: fakeRoot },
+    encoding: 'utf8',
+  })
 
-  if (previousNodePath === undefined) {
-    delete process.env.NODE_PATH
-  } else {
-    process.env.NODE_PATH = previousNodePath
-  }
+  t.is(output.trim(), 'PASS')
 })
 
 test('index.js does not shell out to ldd on import', (t) => {

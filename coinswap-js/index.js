@@ -15,13 +15,9 @@ let nativeBinding = null
 const loadErrors = []
 
 function requireNative() {
-  try {
-    const overrideBinding = tryLoadNativeLibraryPathOverride(__dirname)
-    if (overrideBinding) {
-      return overrideBinding
-    }
-  } catch (err) {
-    loadErrors.push(err)
+  const overrideBinding = tryLoadNativeLibraryPathOverride(__dirname)
+  if (overrideBinding) {
+    return overrideBinding
   }
 
   if (process.platform === 'android') {
@@ -373,7 +369,7 @@ if (!nativeBinding || forceWasi) {
       wasiBindingError = err
     }
   }
-  if (!nativeBinding || forceWasi) {
+  if (!wasiBinding) {
     try {
       wasiBinding = requireOptionalBinding('coinswap-napi-wasm32-wasi', __dirname)
       nativeBinding = wasiBinding
