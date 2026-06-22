@@ -45,6 +45,12 @@ pub struct SwapParams {
     pub preferred_makers: Option<Vec<String>>,
 }
 
+fn checked_satoshi_amount(amount: i64) -> Result<u64, TakerError> {
+    u64::try_from(amount).map_err(|_| TakerError::General {
+        msg: "Amount must be non-negative".to_string(),
+    })
+}
+
 /// SwapParams govern the criteria to find suitable set of makers from the offerbook.
 impl TryFrom<SwapParams> for CoinswapSwapParams {
     type Error = TakerError;
@@ -479,6 +485,7 @@ impl Taker {
         fee_rate: Option<f64>,
         manually_selected_outpoints: Option<Vec<OutPoint>>,
     ) -> Result<Txid, TakerError> {
+        let amount = checked_satoshi_amount(amount)?;
         let manually_selected_outpoints = manually_selected_outpoints
             .map(|outpoints| -> Result<Vec<coinswapOutPoint>, TakerError> {
                 outpoints
@@ -504,12 +511,7 @@ impl Taker {
             .map_err(|_| TakerError::General {
                 msg: "Failed to acquire wallet write lock".to_string(),
             })?
-            .send_to_address(
-                amount as u64,
-                address,
-                fee_rate,
-                manually_selected_outpoints,
-            )
+            .send_to_address(amount, address, fee_rate, manually_selected_outpoints)
             .map_err(|e| TakerError::Wallet {
                 msg: format!("Send to Address error: {:?}", e),
             })?;
@@ -634,5 +636,17 @@ impl Taker {
             .collect();
 
         Ok(addresses)
+    }
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::checked_satoshi_amount;
+
+    #[test]
+    fn checked_satoshi_amount_rejects_negative_values() {
+        assert!(checked_satoshi_amount(-1).is_err());
+        assert_eq!(checked_satoshi_amount(0).unwrap(), 0);
+        assert_eq!(checked_satoshi_amount(50_000).unwrap(), 50_000);
     }
 }

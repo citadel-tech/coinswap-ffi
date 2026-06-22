@@ -39,6 +39,10 @@ pub struct SwapParams {
   pub preferred_makers: Option<Vec<String>>,
 }
 
+fn checked_satoshi_amount(amount: i64) -> Result<u64> {
+  u64::try_from(amount).map_err(|_| napi::Error::from_reason("Amount must be non-negative"))
+}
+
 impl TryFrom<SwapParams> for CoinswapSwapParams {
   type Error = napi::Error;
 
@@ -54,7 +58,7 @@ impl TryFrom<SwapParams> for CoinswapSwapParams {
       }
     };
 
-    let send_amount = csAmount::from_sat(params.send_amount as u64);
+    let send_amount = csAmount::from_sat(checked_satoshi_amount(params.send_amount)?);
 
     let manually_selected_outpoints = params
       .manually_selected_outpoints
@@ -593,6 +597,7 @@ impl Taker {
     fee_rate: Option<f64>,
     manually_selected_outpoints: Option<Vec<OutPoint>>,
   ) -> Result<Txid> {
+    let amount = checked_satoshi_amount(amount)?;
     let manually_selected_outpoints = manually_selected_outpoints
       .map(|outpoints| {
         outpoints
@@ -613,12 +618,7 @@ impl Taker {
       .get_wallet()
       .write()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
-      .send_to_address(
-        amount as u64,
-        address,
-        fee_rate,
-        manually_selected_outpoints,
-      )
+      .send_to_address(amount, address, fee_rate, manually_selected_outpoints)
       .map_err(|e| napi::Error::from_reason(format!("Send to Address error: {:?}", e)))?;
     Ok(txid.into())
   }
@@ -731,8 +731,31 @@ impl Taker {
 
 #[cfg(test)]
 mod tests {
+  use super::{checked_satoshi_amount, CoinswapSwapParams, SwapParams};
   use crate::types::{Amount, FidelityBond, LockTime, OutPoint, PublicKey};
   use coinswap::bitcoin::absolute::LockTime as csLockTime;
+
+  #[test]
+  fn negative_swap_amount_is_rejected() {
+    let params = SwapParams {
+      protocol: None,
+      send_amount: -1,
+      maker_count: 2,
+      tx_count: None,
+      required_confirms: None,
+      manually_selected_outpoints: None,
+      preferred_makers: None,
+    };
+
+    assert!(CoinswapSwapParams::try_from(params).is_err());
+  }
+
+  #[test]
+  fn checked_satoshi_amount_preserves_valid_values() {
+    assert!(checked_satoshi_amount(-1).is_err());
+    assert_eq!(checked_satoshi_amount(0).unwrap(), 0);
+    assert_eq!(checked_satoshi_amount(50_000).unwrap(), 50_000);
+  }
 
   #[test]
   fn test_locktime_conversion_basic() {
