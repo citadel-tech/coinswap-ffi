@@ -635,4 +635,17 @@ impl Taker {
 
         Ok(addresses)
     }
+
+    pub fn verify_deniability(&self, swap_id: String) -> Result<bool, TakerError> {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+
+        let is_deniable = taker
+            .verify_deniability(&swap_id)
+            .map_err(|e| TakerError::General {
+                msg: format!("Deniability verification error: {:?}", e),
+            })?;
+        Ok(is_deniable)
+    }
 }

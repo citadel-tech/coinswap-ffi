@@ -727,6 +727,19 @@ impl Taker {
     coinswap::wallet::Wallet::is_wallet_encrypted(&path)
       .map_err(|e| napi::Error::from_reason(format!("Failed to check wallet encryption: {:?}", e)))
   }
+
+  pub fn verify_deniability(&self, swap_id: String) -> Result<bool> {
+    let taker = self
+      .inner
+      .lock()
+      .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
+
+    let is_deniable = taker
+      .verify_deniability(&swap_id)
+      .map_err(|e| napi::Error::from_reason(format!("Deniability verification error: {:?}", e)))?;
+
+    Ok(is_deniable)
+  }
 }
 
 #[cfg(test)]
