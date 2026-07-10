@@ -160,7 +160,7 @@ fn test_taker_complete_flow() {
         "Should generate internal addresses successfully"
     );
     assert_eq!(
-        internal_addresses.unwrap().len() - 1,
+        internal_addresses.unwrap().len(),
         3,
         "Should generate 3 internal addresses"
     );

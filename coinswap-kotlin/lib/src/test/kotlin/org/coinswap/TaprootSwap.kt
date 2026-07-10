@@ -103,30 +103,47 @@ class TaprootSwap {
             println("\n💸 Getting next external address...")
             val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
             println("📬 Address: ${takerAddress.address}")
+            val fundingAddresses = listOf(
+                takerAddress.address,
+                taker.getNextExternalAddress(AddressType("P2TR")).address,
+                taker.getNextExternalAddress(AddressType("P2TR")).address,
+            )
             
-            // Send 1.0 BTC to the taker address using docker exec
+            // Fund three separate UTXOs and confirm them in a block.
             println("\n💸 Funding taker wallet...")
             try {
-                val sendCommand = ProcessBuilder(
+                val baseCommand = listOf(
                     "docker", "exec", "coinswap-bitcoind",
                     "bitcoin-cli", "-regtest", "-rpcport=18442",
-                    "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
-                    "sendtoaddress", takerAddress.address, "1.0"
-                ).redirectErrorStream(true).start()
-                
-                val txid = sendCommand.inputStream.bufferedReader().readText().trim()
-                val exitCode = sendCommand.waitFor()
-                
-                if (exitCode == 0) {
+                    "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password"
+                )
+                fundingAddresses.forEach { fundingAddress ->
+                    val sendCommand = ProcessBuilder(
+                        baseCommand + listOf("sendtoaddress", fundingAddress, "1.0")
+                    ).redirectErrorStream(true).start()
+
+                    val txid = sendCommand.inputStream.bufferedReader().readText().trim()
+                    if (sendCommand.waitFor() != 0) {
+                        println("❌ Failed to send BTC: $txid")
+                        throw Exception("Could not send BTC to taker address")
+                    }
                     println("✅ Sent 1.0 BTC to taker address (txid: ${txid.take(16)}...)")
-                } else {
-                    println("❌ Failed to send BTC: $txid")
-                    throw Exception("Could not send BTC to taker address")
                 }
-                
-                // Wait a moment for transaction to propagate
-                Thread.sleep(1000)
-                
+
+                val miningAddressCommand = ProcessBuilder(
+                    baseCommand + "getnewaddress"
+                ).redirectErrorStream(true).start()
+                val miningAddress = miningAddressCommand.inputStream.bufferedReader().readText().trim()
+                if (miningAddressCommand.waitFor() != 0) {
+                    throw Exception("Could not create a mining address")
+                }
+
+                val mineCommand = ProcessBuilder(
+                    baseCommand + listOf("generatetoaddress", "1", miningAddress)
+                ).redirectErrorStream(true).start()
+                if (mineCommand.waitFor() != 0) {
+                    throw Exception("Could not confirm funding transactions")
+                }
             } catch (e: Exception) {
                 println("❌ Error funding wallet: ${e.message}")
                 throw e
@@ -141,6 +158,10 @@ class TaprootSwap {
             println("   Regular: ${updatedBalances.regular} sats")
             println("   Swap: ${updatedBalances.swap} sats")
             println("   Fidelity: ${updatedBalances.fidelity} sats")
+            assertEquals(300000000L, updatedBalances.spendable)
+
+            val utxos = taker.listAllUtxoSpendInfo()
+            assertTrue(utxos.size >= 3, "Should have at least 3 UTXOs after funding")
             
             // Sync offerbook
             println("\n� Syncing offerbook...")

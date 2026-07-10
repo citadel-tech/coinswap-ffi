@@ -153,6 +153,14 @@ fn test_taproot_taker_complete_flow() {
         "External addresses should be unique"
     );
 
+    let external_address3 = taker.get_next_external_address(crate::AddressType {
+        addr_type: "P2TR".to_string(),
+    });
+    assert!(
+        external_address3.is_ok(),
+        "Should generate third external address successfully"
+    );
+
     let internal_addresses = taker.get_next_internal_addresses(
         3,
         crate::AddressType {
@@ -164,7 +172,7 @@ fn test_taproot_taker_complete_flow() {
         "Should generate internal addresses successfully"
     );
     assert_eq!(
-        internal_addresses.unwrap().len() - 1,
+        internal_addresses.unwrap().len(),
         3,
         "Should generate 3 internal addresses"
     );
@@ -196,17 +204,24 @@ fn test_taproot_taker_complete_flow() {
     println!("✓ 'get_balances' test passed (initial zero balances)");
 
     println!("\nFunding wallet...");
-    let funding_address_str = external_address1.unwrap().address;
-    let funding_address = funding_address_str
-        .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-        .unwrap()
-        .require_network(bitcoin::Network::Regtest)
-        .unwrap();
-
     let fund_amount = Amount::from_btc(0.42749329).unwrap();
-    let _txid = bitcoind
-        .send_to_address_from_funding_wallet(&funding_address, fund_amount)
-        .unwrap();
+    let funding_addresses =
+        [external_address1, external_address2, external_address3].map(|address| {
+            address
+                .unwrap()
+                .address
+                .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
+                .unwrap()
+                .require_network(bitcoin::Network::Regtest)
+                .unwrap()
+        });
+
+    // Keep each funding output in a distinct address group so tx_count can use them separately.
+    for funding_address in &funding_addresses {
+        bitcoind
+            .send_to_address_from_funding_wallet(funding_address, fund_amount)
+            .unwrap();
+    }
     taker.sync_and_save().unwrap();
     println!("✓ wallet funding completed");
 
@@ -214,8 +229,8 @@ fn test_taproot_taker_complete_flow() {
     let updated_balances = taker.get_balances().unwrap();
     assert_eq!(
         updated_balances.spendable,
-        fund_amount.to_sat() as i64,
-        "Spendable balance should be 42749329 SATS"
+        (fund_amount.to_sat() * 3) as i64,
+        "Spendable balance should be 128247987 SATS"
     );
     println!("✓ 'get_balances' test passed (post-funding balance verification)");
 
@@ -224,8 +239,8 @@ fn test_taproot_taker_complete_flow() {
     assert!(utxos.is_ok(), "Listing UTXOs should succeed");
     let utxos = utxos.unwrap();
     assert!(
-        !utxos.is_empty(),
-        "Should have at least 1 UTXO after funding"
+        utxos.len() >= 3,
+        "Should have at least 3 UTXOs after funding"
     );
     println!("Found {} UTXO(s)", utxos.len());
     println!("✓ list_all_utxo_spend_info test passed");

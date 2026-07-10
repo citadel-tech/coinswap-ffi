@@ -56,18 +56,33 @@ def cleanup_test_wallets():
         print("⚠ Failed to remove wallet from Docker container (may not exist)")
 
 
-def setup_funding_wallet(taker_address: str):
-    """Send BTC from funding wallet to taker address"""
+def setup_funding_wallet(taker_addresses: list[str]):
+    """Send three confirmed UTXOs from the funding wallet to the taker."""
     funding_wallet = "test"
     try:
-        result = subprocess.run(
-            ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password', 'sendtoaddress', taker_address, '0.42749329'],
+        base_command = ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password']
+        for taker_address in taker_addresses:
+            result = subprocess.run(
+                [*base_command, 'sendtoaddress', taker_address, '0.42749329'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            txid = result.stdout.strip()
+            print(f"✓ Sent 0.42749329 BTC to taker address (txid: {txid[:16]}...)")
+
+        mining_address = subprocess.run(
+            [*base_command, 'getnewaddress'],
+            capture_output=True,
+            text=True,
+            check=True
+        ).stdout.strip()
+        subprocess.run(
+            [*base_command, 'generatetoaddress', '1', mining_address],
             capture_output=True,
             text=True,
             check=True
         )
-        txid = result.stdout.strip()
-        print(f"✓ Sent 0.42749329 BTC to taker address (txid: {txid[:16]}...)")
     except subprocess.CalledProcessError as e:
         print(f"✗ Failed to send BTC: {e.stderr}")
         raise Exception("Could not send BTC to taker address") from e
@@ -142,8 +157,8 @@ def main():
         print("✓ External addresses are unique")
 
         internal_addresses = taker.get_next_internal_addresses(3, AddressType(addr_type="P2TR"))
-        assert len(internal_addresses) - 1 == 3, "Should generate 3 internal addresses"
-        print(f"✓ Generated {len(internal_addresses) - 1} internal addresses")
+        assert len(internal_addresses) == 3, "Should generate 3 internal addresses"
+        print(f"✓ Generated {len(internal_addresses)} internal addresses")
         print("✓ 'get_next_external_address' test passed")
         print("✓ 'get_next_internal_addresses' test passed")
 
@@ -166,15 +181,19 @@ def main():
 
         # Fund the wallet
         print("\nFunding wallet...")
-        funding_address = external_address1.address
-        setup_funding_wallet(funding_address)
+        funding_addresses = [
+            external_address1.address,
+            external_address2.address,
+            taker.get_next_external_address(AddressType(addr_type="P2TR")).address,
+        ]
+        setup_funding_wallet(funding_addresses)
         taker.sync_and_save()
         print("✓ wallet funding completed")
 
         # Test updated balances after funding
         print("\nTesting updated balances after funding...")
         updated_balances = taker.get_balances()
-        expected_amount = 42749329  # in sats
+        expected_amount = 128247987  # 3 x 42,749,329 sats
         
         assert updated_balances.spendable == expected_amount, f"Spendable balance should be {expected_amount} SATS"
         
@@ -188,7 +207,7 @@ def main():
         # Test list_all_utxo_spend_info
         print("\nTesting list_all_utxo_spend_info...")
         utxos = taker.list_all_utxo_spend_info()
-        assert len(utxos) > 0, "Should have at least 1 UTXO after funding"
+        assert len(utxos) >= 3, "Should have at least 3 UTXOs after funding"
         print(f"Found {len(utxos)} UTXO(s)")
         print("✓ list_all_utxo_spend_info test passed")
 
