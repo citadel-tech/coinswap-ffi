@@ -451,8 +451,10 @@ fund_makers() {
     local maker1_addr=$(docker logs coinswap-makerd1 2>&1 | grep "Send at least" | tail -1 | grep -Eo '(tb1|bcrt1)[[:alnum:]]+')
     if [ -n "$maker1_addr" ]; then
         print_info "Makerd1 address: $maker1_addr"
-        docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker1_addr" 1.0
-        print_success "Sent 1 BTC to makerd1"
+        for _ in 1 2 3 4; do
+            docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker1_addr" 0.25
+        done
+        print_success "Sent 4x 0.25 BTC (1 BTC total) to makerd1"
     else
         print_warning "Could not find makerd1 address."
     fi
@@ -461,8 +463,10 @@ fund_makers() {
     local maker2_addr=$(docker logs coinswap-makerd2 2>&1 | grep "Send at least" | tail -1 | grep -Eo '(tb1|bcrt1)[[:alnum:]]+')
     if [ -n "$maker2_addr" ]; then
         print_info "Makerd2 address: $maker2_addr"
-        docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker2_addr" 1.0
-        print_success "Sent 1 BTC to makerd2"
+        for _ in 1 2 3 4; do
+            docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker2_addr" 0.25
+        done
+        print_success "Sent 4x 0.25 BTC (1 BTC total) to makerd2"
     else
         print_warning "Could not find makerd2 address."
     fi
@@ -473,8 +477,10 @@ fund_makers() {
         local maker3_addr=$(docker logs coinswap-makerd3 2>&1 | grep "Send at least" | tail -1 | grep -Eo '(tb1|bcrt1)[[:alnum:]]+')
         if [ -n "$maker3_addr" ]; then
             print_info "Makerd3 address: $maker3_addr"
-            docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker3_addr" 1.0
-            print_success "Sent 1 BTC to makerd3"
+            for _ in 1 2 3 4; do
+                docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker3_addr" 0.25
+            done
+            print_success "Sent 4x 0.25 BTC (1 BTC total) to makerd3"
         else
             print_warning "Could not find makerd3 address."
         fi
@@ -483,8 +489,10 @@ fund_makers() {
         local maker4_addr=$(docker logs coinswap-makerd4 2>&1 | grep "Send at least" | tail -1 | grep -Eo '(tb1|bcrt1)[[:alnum:]]+')
         if [ -n "$maker4_addr" ]; then
             print_info "Makerd4 address: $maker4_addr"
-            docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker4_addr" 1.0
-            print_success "Sent 1 BTC to makerd4"
+            for _ in 1 2 3 4; do
+                docker exec coinswap-bitcoind bitcoin-cli -signet -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=$FUNDING_WALLET_NAME sendtoaddress "$maker4_addr" 0.25
+            done
+            print_success "Sent 4x 0.25 BTC (1 BTC total) to makerd4"
         else
             print_warning "Could not find makerd4 address."
         fi
