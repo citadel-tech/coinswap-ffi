@@ -104,29 +104,31 @@ class TaprootSwap {
             val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
             println("📬 Address: ${takerAddress.addr}")
             
-            // Send 1.0 BTC to the taker address using docker exec
-            println("\n💸 Funding taker wallet...")
+            // Fund the taker as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total)
+            println("\n💸 Funding taker wallet (4x 0.25 BTC)...")
             try {
-                val sendCommand = ProcessBuilder(
-                    "docker", "exec", "coinswap-bitcoind",
-                    "bitcoin-cli", "-regtest", "-rpcport=18442",
-                    "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
-                    "sendtoaddress", takerAddress.addr, "1.0"
-                ).redirectErrorStream(true).start()
-                
-                val txid = sendCommand.inputStream.bufferedReader().readText().trim()
-                val exitCode = sendCommand.waitFor()
-                
-                if (exitCode == 0) {
-                    println("✅ Sent 1.0 BTC to taker address (txid: ${txid.take(16)}...)")
-                } else {
-                    println("❌ Failed to send BTC: $txid")
-                    throw Exception("Could not send BTC to taker address")
+                repeat(4) {
+                    val sendCommand = ProcessBuilder(
+                        "docker", "exec", "coinswap-bitcoind",
+                        "bitcoin-cli", "-regtest", "-rpcport=18442",
+                        "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
+                        "sendtoaddress", takerAddress.addr, "0.25"
+                    ).redirectErrorStream(true).start()
+
+                    val txid = sendCommand.inputStream.bufferedReader().readText().trim()
+                    val exitCode = sendCommand.waitFor()
+
+                    if (exitCode == 0) {
+                        println("✅ Sent 0.25 BTC to taker address (txid: ${txid.take(16)}...)")
+                    } else {
+                        println("❌ Failed to send BTC: $txid")
+                        throw Exception("Could not send BTC to taker address")
+                    }
                 }
-                
-                // Wait a moment for transaction to propagate
+
+                // Wait a moment for transactions to propagate
                 Thread.sleep(1000)
-                
+
             } catch (e: Exception) {
                 println("❌ Error funding wallet: ${e.message}")
                 throw e

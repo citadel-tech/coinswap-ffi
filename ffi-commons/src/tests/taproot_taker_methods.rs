@@ -204,9 +204,17 @@ fn test_taproot_taker_complete_flow() {
         .unwrap();
 
     let fund_amount = Amount::from_btc(0.42749329).unwrap();
-    let _txid = bitcoind
-        .send_to_address_from_funding_wallet(&funding_address, fund_amount)
-        .unwrap();
+    let quarter_sats = fund_amount.to_sat() / 4;
+    for i in 0..4 {
+        let part_sats = if i == 3 {
+            fund_amount.to_sat() - quarter_sats * 3
+        } else {
+            quarter_sats
+        };
+        bitcoind
+            .send_to_address_from_funding_wallet(&funding_address, Amount::from_sat(part_sats))
+            .unwrap();
+    }
     taker.sync_and_save().unwrap();
     println!("✓ wallet funding completed");
 

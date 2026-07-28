@@ -99,10 +99,63 @@ jobs:
       - name: Generate C# bindings
         working-directory: ffi-commons
         run: |
-          LIB="$(ls target/${{ matrix.rust_target }}/release-smaller/libcoinswap_ffi.* 2>/dev/null | head -n1)"
+          # Use the staged shared library (exactly one file), NOT a glob over the
+          # target dir — that can match libcoinswap_ffi.a / .d and misgenerate the
+          # DllImport name.
+          LIB="../coinswap-csharp/Coinswap/runtimes/${{ matrix.rid }}/native/libcoinswap_ffi.so"
           uniffi-bindgen-cs --library "$LIB" --config uniffi.toml \
             --out-dir ../coinswap-csharp/Coinswap/Generated --no-format
+
+      - name: Check Docker
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Start regtest stack
+        working-directory: ./ffi-commons
+        run: |
+          chmod +x ffi-docker-setup
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+            echo "Using prebuilt Docker images"
+          else
+            echo "Prebuilt image pull failed; falling back to local image build"
+            ./ffi-docker-setup setup
+          fi
+          ./ffi-docker-setup start 4
+
+      - name: Wait for stack readiness
+        run: |
+          echo "=== Docker Containers ==="
+          docker ps -a
+          echo -e "\n=== Waiting for host ports ==="
+          for i in {1..30}; do
+            all_ok=true
+            for port in 18442 28332 9051; do
+              nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
+            done
+            if $all_ok; then
+              echo "All ports forwarded to host!"; break
+            fi
+            if [ "$i" -eq 30 ]; then echo "Timed out waiting for stack ports"; exit 1; fi
+            echo "Retry $i/30..."
+            sleep 2
+          done
 
       - name: Test
         working-directory: coinswap-csharp
         run: dotnet test Coinswap.Tests/Coinswap.Tests.csproj -c Release
+
+      - name: Cleanup Docker environment
+        if: always()
+        working-directory: ./ffi-commons
+        run: ./ffi-docker-setup stop || true
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csharp-test-logs
+          path: |
+            ~/.coinswap/taker/debug.log
+            ffi-commons/.coinswap-docker-stack/logs/
+          retention-days: 7

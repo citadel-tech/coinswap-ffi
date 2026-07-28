@@ -46,21 +46,25 @@ func requireLiveTestsEnabled() throws {
 }
 
 func fundAddress(_ address: String, config: LiveTestConfig) throws {
-    let args: [String] = [
-        "exec",
-        "coinswap-bitcoind",
-        "bitcoin-cli",
-        "-regtest",
-        "-rpcport=18442",
-        "-rpcwallet=test",
-        "-rpcuser=user",
-        "-rpcpassword=password",
-        "sendtoaddress",
-        address,
-        "1.0"
-    ]
+    // Fund as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total) so the taker has
+    // multiple spendable outputs for split-funded swaps.
+    for _ in 0..<4 {
+        let args: [String] = [
+            "exec",
+            "coinswap-bitcoind",
+            "bitcoin-cli",
+            "-regtest",
+            "-rpcport=18442",
+            "-rpcwallet=test",
+            "-rpcuser=user",
+            "-rpcpassword=password",
+            "sendtoaddress",
+            address,
+            "0.25"
+        ]
 
-    try runProcess(command: "docker", args: args)
+        try runProcess(command: "docker", args: args)
+    }
     Thread.sleep(forTimeInterval: 1.0)
 }
 

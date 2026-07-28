@@ -57,17 +57,23 @@ def cleanup_test_wallets():
 
 
 def setup_funding_wallet(taker_address: str):
-    """Send BTC from funding wallet to taker address"""
+    """Fund the taker as 4 separate UTXOs summing to 0.42749329 BTC."""
     funding_wallet = "test"
+    total_sats = 42749329
+    quarter_sats = total_sats // 4
+    # Last part carries the rounding remainder so the total stays exact.
+    parts = [quarter_sats, quarter_sats, quarter_sats, total_sats - quarter_sats * 3]
     try:
-        result = subprocess.run(
-            ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password', 'sendtoaddress', taker_address, '0.42749329'],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        txid = result.stdout.strip()
-        print(f"✓ Sent 0.42749329 BTC to taker address (txid: {txid[:16]}...)")
+        for part_sats in parts:
+            amount_btc = f"{part_sats / 1e8:.8f}"
+            result = subprocess.run(
+                ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password', 'sendtoaddress', taker_address, amount_btc],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            txid = result.stdout.strip()
+            print(f"✓ Sent {amount_btc} BTC to taker address (txid: {txid[:16]}...)")
     except subprocess.CalledProcessError as e:
         print(f"✗ Failed to send BTC: {e.stderr}")
         raise Exception("Could not send BTC to taker address") from e
