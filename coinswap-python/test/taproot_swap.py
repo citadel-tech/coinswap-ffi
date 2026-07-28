@@ -56,15 +56,18 @@ def cleanup_test_wallets():
         print("⚠ Failed to remove wallet from Docker container (may not exist)")
 
 
-def setup_funding_wallet(taker_address: str):
-    """Fund the taker as 4 separate UTXOs summing to 0.42749329 BTC."""
+def setup_funding_wallet(taker):
+    """Fund the taker as 4 separate UTXOs (summing to 0.42749329 BTC), each sent to a
+    FRESH external P2TR address (one per swap split), mirroring the core integration
+    tests' fund_taker. Reusing one address does not give the split-funding path
+    (tx_count > 1) distinct selectable inputs."""
     funding_wallet = "test"
     total_sats = 42749329
     quarter_sats = total_sats // 4
-    # Last part carries the rounding remainder so the total stays exact.
     parts = [quarter_sats, quarter_sats, quarter_sats, total_sats - quarter_sats * 3]
     try:
         for part_sats in parts:
+            taker_address = taker.get_next_external_address(AddressType(addr_type="P2TR")).addr
             amount_btc = f"{part_sats / 1e8:.8f}"
             result = subprocess.run(
                 ['docker', 'exec', 'coinswap-bitcoind', 'bitcoin-cli', '-regtest', '-rpcport=18442', f'-rpcwallet={funding_wallet}', '-rpcuser=user', '-rpcpassword=password', 'sendtoaddress', taker_address, amount_btc],
@@ -73,7 +76,7 @@ def setup_funding_wallet(taker_address: str):
                 check=True
             )
             txid = result.stdout.strip()
-            print(f"✓ Sent {amount_btc} BTC to taker address (txid: {txid[:16]}...)")
+            print(f"✓ Sent {amount_btc} BTC to {taker_address[:16]}... (txid: {txid[:16]}...)")
     except subprocess.CalledProcessError as e:
         print(f"✗ Failed to send BTC: {e.stderr}")
         raise Exception("Could not send BTC to taker address") from e
@@ -165,8 +168,7 @@ def main():
 
         # Fund the wallet
         print("\nFunding wallet...")
-        funding_address = external_address1.addr
-        setup_funding_wallet(funding_address)
+        setup_funding_wallet(taker)
         taker.sync_and_save()
         print("✓ wallet funding completed")
 

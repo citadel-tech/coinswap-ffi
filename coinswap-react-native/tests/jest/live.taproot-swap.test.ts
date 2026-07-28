@@ -41,9 +41,9 @@ describeLive('React Native live standard swap (taproot)', () => {
       const address = await taker.getNextExternalAddress(AddressType.P2TR)
       expect(address.addr).toBeTruthy()
 
-      // Fund as 4 separate UTXOs summing to 0.42749329 BTC (last carries the remainder).
       for (const partBtc of ['0.10687332', '0.10687332', '0.10687332', '0.10687333']) {
-        fundAddress(address.addr, partBtc)
+        const fundingAddr = await taker.getNextExternalAddress(AddressType.P2TR)
+        fundAddress(fundingAddr.addr, partBtc)
       }
       await sleep(1_000)
       await taker.syncAndSave()

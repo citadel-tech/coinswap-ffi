@@ -99,15 +99,15 @@ class TaprootSwap {
             println("💰 Initial balances - Spendable: ${initialBalances.spendable} sats")
             
             
-            // Get address and fund taker wallet
-            println("\n💸 Getting next external address...")
-            val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
-            println("📬 Address: ${takerAddress.addr}")
-            
-            // Fund the taker as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total)
-            println("\n💸 Funding taker wallet (4x 0.25 BTC)...")
+            // Fund the taker as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total),
+            // each sent to a FRESH external P2TR address (one per swap split),
+            // mirroring the core integration tests' fund_taker. Reusing one address
+            // does not give the split-funding path (tx_count > 1) distinct
+            // selectable inputs.
+            println("\n💸 Funding taker wallet (4x 0.25 BTC, fresh addresses)...")
             try {
                 repeat(4) {
+                    val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
                     val sendCommand = ProcessBuilder(
                         "docker", "exec", "coinswap-bitcoind",
                         "bitcoin-cli", "-regtest", "-rpcport=18442",
@@ -119,7 +119,7 @@ class TaprootSwap {
                     val exitCode = sendCommand.waitFor()
 
                     if (exitCode == 0) {
-                        println("✅ Sent 0.25 BTC to taker address (txid: ${txid.take(16)}...)")
+                        println("✅ Sent 0.25 BTC to ${takerAddress.addr.take(16)}... (txid: ${txid.take(16)}...)")
                     } else {
                         println("❌ Failed to send BTC: $txid")
                         throw Exception("Could not send BTC to taker address")

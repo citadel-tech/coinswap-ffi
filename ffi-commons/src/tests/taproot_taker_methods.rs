@@ -196,23 +196,34 @@ fn test_taproot_taker_complete_flow() {
     println!("✓ 'get_balances' test passed (initial zero balances)");
 
     println!("\nFunding wallet...");
-    let funding_address_str = external_address1.unwrap().addr;
-    let funding_address = funding_address_str
-        .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-        .unwrap()
-        .require_network(bitcoin::Network::Regtest)
-        .unwrap();
-
+    // Fund the taker as 4 separate UTXOs, each to a FRESH external P2TR address
+    // (one per swap split), matching how the core integration tests fund via
+    // `fund_taker`. Funding multiple UTXOs to a single reused address does not
+    // give the split-funding path (tx_count > 1) distinct selectable inputs.
     let fund_amount = Amount::from_btc(0.42749329).unwrap();
     let quarter_sats = fund_amount.to_sat() / 4;
     for i in 0..4 {
         let part_sats = if i == 3 {
+            // Last UTXO carries the rounding remainder so the total stays exact.
             fund_amount.to_sat() - quarter_sats * 3
         } else {
             quarter_sats
         };
+
+        let addr_str = taker
+            .get_next_external_address(crate::AddressType {
+                addr_type: "P2TR".to_string(),
+            })
+            .expect("Should generate funding address")
+            .addr;
+        let addr = addr_str
+            .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
+            .unwrap()
+            .require_network(bitcoin::Network::Regtest)
+            .unwrap();
+
         bitcoind
-            .send_to_address_from_funding_wallet(&funding_address, Amount::from_sat(part_sats))
+            .send_to_address_from_funding_wallet(&addr, Amount::from_sat(part_sats))
             .unwrap();
     }
     taker.sync_and_save().unwrap();
