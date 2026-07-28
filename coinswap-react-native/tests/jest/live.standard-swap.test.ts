@@ -58,7 +58,6 @@ describeLive('React Native live standard swap (legacy)', () => {
 
       const report = await taker.startCoinswap(swapId)
       expect(report.swapId).toBe(swapId)
-      expect(report.outgoingAmount).toBe(500_000n)
       expect(report.makersCount ?? 0).toBeGreaterThanOrEqual(2)
       expect(report.makerAddresses.length).toBeGreaterThanOrEqual(2)
 

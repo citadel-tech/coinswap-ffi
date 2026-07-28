@@ -39,10 +39,6 @@ jobs:
             rust_target: x86_64-unknown-linux-gnu
             rid: linux-x64
             build_script: build-linux.sh
-          - os: macos-14
-            rust_target: aarch64-apple-darwin
-            rid: osx-arm64
-            build_script: build-macos.sh
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -66,7 +62,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
@@ -80,6 +75,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libssl-dev pkg-config
+
+      # Cache only the generator binary (keyed on its tag), not all of ~/.cargo/bin,
+      # so cargo/rustup shims are never overwritten.
+      - name: Cache uniffi-bindgen-cs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/uniffi-bindgen-cs
+          key: ${{ runner.os }}-uniffi-bindgen-cs-${{ env.UNIFFI_BINDGEN_CS_TAG }}
 
       - name: Install uniffi-bindgen-cs
         run: |

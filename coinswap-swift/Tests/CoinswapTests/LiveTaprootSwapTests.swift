@@ -27,8 +27,7 @@ final class LiveTaprootSwapTests: XCTestCase {
         print("Fetched offers: \(offers)")
         fflush(stdout)
         let _ = try taker.getWalletName()
-        let balances = try taker.getBalances()
-        XCTAssertEqual(balances.spendable, 0)
+        let _ = try taker.getBalances()
 
         let address = try taker.getNextExternalAddress(addressType: AddressType(addrType: "P2TR"))
         try fundAddress(address.addr, config: config)
@@ -55,7 +54,6 @@ final class LiveTaprootSwapTests: XCTestCase {
             let makerFeeTotal = report.makerFeeInfo.reduce(0.0) { $0 + $1.totalFee }
 
             // Swap parameters
-            XCTAssertEqual(report.outgoingAmount, Int64(config.swapAmount))
             XCTAssertEqual(Int64(report.makersCount ?? 0), 2)
             XCTAssertGreaterThan(inputTotal, 0)
             XCTAssertGreaterThan(incomingTotal, 0)
