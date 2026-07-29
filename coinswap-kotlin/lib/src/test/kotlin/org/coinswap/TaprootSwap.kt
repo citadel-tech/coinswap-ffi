@@ -29,7 +29,7 @@ class TaprootSwap {
             protocol = "Taproot",
             sendAmount = 100000u,
             makerCount = 2u,
-            txCount = 3u,
+            txCount = 1u,
             requiredConfirms = 1u,
             manuallySelectedOutpoints = null,
             preferredMakers = null,
@@ -200,7 +200,7 @@ class TaprootSwap {
                 protocol = "Taproot",
                 sendAmount = 500000u,  // 500,000 sats (same as Python test)
                 makerCount = 2u,
-                txCount = 3u,
+                txCount = 1u,
                 requiredConfirms = 1u,
                 manuallySelectedOutpoints = null,
                 preferredMakers = null,

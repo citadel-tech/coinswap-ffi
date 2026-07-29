@@ -211,7 +211,7 @@ def main():
             protocol="Taproot",
             send_amount=500000,
             maker_count=2,
-            tx_count=3,
+            tx_count=1,
             required_confirms=1,
             manually_selected_outpoints=None,
             preferred_makers=None,

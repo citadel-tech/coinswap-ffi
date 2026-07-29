@@ -10,7 +10,6 @@ pub const DOCKER_BITCOIN_RPC_URL: &str = "http://localhost:18442";
 pub const DOCKER_BITCOIN_RPC_USER: &str = "user";
 pub const DOCKER_BITCOIN_RPC_PASS: &str = "password";
 pub const DOCKER_BITCOIN_ZMQ: &str = "tcp://127.0.0.1:28332";
-pub const DOCKER_NOSTR_RELAY: &str = "ws://127.0.0.1:8000";
 
 pub struct DockerBitcoind {
     pub client: Client,

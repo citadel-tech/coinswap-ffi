@@ -12,7 +12,6 @@ build/
 # Docker generated files
 ffi-commons/docker-compose.generated.yml
 ffi-commons/torrc.generated
-ffi-commons/nostr-relay.config.toml
 ffi-commons/.coinswap-docker-stack/
 ffi-commons/.block-mining.pid
 

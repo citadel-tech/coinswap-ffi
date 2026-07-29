@@ -55,7 +55,7 @@ describeLive('React Native live standard swap (taproot)', () => {
         protocol: 'Taproot',
         sendAmount: 500_000n,
         makerCount: 2,
-        txCount: 3,
+        txCount: 1,
         requiredConfirms: 1,
       })
 

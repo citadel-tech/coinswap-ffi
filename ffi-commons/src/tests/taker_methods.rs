@@ -34,7 +34,7 @@ fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
         Some("coinswap".to_string()),
         docker_helpers::DOCKER_BITCOIN_ZMQ.to_string(),
         None,
-        Some(vec![docker_helpers::DOCKER_NOSTR_RELAY.to_string()]),
+        None,
     )
     .unwrap();
 

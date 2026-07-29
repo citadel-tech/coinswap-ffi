@@ -1,0 +1,15 @@
+[info]
+name = "coinswap-ffi-regtest-relay"
+description = "Local nostr relay for coinswap FFI tests"
+
+[network]
+address = "0.0.0.0"
+port = 8000
+
+[database]
+in_memory = true
+min_conn = 4
+max_conn = 8
+
+[diagnostics]
+tracing = false

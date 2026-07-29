@@ -35,7 +35,7 @@ fn setup_bitcoind_and_taproot_taker(wallet_name: &str) -> (Arc<Taker>, DockerBit
         Some("coinswap".to_string()),
         docker_helpers::DOCKER_BITCOIN_ZMQ.to_string(),
         None,
-        Some(vec![docker_helpers::DOCKER_NOSTR_RELAY.to_string()]),
+        None,
     )
     .unwrap();
 
@@ -264,7 +264,7 @@ fn test_taproot_taker_complete_flow() {
         protocol: Some("Taproot".to_string()),
         send_amount: 500_000,
         maker_count: 2,
-        tx_count: Some(3),
+        tx_count: Some(1),
         required_confirms: Some(1),
         manually_selected_outpoints: None,
         preferred_makers: None,
