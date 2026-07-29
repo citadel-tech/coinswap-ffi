@@ -195,19 +195,11 @@ services:
     ports:
       - "${TOR_SOCKS_PORT}:${TOR_SOCKS_PORT}"
       - "${TOR_CONTROL_PORT}:${TOR_CONTROL_PORT}"
-
-  relay:
-    image: ${NOSTR_RELAY_IMAGE}
-    container_name: coinswap-relay
-    user: "0:0"
-    volumes:
-      - ./nostr-relay.config.toml:/usr/src/app/config.toml:ro
-    ports:
-      - "${NOSTR_RELAY_PORT}:${NOSTR_RELAY_PORT}"
-    restart: unless-stopped
-
 EOF
 
+    # Maker network/rpc ports are published on the tor service (makers share tor's
+    # network namespace), so they must be appended to tor's `ports:` list BEFORE
+    # tor's service block is closed with `restart:`.
     local i
     for ((i=1; i<=NUM_MAKERS; i++)); do
         local maker_port
@@ -217,11 +209,21 @@ EOF
         cat >> "$compose_file" << EOF
       - "${maker_port}:${maker_port}"
       - "${maker_rpc_port}:${maker_rpc_port}"
-
 EOF
     done
 
+    # Close the tor service, then add the standalone relay service.
     cat >> "$compose_file" << EOF
+    restart: unless-stopped
+
+  relay:
+    image: ${NOSTR_RELAY_IMAGE}
+    container_name: coinswap-relay
+    user: "0:0"
+    volumes:
+      - ./nostr-relay.config.toml:/usr/src/app/config.toml:ro
+    ports:
+      - "${NOSTR_RELAY_PORT}:${NOSTR_RELAY_PORT}"
     restart: unless-stopped
 
 EOF
