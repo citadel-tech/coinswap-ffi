@@ -135,6 +135,7 @@ impl Taker {
         tor_auth_password: Option<String>,
         zmq_addr: String,
         password: Option<String>,
+        nostr_relays: Option<Vec<String>>,
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
@@ -149,7 +150,9 @@ impl Taker {
             zmq_addr,
             password,
             connection_type: ConnectionType::Tor,
-            nostr_relays: TakerInitConfig::default().nostr_relays,
+            // `None` keeps the compiled-in default relays; `Some` lets callers
+            // (e.g. tests pointing at a local relay) override them.
+            nostr_relays: nostr_relays.unwrap_or_else(|| TakerInitConfig::default().nostr_relays),
         };
 
         let taker = CoinswapTaker::init(init_config)?;

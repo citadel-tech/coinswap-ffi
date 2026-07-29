@@ -20,6 +20,7 @@ public class StandardSwapTest
     private const string RpcPassword = "password";
     private const string ZmqAddr = "tcp://127.0.0.1:28332";
     private const ushort ControlPort = 9051;
+    private const string NostrRelay = "ws://127.0.0.1:8000";
 
     private readonly ITestOutputHelper _out;
 
@@ -49,7 +50,8 @@ public class StandardSwapTest
             rpcConfig: rpc,
             controlPort: ControlPort,
             torAuthPassword: "coinswap",
-            password: "");
+            password: "",
+            nostrRelays: new[] { NostrRelay });
 
         try { taker.SetupLogging("Info", DataDir); }
         catch (Exception e) { _out.WriteLine($"warning: could not setup logging: {e.Message}"); }

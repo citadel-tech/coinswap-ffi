@@ -22,7 +22,11 @@ public sealed class CoinswapClient : IDisposable
     /// <summary>Returns the default regtest/signet RPC configuration.</summary>
     public static RpcConfig DefaultRpcConfig() => Native.Coinswap.CreateDefaultRpcConfig();
 
-    /// <summary>Initializes a taker; any argument except <paramref name="zmqAddr"/> may be null to use the Rust-side default.</summary>
+    /// <summary>
+    /// Initializes a taker; any argument except <paramref name="zmqAddr"/> may be null to use the
+    /// Rust-side default. <paramref name="nostrRelays"/> overrides the default discovery relays
+    /// (pass a local relay to avoid public-relay rate limits).
+    /// </summary>
     public static CoinswapClient Init(
         string zmqAddr,
         string? dataDir = null,
@@ -30,10 +34,12 @@ public sealed class CoinswapClient : IDisposable
         RpcConfig? rpcConfig = null,
         ushort? controlPort = null,
         string? torAuthPassword = null,
-        string? password = null)
+        string? password = null,
+        IEnumerable<string>? nostrRelays = null)
     {
         var taker = Taker.Init(
-            dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password);
+            dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password,
+            nostrRelays?.ToArray());
         return new CoinswapClient(taker);
     }
 
