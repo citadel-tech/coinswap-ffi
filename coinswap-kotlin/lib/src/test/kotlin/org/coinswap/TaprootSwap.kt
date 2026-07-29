@@ -29,7 +29,7 @@ class TaprootSwap {
             protocol = "Taproot",
             sendAmount = 100000u,
             makerCount = 2u,
-            txCount = 3u,
+            txCount = 1u,
             requiredConfirms = 1u,
             manuallySelectedOutpoints = null,
             preferredMakers = null,
@@ -79,7 +79,8 @@ class TaprootSwap {
                 controlPort = 9051u,
                 torAuthPassword = "coinswap",
                 zmqAddr = "tcp://localhost:28332",
-                password = ""
+                password = "",
+                nostrRelays = null
             )
             
             println("✅ Taker initialized successfully")
@@ -99,34 +100,36 @@ class TaprootSwap {
             println("💰 Initial balances - Spendable: ${initialBalances.spendable} sats")
             
             
-            // Get address and fund taker wallet
-            println("\n💸 Getting next external address...")
-            val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
-            println("📬 Address: ${takerAddress.address}")
-            
-            // Send 1.0 BTC to the taker address using docker exec
-            println("\n💸 Funding taker wallet...")
+            // Fund the taker as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total),
+            // each sent to a FRESH external P2TR address (one per swap split),
+            // mirroring the core integration tests' fund_taker. Reusing one address
+            // does not give the split-funding path (tx_count > 1) distinct
+            // selectable inputs.
+            println("\n💸 Funding taker wallet (4x 0.25 BTC, fresh addresses)...")
             try {
-                val sendCommand = ProcessBuilder(
-                    "docker", "exec", "coinswap-bitcoind",
-                    "bitcoin-cli", "-regtest", "-rpcport=18442",
-                    "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
-                    "sendtoaddress", takerAddress.address, "1.0"
-                ).redirectErrorStream(true).start()
-                
-                val txid = sendCommand.inputStream.bufferedReader().readText().trim()
-                val exitCode = sendCommand.waitFor()
-                
-                if (exitCode == 0) {
-                    println("✅ Sent 1.0 BTC to taker address (txid: ${txid.take(16)}...)")
-                } else {
-                    println("❌ Failed to send BTC: $txid")
-                    throw Exception("Could not send BTC to taker address")
+                repeat(4) {
+                    val takerAddress = taker.getNextExternalAddress(AddressType("P2TR"))
+                    val sendCommand = ProcessBuilder(
+                        "docker", "exec", "coinswap-bitcoind",
+                        "bitcoin-cli", "-regtest", "-rpcport=18442",
+                        "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
+                        "sendtoaddress", takerAddress.addr, "0.25"
+                    ).redirectErrorStream(true).start()
+
+                    val txid = sendCommand.inputStream.bufferedReader().readText().trim()
+                    val exitCode = sendCommand.waitFor()
+
+                    if (exitCode == 0) {
+                        println("✅ Sent 0.25 BTC to ${takerAddress.addr.take(16)}... (txid: ${txid.take(16)}...)")
+                    } else {
+                        println("❌ Failed to send BTC: $txid")
+                        throw Exception("Could not send BTC to taker address")
+                    }
                 }
-                
-                // Wait a moment for transaction to propagate
+
+                // Wait a moment for transactions to propagate
                 Thread.sleep(1000)
-                
+
             } catch (e: Exception) {
                 println("❌ Error funding wallet: ${e.message}")
                 throw e
@@ -198,7 +201,7 @@ class TaprootSwap {
                 protocol = "Taproot",
                 sendAmount = 500000u,  // 500,000 sats (same as Python test)
                 makerCount = 2u,
-                txCount = 3u,
+                txCount = 1u,
                 requiredConfirms = 1u,
                 manuallySelectedOutpoints = null,
                 preferredMakers = null,

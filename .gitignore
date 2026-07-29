@@ -12,6 +12,8 @@ build/
 # Docker generated files
 ffi-commons/docker-compose.generated.yml
 ffi-commons/torrc.generated
+ffi-commons/.coinswap-docker-stack/
+ffi-commons/.block-mining.pid
 
 # Kotlin/Swift/Ruby generated files
 coinswap-python/libcoinswap_ffi.so

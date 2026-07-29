@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <PackageId>CitadelTech.Coinswap</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Citadel Tech</Authors>
+    <Description>C# bindings for the Coinswap taker API</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/citadel-tech/coinswap-ffi</RepositoryUrl>
+  </PropertyGroup>
+
+  <!-- Pack native libs under runtimes/<rid>/native for NuGet native-asset resolution. -->
+  <ItemGroup>
+    <None Include="runtimes/**"
+          Pack="true"
+          PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- For in-repo builds/tests, copy the host RID's native lib next to the assembly. -->
+  <PropertyGroup>
+    <HostRid Condition="'$(HostRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</HostRid>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="runtimes/$(HostRid)/native/*"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="%(Filename)%(Extension)"
+          Visible="false" />
+  </ItemGroup>
+
+</Project>

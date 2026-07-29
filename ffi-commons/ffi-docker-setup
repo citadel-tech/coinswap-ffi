@@ -119,21 +119,10 @@ generate_maker_service() {
           "min_swap_amount = 10000" \\
           "fidelity_amount = 50000" \\
           "fidelity_timelock = 13104" \\
-          "connection_type = TOR" \\
-          "base_fee = 100" \\
-          "amount_relative_fee_ppt = 1000" \\
           > /home/coinswap/.coinswap/maker/config.toml
         makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"
     environment:
       - RUST_LOG=info
-      - TOR_SOCKS_PORT=${TOR_SOCKS_PORT}
-      - TOR_CONTROL_PORT=${TOR_CONTROL_PORT}
-      - TOR_AUTH_PASSWORD=${TOR_AUTH_PASSWORD:-coinswap}
-      - MIN_SWAP_AMOUNT=10000
-      - FIDELITY_AMOUNT=50000
-      - FIDELITY_TIMELOCK=13104
-      - BASE_FEE=100
-      - AMOUNT_RELATIVE_FEE_PPT=1000
     restart: unless-stopped
 
 EOF
@@ -369,8 +358,10 @@ fund_makers() {
         maker_addr=$(docker logs "$container_name" 2>&1 | grep "Send at least" | tail -1 | grep -Eo 'bcrt1[[:alnum:]]+')
         if [ -n "$maker_addr" ]; then
             print_info "${maker_name} address: $maker_addr"
-            docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker_addr" 1.0
-            print_success "Sent 1 BTC to ${maker_name}"
+            for _ in 1 2 3 4; do
+                docker exec coinswap-bitcoind bitcoin-cli -regtest -rpcport=$BITCOIN_RPC_PORT -rpcuser=user -rpcpassword=password -rpcwallet=test sendtoaddress "$maker_addr" 0.25
+            done
+            print_success "Sent 4x 0.25 BTC (1 BTC total) to ${maker_name}"
         else
             print_warning "Could not find ${maker_name} address."
         fi
@@ -385,7 +376,7 @@ fund_makers() {
     echo ""
     echo "Maker wallets:"
     for idx in $maker_indices; do
-        echo "  Makerd${idx}: 1 BTC (rpc port $(maker_rpc_port "$idx"), net port $(maker_network_port "$idx"))"
+        echo "  Makerd${idx}: 4x 0.25 BTC (rpc port $(maker_rpc_port "$idx"), net port $(maker_network_port "$idx"))"
     done
 }
 

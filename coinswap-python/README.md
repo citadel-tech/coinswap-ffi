@@ -86,7 +86,7 @@ print(f"swap: {balances.swap} sats")
 print(f"contract: {balances.contract} sats")
 print(f"fidelity: {balances.fidelity} sats")
 print(f"spendable: {balances.spendable} sats")
-print(f"receive to: {receive_address.address}")
+print(f"receive to: {receive_address.addr}")
 
 # Build the swap request exactly as the taker API expects it.
 swap_params = SwapParams(

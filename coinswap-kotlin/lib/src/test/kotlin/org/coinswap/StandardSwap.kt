@@ -79,7 +79,8 @@ class StandardSwap {
                 controlPort = 9051u,
                 torAuthPassword = "coinswap",
                 zmqAddr = "tcp://localhost:28332",
-                password = ""
+                password = "",
+                nostrRelays = null
             )
             
             println("✅ Taker initialized successfully")
@@ -102,7 +103,7 @@ class StandardSwap {
             // Get address and fund taker wallet
             println("\n💸 Getting next external address...")
             val takerAddress = taker.getNextExternalAddress(AddressType("P2WPKH"))
-            println("📬 Address: ${takerAddress.address}")
+            println("📬 Address: ${takerAddress.addr}")
             
             // Send 1.0 BTC to the taker address using docker exec
             println("\n💸 Funding taker wallet...")
@@ -111,7 +112,7 @@ class StandardSwap {
                     "docker", "exec", "coinswap-bitcoind",
                     "bitcoin-cli", "-regtest", "-rpcport=18442",
                     "-rpcwallet=test", "-rpcuser=user", "-rpcpassword=password",
-                    "sendtoaddress", takerAddress.address, "1.0"
+                    "sendtoaddress", takerAddress.addr, "1.0"
                 ).redirectErrorStream(true).start()
                 
                 val txid = sendCommand.inputStream.bufferedReader().readText().trim()

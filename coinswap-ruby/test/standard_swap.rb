@@ -91,7 +91,8 @@ def main
       9051,
       "coinswap",
       "tcp://127.0.0.1:28332",
-      ""
+      "",
+      nil
     )
     puts "✓ Taker initialized successfully"
     
@@ -172,8 +173,8 @@ def main
 
     puts "\nGetting next external address..."
     address = taker.get_next_external_address(Coinswap::AddressType.new(addr_type: "P2WPKH"))
-    setup_funding_wallet(address.address)
-    puts "Address: #{address.address}"
+    setup_funding_wallet(address.addr)
+    puts "Address: #{address.addr}"
 
     puts "\nSyncing wallet after funding..."
     taker.sync_and_save

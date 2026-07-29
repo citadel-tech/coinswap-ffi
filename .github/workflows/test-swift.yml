@@ -124,6 +124,25 @@ jobs:
       - name: "Build Swift package"
         run: bash ./build-xcframework-ci.sh
 
+      - name: Wait for Tor egress
+        run: |
+          # An open control port (9051) does NOT mean Tor has finished bootstrapping
+          # and can build circuits. The taker reaches the public nostr relays over
+          # Tor's SOCKS proxy (9050); if it connects before circuits are ready the
+          # relay connection fails with "TTL expired" and maker discovery times out.
+          # Probe actual Tor egress to a public relay before running the tests.
+          echo "=== Waiting for Tor to reach a public nostr relay ==="
+          for i in {1..60}; do
+            for relay in nos.lol relay.damus.io; do
+              if curl -s --max-time 20 --socks5-hostname 127.0.0.1:9050 "https://$relay" -o /dev/null; then
+                echo "Tor egress OK via $relay (attempt $i)"; exit 0
+              fi
+            done
+            echo "Tor not ready yet (attempt $i/60)..."
+            sleep 5
+          done
+          echo "Timed out waiting for Tor egress to public relays"; exit 1
+
       - name: "Run Swift live standard swap test"
         run: sudo -E swift test --filter LiveStandardSwapTests/testLiveTakerFlow
 

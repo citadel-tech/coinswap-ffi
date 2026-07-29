@@ -6,8 +6,9 @@ use crate::{
     AddressType,
     types::{
         Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
-        ListUnspentResultEntry, Offer, OfferBook, OutPoint, RPCConfig, ScriptBuf, SignedAmountSats,
-        SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo, WalletTxInfo,
+        ListUnspentResultEntry, MakerOfferCandidate, Offer, OfferBook, OutPoint, RPCConfig,
+        ScriptBuf, SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo,
+        WalletTxInfo,
     },
 };
 use coinswap::{
@@ -125,6 +126,7 @@ impl Taker {
     ///     a new wallet with the given name will be created.
     ///   - `None`: Create a new wallet file with the default name `taker-wallet`.
     /// - If `rpc_config` = `None`: Use the default [`RPCConfig`]
+    #[allow(clippy::too_many_arguments)]
     pub fn init(
         data_dir: Option<String>,
         wallet_file_name: Option<String>,
@@ -134,6 +136,7 @@ impl Taker {
         tor_auth_password: Option<String>,
         zmq_addr: String,
         password: Option<String>,
+        nostr_relays: Option<Vec<String>>,
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
         let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
@@ -148,7 +151,9 @@ impl Taker {
             zmq_addr,
             password,
             connection_type: ConnectionType::Tor,
-            nostr_relays: TakerInitConfig::default().nostr_relays,
+            // `None` keeps the compiled-in default relays; `Some` lets callers
+            // (e.g. tests pointing at a local relay) override them.
+            nostr_relays: nostr_relays.unwrap_or_else(|| TakerInitConfig::default().nostr_relays),
         };
 
         let taker = CoinswapTaker::init(init_config)?;
@@ -264,9 +269,13 @@ impl Taker {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),
         })?;
-        let wallet = taker.get_wallet().read().map_err(|_| TakerError::General {
-            msg: "Failed to acquire wallet read lock".to_string(),
-        })?;
+        let mut wallet = taker
+            .get_wallet()
+            .write()
+            .map_err(|_| TakerError::General {
+                msg: "Failed to acquire wallet write lock".to_string(),
+            })?;
+        let wallet = &mut *wallet;
         let internal_addresses = wallet
             .get_next_internal_addresses(count, cs_address_type)
             .map_err(|e| TakerError::Wallet {
@@ -556,6 +565,7 @@ impl Taker {
         Ok(())
     }
 
+    /// Runs a full offerbook sync cycle and blocks until it completes.
     pub fn sync_offerbook_and_wait(&self) -> Result<(), TakerError> {
         let taker = self.taker.lock().map_err(|e| TakerError::General {
             msg: format!(
@@ -569,6 +579,29 @@ impl Taker {
                 msg: format!("Offerbook sync error: {:?}", e),
             })?;
         Ok(())
+    }
+
+    /// Polls a single maker, verifies its fidelity proof, stores it in the offerbook, and returns the maker's final state.
+    pub fn poll_maker(&self, address: String) -> Result<MakerOfferCandidate, TakerError> {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        let candidate = taker.poll_maker(address).map_err(|e| TakerError::Network {
+            msg: format!("Poll maker error: {:?}", e),
+        })?;
+        Ok(MakerOfferCandidate::from(candidate))
+    }
+
+    /// Removes a maker from the offerbook by address; returns true if an entry was removed.
+    pub fn remove_maker(&self, address: String) -> Result<bool, TakerError> {
+        let taker = self.taker.lock().map_err(|_| TakerError::General {
+            msg: "Failed to acquire taker lock".to_string(),
+        })?;
+        taker
+            .remove_maker(address)
+            .map_err(|e| TakerError::General {
+                msg: format!("Remove maker error: {:?}", e),
+            })
     }
 
     /// Returns the OfferBook.
@@ -638,6 +671,7 @@ impl Taker {
         Ok(addresses)
     }
 
+    /// Verifies the deniability proof for a completed swap.
     pub fn verify_deniability(&self, swap_id: String) -> Result<bool, TakerError> {
         let taker = self.taker.lock().map_err(|_| TakerError::General {
             msg: "Failed to acquire taker lock".to_string(),

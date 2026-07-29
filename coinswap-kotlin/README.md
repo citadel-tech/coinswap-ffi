@@ -93,7 +93,7 @@ println("swap: ${balances.swap} sats")
 println("contract: ${balances.contract} sats")
 println("fidelity: ${balances.fidelity} sats")
 println("spendable: ${balances.spendable} sats")
-println("receive to: ${receiveAddress.address}")
+println("receive to: ${receiveAddress.addr}")
 
 // Build the swap request exactly as the taker API expects it.
 val swapParams = SwapParams(
@@ -117,7 +117,7 @@ val report = taker.startCoinswap(
 println("swap id: ${report.swapId}")
 println("status: ${report.status}")
 println("outgoing amount: ${report.outgoingAmount} sats")
-println("fee paid: ${kotlin.math.abs(report.feePaidOrEarned)} sats")
+println("fee paid: ${kotlin.math.abs(report.feePaid)} sats")
 ```
 
 ## API Reference
@@ -193,30 +193,29 @@ balances.spendable                                    // regular + swap balance 
 
 report.swapId                                         // unique swap identifier
 report.role                                           // report creator, usually Taker
-report.status                                         // swap terminal state
+report.status                                         // swap status: Success | Failed | RecoveryHashlock | RecoveryTimelock
 report.swapDurationSeconds                            // execution duration in seconds
-report.recoveryDurationSeconds                        // recovery duration in seconds
 report.startTimestamp                                 // unix start timestamp
 report.endTimestamp                                   // unix end timestamp
 report.network                                        // bitcoin network name
-report.errorMessage                                   // error detail, if present
+report.errorMessage                                   // error detail, if present (nullable)
 report.incomingAmount                                 // sats received by the taker
 report.outgoingAmount                                 // sats sent by the taker
-report.feePaidOrEarned                                // negative when paid, positive when earned
-report.fundingTxids                                   // funding txids grouped by hop
-report.recoveryTxids                                  // recovery txids, if any
-report.timelock                                       // contract timelock in blocks
-report.makerCount                                     // maker hop count used in the swap
+report.feePaid                                        // fee paid in sats (negative)
+report.incomingContractTxid                           // incoming contract txid, if any (nullable)
+report.outgoingContractTxid                           // outgoing contract txid, if any (nullable)
+report.fundingTxids                                   // funding txids grouped by hop (List<List<String>>)
+report.makersCount                                    // maker hop count used in the swap (nullable)
 report.makerAddresses                                 // maker addresses used in the route
 report.totalMakerFees                                 // aggregate maker fees in sats
 report.miningFee                                      // mining fees in sats
-report.feePercentage                                  // total fee as a percentage of amount
-report.makerFeeInfo                                   // per-maker fee breakdown
+report.feePercentage                                  // total fee as a percentage of target amount
+report.makerFeeInfo                                   // per-maker fee breakdown (List<MakerFeeInfo>)
 report.inputUtxos                                     // input UTXO amounts in sats
 report.outputChangeAmounts                            // output change amounts in sats
 report.outputSwapAmounts                              // output swap amounts in sats
-report.outputChangeUtxos                              // change outputs with amount and address
-report.outputSwapUtxos                                // swap outputs with amount and address
+report.outputChangeUtxos                              // change outputs with amount and address (List<UtxoWithAddress>)
+report.outputSwapUtxos                                // swap outputs with amount and address (List<UtxoWithAddress>)
 ```
 
 ## Testing

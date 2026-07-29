@@ -147,13 +147,13 @@ impl From<coinswapOutPoint> for OutPoint {
 
 #[derive(Clone, uniffi::Record)]
 pub struct Address {
-    pub address: String,
+    pub addr: String,
 }
 
 impl From<csAddress> for Address {
     fn from(addr: csAddress) -> Self {
         Self {
-            address: addr.to_string(),
+            addr: addr.to_string(),
         }
     }
 }

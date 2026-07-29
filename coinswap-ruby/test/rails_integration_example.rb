@@ -23,7 +23,8 @@ module CoinswapConfig
       control_port: ENV['TOR_CONTROL_PORT']&.to_i || 9051,
       tor_auth_password: ENV['TOR_AUTH_PASSWORD'],
       zmq_addr: ENV['ZMQ_ADDR'] || 'tcp://localhost:28332',
-      password: ENV['WALLET_PASSWORD']
+      password: ENV['WALLET_PASSWORD'],
+      nostr_relays: nil
     )
   end
 end

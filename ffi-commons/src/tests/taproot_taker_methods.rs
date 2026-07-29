@@ -35,6 +35,7 @@ fn setup_bitcoind_and_taproot_taker(wallet_name: &str) -> (Arc<Taker>, DockerBit
         Some("coinswap".to_string()),
         docker_helpers::DOCKER_BITCOIN_ZMQ.to_string(),
         None,
+        None,
     )
     .unwrap();
 
@@ -148,8 +149,8 @@ fn test_taproot_taker_complete_flow() {
     );
 
     assert_ne!(
-        external_address1.as_ref().unwrap().address,
-        external_address2.as_ref().unwrap().address,
+        external_address1.as_ref().unwrap().addr,
+        external_address2.as_ref().unwrap().addr,
         "External addresses should be unique"
     );
 
@@ -164,7 +165,7 @@ fn test_taproot_taker_complete_flow() {
         "Should generate internal addresses successfully"
     );
     assert_eq!(
-        internal_addresses.unwrap().len() - 1,
+        internal_addresses.unwrap().len(),
         3,
         "Should generate 3 internal addresses"
     );
@@ -196,17 +197,31 @@ fn test_taproot_taker_complete_flow() {
     println!("✓ 'get_balances' test passed (initial zero balances)");
 
     println!("\nFunding wallet...");
-    let funding_address_str = external_address1.unwrap().address;
-    let funding_address = funding_address_str
-        .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
-        .unwrap()
-        .require_network(bitcoin::Network::Regtest)
-        .unwrap();
-
     let fund_amount = Amount::from_btc(0.42749329).unwrap();
-    let _txid = bitcoind
-        .send_to_address_from_funding_wallet(&funding_address, fund_amount)
-        .unwrap();
+    let quarter_sats = fund_amount.to_sat() / 4;
+    for i in 0..4 {
+        let part_sats = if i == 3 {
+            fund_amount.to_sat() - quarter_sats * 3
+        } else {
+            quarter_sats
+        };
+
+        let addr_str = taker
+            .get_next_external_address(crate::AddressType {
+                addr_type: "P2TR".to_string(),
+            })
+            .expect("Should generate funding address")
+            .addr;
+        let addr = addr_str
+            .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
+            .unwrap()
+            .require_network(bitcoin::Network::Regtest)
+            .unwrap();
+
+        bitcoind
+            .send_to_address_from_funding_wallet(&addr, Amount::from_sat(part_sats))
+            .unwrap();
+    }
     taker.sync_and_save().unwrap();
     println!("✓ wallet funding completed");
 
@@ -249,7 +264,7 @@ fn test_taproot_taker_complete_flow() {
         protocol: Some("Taproot".to_string()),
         send_amount: 500_000,
         maker_count: 2,
-        tx_count: Some(3),
+        tx_count: Some(1),
         required_confirms: Some(1),
         manually_selected_outpoints: None,
         preferred_makers: None,

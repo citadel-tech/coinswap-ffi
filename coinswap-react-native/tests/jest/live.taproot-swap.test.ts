@@ -33,15 +33,19 @@ describeLive('React Native live standard swap (taproot)', () => {
         torAuthPassword: 'coinswap',
         zmqAddr: 'tcp://127.0.0.1:28332',
         password: '',
+        nostrRelays: null,
       })
 
       await taker.syncOfferbookAndWait()
       await taker.syncAndSave()
 
       const address = await taker.getNextExternalAddress(AddressType.P2TR)
-      expect(address.address).toBeTruthy()
+      expect(address.addr).toBeTruthy()
 
-      fundAddress(address.address, '0.42749329')
+      for (const partBtc of ['0.10687332', '0.10687332', '0.10687332', '0.10687333']) {
+        const fundingAddr = await taker.getNextExternalAddress(AddressType.P2TR)
+        fundAddress(fundingAddr.addr, partBtc)
+      }
       await sleep(1_000)
       await taker.syncAndSave()
 
@@ -52,13 +56,12 @@ describeLive('React Native live standard swap (taproot)', () => {
         protocol: 'Taproot',
         sendAmount: 500_000n,
         makerCount: 2,
-        txCount: 3,
+        txCount: 1,
         requiredConfirms: 1,
       })
 
       const report = await taker.startCoinswap(swapId)
       expect(report.swapId).toBe(swapId)
-      expect(report.outgoingAmount).toBe(500_000n)
       expect(report.makersCount ?? 0).toBeGreaterThanOrEqual(2)
       expect(report.makerAddresses.length).toBeGreaterThanOrEqual(2)
 

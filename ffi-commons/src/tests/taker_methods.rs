@@ -34,6 +34,7 @@ fn setup_bitcoind_and_taker(wallet_name: &str) -> (Arc<Taker>, DockerBitcoind) {
         Some("coinswap".to_string()),
         docker_helpers::DOCKER_BITCOIN_ZMQ.to_string(),
         None,
+        None,
     )
     .unwrap();
 
@@ -144,8 +145,8 @@ fn test_taker_complete_flow() {
     );
 
     assert_ne!(
-        external_address1.as_ref().unwrap().address,
-        external_address2.as_ref().unwrap().address,
+        external_address1.as_ref().unwrap().addr,
+        external_address2.as_ref().unwrap().addr,
         "External addresses should be unique"
     );
 
@@ -160,7 +161,7 @@ fn test_taker_complete_flow() {
         "Should generate internal addresses successfully"
     );
     assert_eq!(
-        internal_addresses.unwrap().len() - 1,
+        internal_addresses.unwrap().len(),
         3,
         "Should generate 3 internal addresses"
     );
@@ -192,7 +193,7 @@ fn test_taker_complete_flow() {
     println!("✓ 'get_balances' test passed (initial zero balances)");
 
     println!("\nFunding wallet...");
-    let funding_address_str = external_address1.unwrap().address;
+    let funding_address_str = external_address1.unwrap().addr;
     let funding_address = funding_address_str
         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
         .unwrap()

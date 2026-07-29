@@ -98,7 +98,7 @@ print("swap: \(balances.swap) sats")
 print("contract: \(balances.contract) sats")
 print("fidelity: \(balances.fidelity) sats")
 print("spendable: \(balances.spendable) sats")
-print("receive to: \(receiveAddress.address)")
+print("receive to: \(receiveAddress.addr)")
 
 // Build the swap request exactly as the taker API expects it.
 let swapParams = SwapParams(

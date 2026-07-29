@@ -149,7 +149,7 @@ const balances = await taker.getBalances()
 const address = await taker.getNextExternalAddress(AddressType.P2WPKH)
 
 console.log('spendable:', balances.spendable, 'sats')
-console.log('receive to:', address.address)
+console.log('receive to:', address.addr)
 
 // Prepare the swap, then execute it with the returned swap id.
 const swapId = await taker.prepareCoinswap({

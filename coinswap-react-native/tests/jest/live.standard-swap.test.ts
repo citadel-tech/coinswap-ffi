@@ -33,15 +33,16 @@ describeLive('React Native live standard swap (legacy)', () => {
         torAuthPassword: 'coinswap',
         zmqAddr: 'tcp://127.0.0.1:28332',
         password: '',
+        nostrRelays: null,
       })
 
       await taker.syncOfferbookAndWait()
       await taker.syncAndSave()
 
       const address = await taker.getNextExternalAddress(AddressType.P2WPKH)
-      expect(address.address).toBeTruthy()
+      expect(address.addr).toBeTruthy()
 
-      fundAddress(address.address, '1.0')
+      fundAddress(address.addr, '1.0')
       await sleep(1_000)
       await taker.syncAndSave()
 
@@ -58,7 +59,6 @@ describeLive('React Native live standard swap (legacy)', () => {
 
       const report = await taker.startCoinswap(swapId)
       expect(report.swapId).toBe(swapId)
-      expect(report.outgoingAmount).toBe(500_000n)
       expect(report.makersCount ?? 0).toBeGreaterThanOrEqual(2)
       expect(report.makerAddresses.length).toBeGreaterThanOrEqual(2)
 

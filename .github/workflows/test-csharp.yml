@@ -1,20 +1,20 @@
-name: Python Tests
+name: C# Tests
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'coinswap-python/**'
+      - 'coinswap-csharp/**'
       - 'ffi-commons/**'
-      - '.github/workflows/test-python.yml'
+      - '.github/workflows/test-csharp.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'coinswap-python/**'
+      - 'coinswap-csharp/**'
       - 'ffi-commons/**'
-      - '.github/workflows/test-python.yml'
+      - '.github/workflows/test-csharp.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,62 +23,95 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+  # Keep in lockstep with ffi-commons' uniffi crate version.
+  UNIFFI_BINDGEN_CS_TAG: v0.11.0+v0.31.0
 
 jobs:
-  test-python:
-    name: Test Python Bindings
-    runs-on: ubuntu-24.04
-    
+  test-csharp:
+    name: Test C# Bindings (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rust_target: x86_64-unknown-linux-gnu
+            rid: linux-x64
+            build_script: build-linux.sh
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.rust_target }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ffi-commons/target/
-          key: ${{ runner.os }}-cargo-python-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-csharp-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Cache Python dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'coinswap-python/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Cache Python FFI build artifacts
-        id: cache-python-ffi-build
-        uses: actions/cache@v4
-        with:
-          path: |
-            coinswap-python/src/coinswap/native/linux-x86_64/
-            coinswap-python/src/coinswap/coinswap.py
-          key: ${{ runner.os }}-python-ffi-build-${{ hashFiles('ffi-commons/Cargo.lock', 'ffi-commons/Cargo.toml', 'ffi-commons/src/**', 'ffi-commons/uniffi.toml', 'coinswap-python/build-scripts/development/build-dev-linux-x86_64.sh') }}
-
-      - name: Install system dependencies
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libssl-dev \
-            pkg-config
+          sudo apt-get install -y build-essential libssl-dev pkg-config
+
+      # Cache only the generator binary (keyed on its tag), not all of ~/.cargo/bin,
+      # so cargo/rustup shims are never overwritten.
+      - name: Cache uniffi-bindgen-cs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/uniffi-bindgen-cs
+          key: ${{ runner.os }}-uniffi-bindgen-cs-${{ env.UNIFFI_BINDGEN_CS_TAG }}
+
+      - name: Install uniffi-bindgen-cs
+        run: |
+          if ! command -v uniffi-bindgen-cs >/dev/null 2>&1; then
+            cargo install uniffi-bindgen-cs \
+              --git https://github.com/NordSecurity/uniffi-bindgen-cs \
+              --tag "$UNIFFI_BINDGEN_CS_TAG"
+          fi
+
+      - name: Build native library
+        working-directory: coinswap-csharp
+        run: bash ./build-scripts/${{ matrix.build_script }} ${{ matrix.rust_target }}
+
+      - name: Generate C# bindings
+        working-directory: ffi-commons
+        run: |
+          # Use the staged shared library (exactly one file), NOT a glob over the
+          # target dir — that can match libcoinswap_ffi.a / .d and misgenerate the
+          # DllImport name.
+          LIB="../coinswap-csharp/Coinswap/runtimes/${{ matrix.rid }}/native/libcoinswap_ffi.so"
+          uniffi-bindgen-cs --library "$LIB" --config uniffi.toml \
+            --out-dir ../coinswap-csharp/Coinswap/Generated --no-format
 
       - name: Check Docker
         run: |
           docker --version
           docker compose version
 
-      - name: Setup Docker environment
+      - name: Start regtest stack
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
@@ -90,31 +123,12 @@ jobs:
           fi
           ./ffi-docker-setup start 4
 
-      - name: Check Docker containers status
+      - name: Wait for stack readiness
         run: |
           echo "=== Docker Containers ==="
           docker ps -a
-          
-          echo -e "\n=== Bitcoin Core Logs ==="
-          docker logs coinswap-bitcoind --tail 50 || true
-          
-          echo -e "\n=== Tor Logs ==="
-          docker logs coinswap-tor --tail 30 || true
-          
-          echo -e "\n=== Maker1 Logs ==="
-          docker logs coinswap-makerd1 --tail 30 || true
-          
-          echo -e "\n=== Maker2 Logs ==="
-          docker logs coinswap-makerd2 --tail 30 || true
-
-          echo -e "\n=== Maker3 Logs ==="
-          docker logs coinswap-makerd3 --tail 30 || true
-          
-          echo -e "\n=== Maker4 Logs ==="
-          docker logs coinswap-makerd4 --tail 30 || true
-
-          echo -e "\n=== Host Port Connectivity ==="
-          for i in {1..20}; do
+          echo -e "\n=== Waiting for host ports ==="
+          for i in {1..30}; do
             all_ok=true
             for port in 18442 28332 9051; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
@@ -122,7 +136,8 @@ jobs:
             if $all_ok; then
               echo "All ports forwarded to host!"; break
             fi
-            echo "Retry $i/20..."
+            if [ "$i" -eq 30 ]; then echo "Timed out waiting for stack ports"; exit 1; fi
+            echo "Retry $i/30..."
             sleep 2
           done
 
@@ -132,7 +147,7 @@ jobs:
           # and can build circuits. The taker reaches the public nostr relays over
           # Tor's SOCKS proxy (9050); if it connects before circuits are ready the
           # relay connection fails with "TTL expired" and maker discovery times out.
-          # Probe actual Tor egress to a public relay before running the tests.
+          # Probe actual Tor egress to a public relay before running the test.
           echo "=== Waiting for Tor to reach a public nostr relay ==="
           for i in {1..60}; do
             for relay in nos.lol relay.damus.io; do
@@ -145,37 +160,20 @@ jobs:
           done
           echo "Timed out waiting for Tor egress to public relays"; exit 1
 
-      - name: Build FFI bindings
-        if: steps.cache-python-ffi-build.outputs.cache-hit != 'true'
-        working-directory: ./coinswap-python
-        run: |
-          bash ./build-scripts/development/build-dev-linux-x86_64.sh
-
-      - name: Run Python test (standard_swap.py)
-        working-directory: ./coinswap-python
-        run: |
-          echo "Running Python standard swap test..."
-          python3 test/standard_swap.py
-        continue-on-error: false
-
-      - name: Run Python test (taproot_swap.py)
-        working-directory: ./coinswap-python
-        run: |
-          echo "Running Python taproot swap test..."
-          python3 test/taproot_swap.py
-        continue-on-error: false
+      - name: Test
+        working-directory: coinswap-csharp
+        run: dotnet test Coinswap.Tests/Coinswap.Tests.csproj -c Release
 
       - name: Cleanup Docker environment
         if: always()
         working-directory: ./ffi-commons
-        run: |
-          ./ffi-docker-setup stop || true
+        run: ./ffi-docker-setup stop || true
 
       - name: Upload test logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: python-test-logs
+          name: csharp-test-logs
           path: |
             ~/.coinswap/taker/debug.log
             ffi-commons/.coinswap-docker-stack/logs/
