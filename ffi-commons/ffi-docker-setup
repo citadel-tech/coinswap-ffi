@@ -3,8 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COINSWAP_REPO="${COINSWAP_REPO:-https://github.com/NeoZ666/coinswap.git}"
-COINSWAP_BRANCH="${COINSWAP_BRANCH:-maker-nostr-relay-config}"
+COINSWAP_REPO="https://github.com/citadel-tech/coinswap.git"
 COINSWAP_DIR="$SCRIPT_DIR/.coinswap-docker-stack"
 IMAGE_NAME="coinswap"
 BITCOIN_IMAGE_NAME="bitcoin-mutinynet"
@@ -18,8 +17,6 @@ MAKER_BASE_PORT="6102"
 MAKER_NETWORK_PORT_OFFSET="10000"
 TOR_SOCKS_PORT="9050"
 TOR_CONTROL_PORT="9051"
-NOSTR_RELAY_PORT="8000"
-NOSTR_RELAY_IMAGE="scsibug/nostr-rs-relay:latest"
 NUM_MAKERS="2"
 
 RED='\033[0;31m'
@@ -70,8 +67,8 @@ check_docker() {
 
 setup_coinswap_repo() {
     if [ ! -d "$COINSWAP_DIR" ]; then
-        print_info "Cloning coinswap repository ($COINSWAP_REPO@$COINSWAP_BRANCH) for Docker images..."
-        git clone --depth 1 --branch "$COINSWAP_BRANCH" "$COINSWAP_REPO" "$COINSWAP_DIR"
+        print_info "Cloning coinswap repository for Docker images..."
+        git clone --depth 1 "$COINSWAP_REPO" "$COINSWAP_DIR"
     else
         print_info "Coinswap repository already exists at $COINSWAP_DIR"
     fi
@@ -87,32 +84,6 @@ HashedControlPassword 16:16E946B27E1A526E60A2B64061EC3F140ACA991F1B705ACD35374D6
 DataDirectory /var/lib/tor
 EOF
     print_success "Generated torrc: $torrc_file"
-}
-
-generate_nostr_relay_config() {
-    local relay_config="$SCRIPT_DIR/nostr-relay.config.toml"
-    print_info "Generating nostr-rs-relay configuration..."
-    # Minimal relay config: bind all interfaces on the relay port with an
-    # in-memory DB so nothing persists between runs. Mirrors the local relay the
-    # coinswap core integration tests spawn.
-    cat > "$relay_config" << EOF
-[info]
-name = "coinswap-ffi-regtest-relay"
-description = "Local nostr relay for coinswap FFI tests"
-
-[network]
-address = "0.0.0.0"
-port = ${NOSTR_RELAY_PORT}
-
-[database]
-in_memory = true
-min_conn = 4
-max_conn = 8
-
-[diagnostics]
-tracing = false
-EOF
-    print_success "Generated nostr relay config: $relay_config"
 }
 
 generate_maker_service() {
@@ -149,7 +120,7 @@ generate_maker_service() {
           "fidelity_amount = 50000" \\
           "fidelity_timelock = 13104" \\
           > /home/coinswap/.coinswap/maker/config.toml
-        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME" --nostr-relays ws://relay:${NOSTR_RELAY_PORT}
+        makerd -r bitcoind:${BITCOIN_RPC_PORT} -a user:password -w "\$\$WALLET_NAME"
     environment:
       - RUST_LOG=info
     restart: unless-stopped
@@ -161,7 +132,6 @@ generate_compose_file() {
     local compose_file="$SCRIPT_DIR/docker-compose.generated.yml"
 
     generate_torrc
-    generate_nostr_relay_config
 
     local bitcoin_tag="latest"
     if [ -f "$VERSION_FILE" ]; then
@@ -195,11 +165,9 @@ services:
     ports:
       - "${TOR_SOCKS_PORT}:${TOR_SOCKS_PORT}"
       - "${TOR_CONTROL_PORT}:${TOR_CONTROL_PORT}"
+
 EOF
 
-    # Maker network/rpc ports are published on the tor service (makers share tor's
-    # network namespace), so they must be appended to tor's `ports:` list BEFORE
-    # tor's service block is closed with `restart:`.
     local i
     for ((i=1; i<=NUM_MAKERS; i++)); do
         local maker_port
@@ -209,21 +177,11 @@ EOF
         cat >> "$compose_file" << EOF
       - "${maker_port}:${maker_port}"
       - "${maker_rpc_port}:${maker_rpc_port}"
+
 EOF
     done
 
-    # Close the tor service, then add the standalone relay service.
     cat >> "$compose_file" << EOF
-    restart: unless-stopped
-
-  relay:
-    image: ${NOSTR_RELAY_IMAGE}
-    container_name: coinswap-relay
-    user: "0:0"
-    volumes:
-      - ./nostr-relay.config.toml:/usr/src/app/config.toml:ro
-    ports:
-      - "${NOSTR_RELAY_PORT}:${NOSTR_RELAY_PORT}"
     restart: unless-stopped
 
 EOF
@@ -251,7 +209,6 @@ EOF
 
 build_image() {
     print_info "Building Coinswap Docker image..."
-    setup_coinswap_repo
     cd "$COINSWAP_DIR"
     if docker build -f docker/Dockerfile -t "coinswap/${IMAGE_NAME}:master" -t "coinswap/${IMAGE_NAME}:latest" .; then
         print_success "Coinswap image built successfully"
@@ -263,7 +220,6 @@ build_image() {
 
 build_bitcoin_image() {
     print_info "Building Bitcoin Mutinynet Docker image..."
-    setup_coinswap_repo
     cd "$COINSWAP_DIR"
     if [ -f "docker/bitcoin-mutinynet.version" ]; then
         local tag=$(grep "^TAG=" "docker/bitcoin-mutinynet.version" | cut -d'=' -f2)
