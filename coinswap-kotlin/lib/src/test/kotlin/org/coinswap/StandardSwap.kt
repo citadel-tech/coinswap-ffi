@@ -79,7 +79,8 @@ class StandardSwap {
                 controlPort = 9051u,
                 torAuthPassword = "coinswap",
                 zmqAddr = "tcp://localhost:28332",
-                password = ""
+                password = "",
+                nostrRelays = null
             )
             
             println("✅ Taker initialized successfully")

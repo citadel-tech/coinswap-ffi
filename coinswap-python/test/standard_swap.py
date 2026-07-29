@@ -92,6 +92,7 @@ def main():
                 tor_auth_password="coinswap",
                 zmq_addr="tcp://127.0.0.1:28332",
                 password="",
+                nostr_relays=None,
             )
         print("✓ Taker initialized successfully")
         

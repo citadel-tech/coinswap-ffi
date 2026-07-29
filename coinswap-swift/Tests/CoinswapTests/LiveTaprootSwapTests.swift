@@ -15,7 +15,8 @@ final class LiveTaprootSwapTests: XCTestCase {
             controlPort: config.torControlPort,
             torAuthPassword: config.torAuthPassword,
             zmqAddr: config.zmqAddr,
-            password: config.walletPassword
+            password: config.walletPassword,
+            nostrRelays: nil
         )
 
         try taker.setupLogging(dataDir: config.dataDir, logLevel: "Info")

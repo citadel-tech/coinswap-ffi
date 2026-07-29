@@ -126,6 +126,7 @@ impl Taker {
     ///     a new wallet with the given name will be created.
     ///   - `None`: Create a new wallet file with the default name `taker-wallet`.
     /// - If `rpc_config` = `None`: Use the default [`RPCConfig`]
+    #[allow(clippy::too_many_arguments)]
     pub fn init(
         data_dir: Option<String>,
         wallet_file_name: Option<String>,

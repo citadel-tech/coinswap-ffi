@@ -91,7 +91,8 @@ def main
       9051,
       "coinswap",
       "tcp://127.0.0.1:28332",
-      ""
+      "",
+      nil
     )
     puts "✓ Taker initialized successfully"
     

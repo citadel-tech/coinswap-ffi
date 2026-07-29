@@ -33,6 +33,7 @@ describeLive('React Native live standard swap (taproot)', () => {
         torAuthPassword: 'coinswap',
         zmqAddr: 'tcp://127.0.0.1:28332',
         password: '',
+        nostrRelays: null,
       })
 
       await taker.syncOfferbookAndWait()
