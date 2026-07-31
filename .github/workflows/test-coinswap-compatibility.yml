@@ -1,0 +1,631 @@
+name: Build Coinswap FFI compatibility
+
+# Receives the coinswap-updated dispatch from citadel-tech/coinswap. For a
+# manual build, run this workflow with a full coinswap commit SHA. The checked
+# out commit must be on coinswap's master branch. A temporary Cargo patch makes
+# both Rust binding crates use the sibling checkout. Failures create or update
+# a coinswap-ffi issue and are deduplicated with
+# <!-- coinswap-compatibility:<sha> -->.
+on:
+  repository_dispatch:
+    types:
+      - coinswap-updated
+  workflow_dispatch:
+    inputs:
+      coinswap_sha:
+        description: Full SHA of a commit on citadel-tech/coinswap master
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: coinswap-compatibility-${{ github.event.client_payload.coinswap_sha || inputs.coinswap_sha || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  CLICOLOR: "0"
+  FORCE_COLOR: "0"
+  NO_COLOR: "1"
+  RUST_BACKTRACE: "1"
+  TERM: dumb
+
+jobs:
+  compatibility:
+    name: Build against exact Coinswap commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    # Read access is required only to check out coinswap-ffi and its dependencies.
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.build.outputs.result }}
+      coinswap_sha: ${{ steps.context.outputs.sha }}
+    steps:
+      - name: Resolve and validate dispatch context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_SHA: ${{ github.event.client_payload.coinswap_sha }}
+          DISPATCH_REF: ${{ github.event.client_payload.coinswap_ref }}
+          DISPATCH_ACTOR: ${{ github.event.client_payload.triggering_actor }}
+          MANUAL_SHA: ${{ inputs.coinswap_sha }}
+          MANUAL_ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "repository_dispatch" ]]; then
+            coinswap_sha="${DISPATCH_SHA}"
+            coinswap_ref="${DISPATCH_REF}"
+            triggering_actor="${DISPATCH_ACTOR}"
+            if [[ "${coinswap_ref}" != "refs/heads/master" ]]; then
+              echo "::error::Dispatches are accepted only from refs/heads/master."
+              exit 1
+            fi
+          else
+            coinswap_sha="${MANUAL_SHA}"
+            coinswap_ref="refs/heads/master"
+            triggering_actor="${MANUAL_ACTOR}"
+          fi
+
+          if [[ ! "${coinswap_sha}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::coinswap_sha must be a full 40-character hexadecimal Git SHA."
+            exit 1
+          fi
+
+          coinswap_sha="${coinswap_sha,,}"
+          triggering_actor="$(printf '%s' "${triggering_actor}" | tr -cd '[:alnum:]_.-')"
+          if [[ -z "${triggering_actor}" ]]; then
+            triggering_actor="unknown"
+          fi
+
+          {
+            echo "sha=${coinswap_sha}"
+            echo "ref=${coinswap_ref}"
+            echo "actor=${triggering_actor}"
+            echo "commit_url=https://github.com/citadel-tech/coinswap/commit/${coinswap_sha}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout coinswap-ffi
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: coinswap-ffi
+          persist-credentials: false
+
+      - name: Checkout exact Coinswap commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: citadel-tech/coinswap
+          ref: ${{ steps.context.outputs.sha }}
+          fetch-depth: 0
+          path: coinswap
+          persist-credentials: false
+
+      - name: Confirm commit belongs to Coinswap master
+        env:
+          COINSWAP_SHA: ${{ steps.context.outputs.sha }}
+        working-directory: coinswap
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          if ! git merge-base --is-ancestor "${COINSWAP_SHA}" "origin/master"; then
+            echo "::error::${COINSWAP_SHA} is not a commit on citadel-tech/coinswap master."
+            exit 1
+          fi
+          test "$(git rev-parse HEAD)" = "${COINSWAP_SHA}"
+
+      - name: Set up stable Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-downloads-${{ hashFiles('coinswap-ffi/**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-downloads-
+
+      - name: Cache exact compatibility build outputs
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            coinswap-ffi/ffi-commons/target/
+            coinswap-ffi/coinswap-js/target/
+          key: ${{ runner.os }}-coinswap-compatibility-${{ github.sha }}-${{ steps.context.outputs.sha }}-${{ hashFiles('coinswap-ffi/**/Cargo.lock') }}
+
+      - name: Install system dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libssl-dev \
+            pkg-config \
+            protobuf-compiler
+          corepack enable
+          rustup target add \
+            x86_64-unknown-linux-gnu \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android
+
+      - name: Override Coinswap dependency with local checkout
+        env:
+          COINSWAP_PATH: ${{ github.workspace }}/coinswap
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/coinswap-ffi/.cargo"
+          {
+            echo '[patch."https://github.com/citadel-tech/coinswap.git"]'
+            printf 'coinswap = { path = "%s" }\n' "${COINSWAP_PATH}"
+          } > "${GITHUB_WORKSPACE}/coinswap-ffi/.cargo/config.toml"
+
+      - name: Build supported FFI surfaces
+        id: build
+        env:
+          FFI_ROOT: ${{ github.workspace }}/coinswap-ffi
+          COINSWAP_PATH: ${{ github.workspace }}/coinswap
+          BUILD_LOG: ${{ runner.temp }}/coinswap-ffi-build.log
+          FAILED_STAGE_FILE: ${{ runner.temp }}/coinswap-ffi-failed-stage.txt
+          FAILED_LOG_FILE: ${{ runner.temp }}/coinswap-ffi-failed-stage.log
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "${BUILD_LOG}"
+          : > "${FAILED_STAGE_FILE}"
+          : > "${FAILED_LOG_FILE}"
+
+          run_stage() {
+            local stage="$1"
+            shift
+            local stage_log="${RUNNER_TEMP}/coinswap-ffi-current-stage.log"
+            : > "${stage_log}"
+            echo "::group::${stage}"
+            printf '\n===== %s =====\n' "${stage}" | tee -a "${BUILD_LOG}"
+            "$@" 2>&1 | tee -a "${BUILD_LOG}" "${stage_log}"
+            local command_status="${PIPESTATUS[0]}"
+            echo "::endgroup::"
+            if [[ "${command_status}" -ne 0 ]]; then
+              printf '%s\n' "${stage}" > "${FAILED_STAGE_FILE}"
+              cp "${stage_log}" "${FAILED_LOG_FILE}"
+              return "${command_status}"
+            fi
+          }
+
+          run_in_dir() {
+            local directory="$1"
+            shift
+            (
+              set -e
+              cd "${directory}"
+              "$@"
+            )
+          }
+
+          verify_resolution() {
+            local manifest="$1"
+            local metadata_file="$2"
+            if ! (
+              set -e
+              cd "$(dirname "${manifest}")"
+              cargo metadata --manifest-path "${manifest}" --format-version 1 > "${metadata_file}"
+            ); then
+              return 1
+            fi
+            if ! jq -e --arg expected "${COINSWAP_PATH}/Cargo.toml" '
+              any(.packages[];
+                .name == "coinswap"
+                and .source == null
+                and .manifest_path == $expected
+              )
+            ' "${metadata_file}"; then
+              return 1
+            fi
+            jq -r '
+              .packages[]
+              | select(.name == "coinswap")
+              | "Resolved coinswap from \(.manifest_path) (source=\(.source // "local path"))"
+            ' "${metadata_file}"
+          }
+
+          build_status=0
+          run_stage \
+            "Verify ffi-commons resolves the local Coinswap checkout" \
+            verify_resolution \
+            "${FFI_ROOT}/ffi-commons/Cargo.toml" \
+            "${RUNNER_TEMP}/ffi-commons-metadata.json" || build_status=$?
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Verify coinswap-js resolves the local Coinswap checkout" \
+              verify_resolution \
+              "${FFI_ROOT}/coinswap-js/Cargo.toml" \
+              "${RUNNER_TEMP}/coinswap-js-metadata.json" || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build ffi-commons Rust library" \
+              run_in_dir "${FFI_ROOT}/ffi-commons" \
+              cargo build --target x86_64-unknown-linux-gnu || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build Kotlin bindings" \
+              run_in_dir "${FFI_ROOT}/coinswap-kotlin" \
+              bash ./build-scripts/development/build-dev-linux-jvm.sh || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build Python bindings" \
+              run_in_dir "${FFI_ROOT}/coinswap-python" \
+              bash ./build-scripts/development/build-dev-linux-x86_64.sh || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build Ruby bindings" \
+              run_in_dir "${FFI_ROOT}/coinswap-ruby" \
+              bash ./build-scripts/development/build-dev-linux-x86_64.sh || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            mkdir -p "${RUNNER_TEMP}/coinswap-swift-bindings"
+            run_stage \
+              "Generate Swift bindings" \
+              run_in_dir "${FFI_ROOT}/ffi-commons" \
+              cargo run \
+              --bin uniffi-bindgen \
+              generate \
+              --library "${FFI_ROOT}/ffi-commons/target/x86_64-unknown-linux-gnu/debug/libcoinswap_ffi.so" \
+              --language swift \
+              --out-dir "${RUNNER_TEMP}/coinswap-swift-bindings" \
+              --no-format || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Install coinswap-js dependencies" \
+              run_in_dir "${FFI_ROOT}/coinswap-js" \
+              yarn install --immutable || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build coinswap-js native binding" \
+              run_in_dir "${FFI_ROOT}/coinswap-js" \
+              yarn build || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Install React Native dependencies" \
+              run_in_dir "${FFI_ROOT}/coinswap-react-native" \
+              npm ci || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build React Native Android bindings" \
+              run_in_dir "${FFI_ROOT}/coinswap-react-native" \
+              npm run ubrn:android || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            echo "result=success" >> "${GITHUB_OUTPUT}"
+            echo "All compatibility build stages succeeded."
+          else
+            echo "result=failure" >> "${GITHUB_OUTPUT}"
+            echo "::error::Compatibility build failed in: $(<"${FAILED_STAGE_FILE}")"
+          fi
+
+          # Reporting steps inspect the result output and must still run.
+          exit 0
+
+      - name: Prepare failure issue Markdown
+        if: steps.build.outputs.result == 'failure'
+        env:
+          COINSWAP_SHA: ${{ steps.context.outputs.sha }}
+          COINSWAP_REF: ${{ steps.context.outputs.ref }}
+          COINSWAP_ACTOR: ${{ steps.context.outputs.actor }}
+          COINSWAP_COMMIT_URL: ${{ steps.context.outputs.commit_url }}
+          FFI_SHA: ${{ github.sha }}
+          FFI_COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUNNER_OS_NAME: ${{ runner.os }}
+          BUILD_LOG: ${{ runner.temp }}/coinswap-ffi-build.log
+          FAILED_STAGE_FILE: ${{ runner.temp }}/coinswap-ffi-failed-stage.txt
+          FAILED_LOG_FILE: ${{ runner.temp }}/coinswap-ffi-failed-stage.log
+          ERROR_SUMMARY_FILE: ${{ runner.temp }}/coinswap-ffi-error-summary.txt
+          FAILURE_AREA_FILE: ${{ runner.temp }}/coinswap-ffi-failure-area.txt
+          ISSUE_BODY: ${{ runner.temp }}/coinswap-compatibility-issue.md
+          ISSUE_COMMENT: ${{ runner.temp }}/coinswap-compatibility-comment.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed_stage="$(<"${FAILED_STAGE_FILE}")"
+          clean_log="${RUNNER_TEMP}/coinswap-ffi-failed-stage-clean.log"
+          error_output="${RUNNER_TEMP}/coinswap-ffi-error-output.log"
+
+          # Remove ANSI/terminal control sequences before putting output into
+          # Markdown. The complete raw log remains available as an artifact.
+          perl -pe '
+            s/\e\[[0-?]*[ -\/]*[@-~]//g;
+            s/\e\][^\a]*(?:\a|\e\\)//g;
+            s/\r//g;
+          ' "${FAILED_LOG_FILE}" > "${clean_log}"
+
+          # Start at the first recognizable build/compiler error instead of
+          # filling the issue with dependency downloads and compile progress.
+          awk '
+            BEGIN { found = 0 }
+            {
+              lower = tolower($0)
+              if (!found) {
+                if (lower ~ /^[[:space:]]*error(\[[^]]+\])?:/) found = 1
+                else if (lower ~ /:[0-9]+:[0-9]+: error:/) found = 1
+                else if (lower ~ /^[[:space:]]*npm (err!|error)/) found = 1
+                else if (lower ~ /^[[:space:]]*failure:/) found = 1
+                else if (lower ~ /^[[:space:]]*fatal:/) found = 1
+                else if (lower ~ /^[[:space:]]*caused by:/) found = 1
+                else if (lower ~ /^[[:space:]]*exception/) found = 1
+              }
+              if (found && emitted < 160) {
+                print
+                emitted++
+              }
+            }
+          ' "${clean_log}" > "${error_output}"
+
+          if [[ ! -s "${error_output}" ]]; then
+            tail -n 80 "${clean_log}" > "${error_output}"
+          fi
+          sed 's/```/` ` `/g' "${error_output}" > "${error_output}.safe"
+          mv "${error_output}.safe" "${error_output}"
+
+          error_summary="$(
+            grep -i -m1 -E \
+              '^[[:space:]]*error(\[[^]]+\])?:|:[0-9]+:[0-9]+: error:|^[[:space:]]*npm (ERR!|error)|^[[:space:]]*FAILURE:|^[[:space:]]*fatal:|^[[:space:]]*Caused by:|^[[:space:]]*Exception' \
+              "${clean_log}" || true
+          )"
+          if [[ -z "${error_summary}" ]]; then
+            error_summary="The build command exited unsuccessfully; see the focused output below."
+          fi
+          error_summary="$(printf '%s' "${error_summary}" | sed 's/^[[:space:]]*//')"
+          printf '%s\n' "${error_summary}" > "${ERROR_SUMMARY_FILE}"
+
+          case "${failed_stage}" in
+            *Kotlin*) failure_area="Kotlin binding" ;;
+            *Python*) failure_area="Python binding" ;;
+            *Ruby*) failure_area="Ruby binding" ;;
+            *Swift*) failure_area="Swift/UniFFI generation" ;;
+            *coinswap-js*) failure_area="JavaScript/N-API binding" ;;
+            *"React Native"*) failure_area="React Native Android binding" ;;
+            *) failure_area="FFI binding" ;;
+          esac
+
+          # For generic Rust/metadata stages, identify a distinctive upstream
+          # API area from compiler diagnostics without overriding a binding-
+          # specific stage classification.
+          if [[ "${failure_area}" == "FFI binding" ]]; then
+            if grep -qE 'coinswap::wallet(::|\b)|Wallet(Error)?\b' "${error_output}"; then
+              failure_area="Wallet API"
+            elif grep -qE 'coinswap::taker(::|\b)|Taker(Error)?\b' "${error_output}"; then
+              failure_area="Taker API"
+            elif grep -qiE 'uniffi|binding generation' "${error_output}"; then
+              failure_area="UniFFI generation"
+            fi
+          fi
+          printf '%s\n' "${failure_area}" > "${FAILURE_AREA_FILE}"
+
+          error_location="$(
+            grep -m1 -E '^[[:space:]]*-->[[:space:]]+|[^[:space:]]+:[0-9]+:[0-9]+:[[:space:]]+error:' \
+              "${clean_log}" || true
+          )"
+          error_location="$(printf '%s' "${error_location}" | sed -E 's/^[[:space:]]*-->[[:space:]]*//')"
+
+          {
+            printf '<!-- coinswap-compatibility:%s -->\n' "${COINSWAP_SHA}"
+            printf '## What failed\n\n'
+            printf 'The `%s` stage could not build against the selected Coinswap commit.\n\n' "${failed_stage}"
+            printf '**Affected area:** `%s`\n\n' "${failure_area}"
+            printf '**Build error:**\n\n> %s\n\n' "${error_summary}"
+            if [[ -n "${error_location}" ]]; then
+              printf '**Source location:** `%s`\n\n' "${error_location}"
+            fi
+            printf '### Relevant error output\n\n'
+            printf '```text\n'
+            cat "${error_output}"
+            printf '\n```\n\n'
+            printf 'The complete build log is attached to the [failed workflow run](%s).\n\n' "${RUN_URL}"
+            printf '<details>\n<summary>Build context</summary>\n\n'
+            printf -- '- Coinswap commit: [`%s`](%s)\n' "${COINSWAP_SHA}" "${COINSWAP_COMMIT_URL}"
+            printf -- '- Coinswap ref: `%s`\n' "${COINSWAP_REF}"
+            printf -- '- Triggering actor: `%s`\n' "${COINSWAP_ACTOR}"
+            printf -- '- coinswap-ffi commit: [`%s`](%s)\n' "${FFI_SHA}" "${FFI_COMMIT_URL}"
+            printf -- '- Failing build stage: `%s`\n' "${failed_stage}"
+            printf -- '- Runner OS: `%s`\n' "${RUNNER_OS_NAME}"
+            printf '\n</details>\n\n'
+            printf '_Generated automatically by the Coinswap FFI compatibility build._\n'
+          } > "${ISSUE_BODY}"
+
+          {
+            printf '## FFI build failed again\n\n'
+            printf '**Stage:** `%s`\n\n' "${failed_stage}"
+            printf '**Affected area:** `%s`\n\n' "${failure_area}"
+            printf '**Build error:**\n\n> %s\n\n' "${error_summary}"
+            if [[ -n "${error_location}" ]]; then
+              printf '**Source location:** `%s`\n\n' "${error_location}"
+            fi
+            printf '```text\n'
+            cat "${error_output}"
+            printf '\n```\n\n'
+            printf '[View the workflow run and complete log](%s).\n' "${RUN_URL}"
+          } > "${ISSUE_COMMENT}"
+
+      - name: Upload failure report and complete logs
+        if: steps.build.outputs.result == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coinswap-compatibility-${{ steps.context.outputs.sha }}
+          path: |
+            ${{ runner.temp }}/coinswap-ffi-build.log
+            ${{ runner.temp }}/coinswap-ffi-failed-stage.txt
+            ${{ runner.temp }}/coinswap-ffi-failed-stage.log
+            ${{ runner.temp }}/coinswap-ffi-error-summary.txt
+            ${{ runner.temp }}/coinswap-ffi-failure-area.txt
+            ${{ runner.temp }}/coinswap-compatibility-issue.md
+            ${{ runner.temp }}/coinswap-compatibility-comment.md
+            ${{ runner.temp }}/*-metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+  report:
+    name: Report compatibility failure
+    needs: compatibility
+    if: needs.compatibility.outputs.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Artifact read retrieves sanitized diagnostics; issue write is isolated
+    # here so checked-out upstream code and build scripts never receive it.
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Download failure report
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: coinswap-compatibility-${{ needs.compatibility.outputs.coinswap_sha }}
+          path: ${{ runner.temp }}/coinswap-compatibility-report
+
+      - name: Create or update compatibility issue
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          COINSWAP_SHA: ${{ needs.compatibility.outputs.coinswap_sha }}
+          ISSUE_BODY: ${{ runner.temp }}/coinswap-compatibility-report/coinswap-compatibility-issue.md
+          ISSUE_COMMENT: ${{ runner.temp }}/coinswap-compatibility-report/coinswap-compatibility-comment.md
+          ERROR_SUMMARY_FILE: ${{ runner.temp }}/coinswap-compatibility-report/coinswap-ffi-error-summary.txt
+          FAILURE_AREA_FILE: ${{ runner.temp }}/coinswap-compatibility-report/coinswap-ffi-failure-area.txt
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs')
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const sha = process.env.COINSWAP_SHA
+            const marker = `<!-- coinswap-compatibility:${sha} -->`
+            const body = fs.readFileSync(process.env.ISSUE_BODY, 'utf8')
+            const comment = fs.readFileSync(process.env.ISSUE_COMMENT, 'utf8')
+            const errorSummary = fs
+              .readFileSync(process.env.ERROR_SUMMARY_FILE, 'utf8')
+              .replace(/[\r\n\t]+/g, ' ')
+              .replace(/[`*_<>]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+            const failureArea = fs
+              .readFileSync(process.env.FAILURE_AREA_FILE, 'utf8')
+              .replace(/[\r\n\t]+/g, ' ')
+              .trim()
+            const issueTitle =
+              `Coinswap FFI build failed (${sha.slice(0, 12)}) — ${failureArea}: ${errorSummary.slice(0, 70)}`
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            })
+            const existing = openIssues.find(
+              (issue) => !issue.pull_request && (issue.body || '').includes(marker),
+            )
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                title: issueTitle,
+                body,
+              })
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: comment,
+              })
+              core.info(`Updated existing issue #${existing.number}`)
+              return
+            }
+
+            let labels = []
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: 'upstream-breakage',
+              })
+              labels = ['upstream-breakage']
+            } catch (error) {
+              if (error.status === 404) {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: 'upstream-breakage',
+                    color: 'b60205',
+                    description: 'Breakage caused by an upstream Coinswap change',
+                  })
+                  labels = ['upstream-breakage']
+                } catch (labelError) {
+                  core.warning(`Could not create upstream-breakage label: ${labelError.message}`)
+                }
+              } else {
+                core.warning(`Could not inspect upstream-breakage label: ${error.message}`)
+              }
+            }
+
+            const issue = {
+              owner,
+              repo,
+              title: issueTitle,
+              body,
+              labels,
+            }
+
+            try {
+              const created = await github.rest.issues.create(issue)
+              core.info(`Created issue #${created.data.number}`)
+            } catch (error) {
+              if (labels.length === 0) throw error
+              core.warning(`Issue creation with label failed; retrying without it: ${error.message}`)
+              issue.labels = []
+              const created = await github.rest.issues.create(issue)
+              core.info(`Created issue #${created.data.number} without a label`)
+            }
+
+      - name: Fail workflow after reporting
+        shell: bash
+        run: |
+          echo "::error::Coinswap compatibility build failed; the issue was created or updated."
+          exit 1
