@@ -24,7 +24,7 @@ env:
 
 jobs:
   test-taker:
-    name: Test Standard Taker Methods
+    name: Test RPC + Electrum Taker Methods
     runs-on: ubuntu-24.04
     
     steps:
@@ -63,48 +63,25 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 1 RPC maker + 1 Electrum maker.
+          ./ffi-docker-setup start
 
-      - name: Check Docker containers status
+      - name: Check stack readiness
         run: |
-          echo "=== Docker Containers ==="
-          docker ps -a
-          
-          echo -e "\n=== Bitcoin Core Logs ==="
-          docker logs coinswap-bitcoind --tail 50 || true
-          
-          echo -e "\n=== Tor Logs ==="
-          docker logs tor --tail 30 || true
-          
-          echo -e "\n=== Maker1 Logs ==="
-          docker logs coinswap-makerd1 --tail 30 || true
-          
-          echo -e "\n=== Maker2 Logs ==="
-          docker logs coinswap-makerd2 --tail 30 || true
-
-          echo -e "\n=== Maker3 Logs ==="
-          docker logs coinswap-makerd3 --tail 30 || true
-          
-          echo -e "\n=== Maker4 Logs ==="
-          docker logs coinswap-makerd4 --tail 30 || true
-
-          echo -e "\n=== Host Port Connectivity ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}'
           for i in {1..20}; do
-            all_ok=true
-            for port in 18442 28332 9051; do
-              nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
+            ok=true
+            for port in 18442 28332 9051 50001; do
+              nc -z 127.0.0.1 "$port" 2>/dev/null || ok=false
             done
-            if $all_ok; then
-              echo "All ports forwarded to host!"; break
-            fi
-            echo "Retry $i/20..."
-            sleep 2
+            $ok && { echo "all ports reachable"; break; }
+            echo "waiting for ports ($i/20)..."; sleep 2
           done
 
       - name: Wait for Tor egress
@@ -126,19 +103,9 @@ jobs:
           done
           echo "Timed out waiting for Tor egress to public relays"; exit 1
 
-      - name: Run Taker method test - legacy (P2WPKH)
+      - name: Run taker swap test (legacy/taproot x rpc/electrum, 2 makers)
         working-directory: ./ffi-commons
-        run: |
-          echo "Running Taker method tests..."
-          cargo test tests::taker_methods::main -- --nocapture --exact
-        continue-on-error: false
-
-      - name: Run Taker method test - taproot (P2TR)
-        working-directory: ./ffi-commons
-        run: |
-          echo "Running Taproot taker method tests..."
-          cargo test tests::taproot_taker_methods::main -- --nocapture --exact
-        continue-on-error: false
+        run: cargo test tests::swap_test::main -- --nocapture --exact
 
       - name: Cleanup Docker environment
         if: always()

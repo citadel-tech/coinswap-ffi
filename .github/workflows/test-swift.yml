@@ -71,13 +71,14 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 2 RPC makers + 2 Electrum makers.
+          ./ffi-docker-setup start
 
       - name: Check Docker containers status
         run: |
@@ -90,22 +91,19 @@ jobs:
           echo -e "\n=== Tor Logs ==="
           docker logs coinswap-tor --tail 30 || true
 
+          echo -e "\n=== electrs ==="
+          docker logs coinswap-electrs --tail 30 || true
+
           echo -e "\n=== Maker1 Logs ==="
           docker logs coinswap-makerd1 --tail 30 || true
 
-          echo -e "\n=== Maker2 Logs ==="
+          echo -e "\n=== Electrum Maker2 Logs ==="
           docker logs coinswap-makerd2 --tail 30 || true
-
-          echo -e "\n=== Maker3 Logs ==="
-          docker logs coinswap-makerd3 --tail 30 || true
-
-          echo -e "\n=== Maker4 Logs ==="
-          docker logs coinswap-makerd4 --tail 30 || true
 
           echo -e "\n=== Host Port Connectivity ==="
           for i in {1..20}; do
             all_ok=true
-            for port in 18442 28332 9051; do
+            for port in 18442 28332 9051 50001; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
             done
             if $all_ok; then
@@ -143,11 +141,8 @@ jobs:
           done
           echo "Timed out waiting for Tor egress to public relays"; exit 1
 
-      - name: "Run Swift live standard swap test"
-        run: sudo -E swift test --filter LiveStandardSwapTests/testLiveTakerFlow
-
-      - name: "Run Swift live taproot swap test"
-        run: sudo -E swift test --skip-build --filter LiveTaprootSwapTests/testLiveTaprootTakerFlow
+      - name: "Run Swift live swap tests (backend x protocol matrix)"
+        run: sudo -E swift test --filter LiveSwapTests
 
       - name: Cleanup Docker environment
         if: always()

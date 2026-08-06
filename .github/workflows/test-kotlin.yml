@@ -85,39 +85,25 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 2 RPC makers + 2 Electrum makers.
+          ./ffi-docker-setup start
 
-      - name: Check Docker status
+      - name: Check stack readiness
         run: |
-          docker ps -a
-          echo -e "\n=== Bitcoin Core ==="
-          docker logs coinswap-bitcoind --tail 20 || true
-          echo -e "\n=== Standard Maker1 ==="
-          docker logs coinswap-makerd1 --tail 20 || true
-          echo -e "\n=== Standard Maker2 ==="
-          docker logs coinswap-makerd2 --tail 20 || true
-          echo -e "\n=== Taproot Maker3 ==="
-          docker logs coinswap-makerd3 --tail 20 || true
-          echo -e "\n=== Taproot Maker4 ==="
-          docker logs coinswap-makerd4 --tail 20 || true
-
-          echo -e "\n=== Host Port Connectivity ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}'
           for i in {1..20}; do
-            all_ok=true
-            for port in 18442 28332 9051; do
-              nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
+            ok=true
+            for port in 18442 28332 9051 50001; do
+              nc -z 127.0.0.1 "$port" 2>/dev/null || ok=false
             done
-            if $all_ok; then
-              echo "All ports forwarded to host!"; break
-            fi
-            echo "Retry $i/20..."
-            sleep 2
+            $ok && { echo "all ports reachable"; break; }
+            echo "waiting for ports ($i/20)..."; sleep 2
           done
 
       - name: Wait for Tor egress
@@ -139,16 +125,11 @@ jobs:
           done
           echo "Timed out waiting for Tor egress to public relays"; exit 1
 
-      - name: Run Kotlin Standard Swap Test (P2WPKH)
+      - name: Run Kotlin swap test (legacy/taproot x rpc/electrum, 2 makers)
         working-directory: ./coinswap-kotlin
         run: |
           chmod +x gradlew
-          ./gradlew :lib:testDebugUnitTest --tests "org.coinswap.StandardSwap" --no-daemon --stacktrace
-
-      - name: Run Kotlin Taproot Swap Test (P2TR)
-        working-directory: ./coinswap-kotlin
-        run: |
-          ./gradlew :lib:testDebugUnitTest --tests "org.coinswap.TaprootSwap" --no-daemon --stacktrace
+          ./gradlew :lib:testDebugUnitTest --tests "org.coinswap.SwapTest" --no-daemon --stacktrace
 
       - name: Cleanup Docker
         if: always()

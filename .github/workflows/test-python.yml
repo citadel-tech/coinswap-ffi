@@ -82,13 +82,14 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 2 RPC makers + 2 Electrum makers.
+          ./ffi-docker-setup start
 
       - name: Check Docker containers status
         run: |
@@ -101,22 +102,19 @@ jobs:
           echo -e "\n=== Tor Logs ==="
           docker logs coinswap-tor --tail 30 || true
           
+          echo -e "\n=== electrs ==="
+          docker logs coinswap-electrs --tail 30 || true
+
           echo -e "\n=== Maker1 Logs ==="
           docker logs coinswap-makerd1 --tail 30 || true
           
-          echo -e "\n=== Maker2 Logs ==="
+          echo -e "\n=== Electrum Maker2 Logs ==="
           docker logs coinswap-makerd2 --tail 30 || true
-
-          echo -e "\n=== Maker3 Logs ==="
-          docker logs coinswap-makerd3 --tail 30 || true
-          
-          echo -e "\n=== Maker4 Logs ==="
-          docker logs coinswap-makerd4 --tail 30 || true
 
           echo -e "\n=== Host Port Connectivity ==="
           for i in {1..20}; do
             all_ok=true
-            for port in 18442 28332 9051; do
+            for port in 18442 28332 9051 50001; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
             done
             if $all_ok; then
@@ -151,18 +149,11 @@ jobs:
         run: |
           bash ./build-scripts/development/build-dev-linux-x86_64.sh
 
-      - name: Run Python test (standard_swap.py)
+      - name: Run Python test (swap_test.py)
         working-directory: ./coinswap-python
         run: |
-          echo "Running Python standard swap test..."
-          python3 test/standard_swap.py
-        continue-on-error: false
-
-      - name: Run Python test (taproot_swap.py)
-        working-directory: ./coinswap-python
-        run: |
-          echo "Running Python taproot swap test..."
-          python3 test/taproot_swap.py
+          echo "Running Python swap test (4 takers × 2 makers)..."
+          python3 test/swap_test.py
         continue-on-error: false
 
       - name: Cleanup Docker environment

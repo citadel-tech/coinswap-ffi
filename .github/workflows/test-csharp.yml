@@ -115,13 +115,14 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 2 RPC makers + 2 Electrum makers.
+          ./ffi-docker-setup start
 
       - name: Wait for stack readiness
         run: |
@@ -130,7 +131,7 @@ jobs:
           echo -e "\n=== Waiting for host ports ==="
           for i in {1..30}; do
             all_ok=true
-            for port in 18442 28332 9051; do
+            for port in 18442 28332 9051 50001; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
             done
             if $all_ok; then

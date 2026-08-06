@@ -72,3 +72,43 @@ export function fundAddress(address: string, amountBtc: string) {
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+/** RPC config factory for the Docker regtest stack. */
+export function rpcConfig(walletName: string) {
+  return {
+    url: 'localhost:18442',
+    username: 'user',
+    password: 'password',
+    walletName,
+  }
+}
+
+/** Electrum backend config pointing at the regtest electrs server. */
+export function electrumBackendConfig() {
+  return {
+    kind: 'electrum',
+    url: 'tcp://localhost:50001',
+  }
+}
+
+type SpendableTaker = {
+  syncAndSave: () => Promise<void>
+  getBalances: () => Promise<{ spendable: bigint }>
+}
+
+/**
+ * Sync until spendable reaches `target`, tolerating Electrum indexing lag.
+ * Polls up to 30 times with a 3s pause between attempts.
+ */
+export async function waitForSpendable(taker: SpendableTaker, target: bigint) {
+  let balances = await taker.getBalances()
+  for (let i = 0; i < 30; i += 1) {
+    await taker.syncAndSave()
+    balances = await taker.getBalances()
+    if (balances.spendable >= target) {
+      return balances
+    }
+    await sleep(3_000)
+  }
+  return balances
+}

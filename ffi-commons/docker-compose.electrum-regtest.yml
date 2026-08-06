@@ -1,0 +1,125 @@
+services:
+  bitcoind:
+    image: coinswap/bitcoin-mutinynet:latest
+    container_name: coinswap-bitcoind
+    user: "0:0"
+    command:
+      - bitcoind
+      - -datadir=/home/bitcoin/.bitcoin
+      - -server=1
+      - -rest=1
+      - -rpcuser=user
+      - -rpcpassword=password
+      - -rpcallowip=0.0.0.0/0
+      - -txindex=1
+      - -blockfilterindex=1
+      - -regtest=1
+      - -fallbackfee=0.00001000
+      - -rpcbind=0.0.0.0
+      - -rpcport=18442
+      - -listen=1
+      - -bind=0.0.0.0:18444
+      - -zmqpubrawblock=tcp://0.0.0.0:28332
+      - -zmqpubrawtx=tcp://0.0.0.0:28332
+    ports:
+      - "18442:18442"
+      - "28332:28332"
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcport=18442", "-rpcuser=user", "-rpcpassword=password", "getblockchaininfo"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # Electrum server (electrs) indexing the regtest bitcoind. Backs the two
+  # Electrum makers and the Electrum taker test.
+  electrs:
+    # mempool/electrs is the Blockstream esplora-electrs fork (v3.4.0-dev1 ==
+    # the digest that `:latest` currently points to). Unlike romanz/electrs
+    # 0.9 (getumbrel/electrs), it parses Bitcoin Core 29.x
+    # getnetworkinfo/getblockchaininfo without crashing, and it takes the RPC
+    # credentials inline via `--cookie user:password` (no cookie file mount).
+    # It uses JSON-RPC block import (`--jsonrpc-import`) rather than a P2P
+    # connection, so no --daemon-p2p-addr is needed.
+    image: mempool/electrs:v3.4.0-dev1
+    container_name: coinswap-electrs
+    entrypoint: ["electrs"]
+    command:
+      - --network=regtest
+      - --daemon-rpc-addr=bitcoind:18442
+      - --electrum-rpc-addr=0.0.0.0:50001
+      - --cookie=user:password
+      - --db-dir=/data
+      - --jsonrpc-import
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+    ports:
+      - "50001:50001"
+    volumes:
+      - electrs-data:/data
+    # Expose the esplora REST port so the healthcheck can probe it.
+    # Mark healthy only once electrs has indexed and serves the chain tip, so
+    # the Electrum makers below (which exit on a failed connect) don't start
+    # before electrs can resolve/serve.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3002/blocks/tip/height || exit 1"]
+      interval: 10s
+      timeout: 8s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  tor:
+    image: osminogin/tor-simple
+    container_name: coinswap-tor
+    volumes:
+      - ./torrc.generated:/etc/tor/torrc:ro
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    restart: unless-stopped
+
+  # ---- RPC maker (Bitcoin Core backend) ----
+  makerd1:
+    image: coinswap/coinswap:electrum-sync
+    container_name: coinswap-makerd1
+    network_mode: "service:tor"
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+    command: >
+      sh -c 'sleep 1 &&
+      mkdir -p /home/coinswap/.coinswap/maker &&
+      printf "%s\n" "network_port = 16102" "rpc_port = 6102" "socks_port = 9050" "control_port = 9051" "tor_auth_password = coinswap" "min_swap_amount = 10000" "fidelity_amount = 50000" "fidelity_timelock = 13104" > /home/coinswap/.coinswap/maker/config.toml &&
+      makerd -r bitcoind:18442 -z tcp://bitcoind:28332 -a user:password -w makerd1-wallet'
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped
+
+  # ---- Electrum maker (electrs backend) ----
+  # The maker's Electrum backend talks to electrs directly over the shared
+  # docker network (clearnet hostname), so --electrum-tor is NOT needed here;
+  # peer-to-peer maker traffic still goes over Tor via network_mode.
+  makerd2:
+    image: coinswap/coinswap:electrum-sync
+    container_name: coinswap-makerd2
+    network_mode: "service:tor"
+    depends_on:
+      electrs:
+        condition: service_healthy
+    command: >
+      sh -c 'sleep 2 &&
+      mkdir -p /home/coinswap/.coinswap/maker &&
+      printf "%s\n" "network_port = 16103" "rpc_port = 6103" "socks_port = 9050" "control_port = 9051" "tor_auth_password = coinswap" "min_swap_amount = 10000" "fidelity_amount = 50000" "fidelity_timelock = 13104" > /home/coinswap/.coinswap/maker/config.toml &&
+      makerd --electrum tcp://electrs:50001 -w makerd2-wallet'
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped
+
+volumes:
+  electrs-data:
+
+networks:
+  default:
+    name: coinswap-network
