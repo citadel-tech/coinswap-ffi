@@ -308,7 +308,7 @@ jobs:
             run_stage \
               "Install coinswap-js dependencies" \
               run_in_dir "${FFI_ROOT}/coinswap-js" \
-              yarn install --immutable || build_status=$?
+              yarn install --no-immutable || build_status=$?
           fi
 
           if [[ "${build_status}" -eq 0 ]]; then
