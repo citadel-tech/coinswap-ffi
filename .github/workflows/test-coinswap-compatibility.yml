@@ -24,12 +24,15 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  ANDROID_NDK_VERSION: "27.3.13750724"
   CARGO_TERM_COLOR: never
   CLICOLOR: "0"
   FORCE_COLOR: "0"
   NO_COLOR: "1"
   RUST_BACKTRACE: "1"
   TERM: dumb
+  # Keep in lockstep with ffi-commons' uniffi crate version.
+  UNIFFI_BINDGEN_CS_REV: e10ce410eb3a10cc19c7928b93ea8d84e038c034
 
 jobs:
   compatibility:
@@ -131,6 +134,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: "8.0.x"
+
       - name: Cache Cargo downloads
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -166,6 +174,49 @@ jobs:
             aarch64-linux-android \
             armv7-linux-androideabi \
             x86_64-linux-android
+
+      - name: Install and verify FFI build tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install cargo-ndk --version 4.1.2 --locked
+          cargo ndk --version
+
+          cargo install uniffi-bindgen-cs \
+            --git https://github.com/NordSecurity/uniffi-bindgen-cs \
+            --rev "${UNIFFI_BINDGEN_CS_REV}" \
+            --locked
+          uniffi-bindgen-cs --version
+
+          android_sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [[ -z "${android_sdk_root}" || ! -d "${android_sdk_root}" ]]; then
+            echo "::error::ANDROID_SDK_ROOT/ANDROID_HOME is not set to an installed Android SDK."
+            exit 1
+          fi
+
+          ndk_home="${android_sdk_root}/ndk/${ANDROID_NDK_VERSION}"
+          if [[ ! -d "${ndk_home}" ]]; then
+            sdkmanager --install "ndk;${ANDROID_NDK_VERSION}"
+          fi
+          if [[ ! -d "${ndk_home}" ]]; then
+            echo "::error::Android NDK ${ANDROID_NDK_VERSION} was not installed at ${ndk_home}."
+            exit 1
+          fi
+          {
+            echo "ANDROID_NDK_HOME=${ndk_home}"
+            echo "ANDROID_NDK_ROOT=${ndk_home}"
+          } >> "${GITHUB_ENV}"
+
+          installed_targets="$(rustup target list --installed)"
+          for target in \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android; do
+            if ! grep -Fxq "${target}" <<< "${installed_targets}"; then
+              echo "::error::Required Rust target ${target} is not installed."
+              exit 1
+            fi
+          done
 
       - name: Override Coinswap dependency with local checkout
         env:
@@ -306,6 +357,31 @@ jobs:
 
           if [[ "${build_status}" -eq 0 ]]; then
             run_stage \
+              "Build C# native library" \
+              run_in_dir "${FFI_ROOT}/coinswap-csharp" \
+              bash ./build-scripts/build-linux.sh x86_64-unknown-linux-gnu || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Generate C# bindings" \
+              run_in_dir "${FFI_ROOT}/ffi-commons" \
+              uniffi-bindgen-cs \
+              --library "${FFI_ROOT}/coinswap-csharp/Coinswap/runtimes/linux-x64/native/libcoinswap_ffi.so" \
+              --config uniffi.toml \
+              --out-dir "${FFI_ROOT}/coinswap-csharp/Coinswap/Generated" \
+              --no-format || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
+              "Build C# bindings" \
+              run_in_dir "${FFI_ROOT}/coinswap-csharp" \
+              dotnet build Coinswap/Coinswap.csproj --configuration Release || build_status=$?
+          fi
+
+          if [[ "${build_status}" -eq 0 ]]; then
+            run_stage \
               "Install coinswap-js dependencies" \
               run_in_dir "${FFI_ROOT}/coinswap-js" \
               yarn install --no-immutable || build_status=$?
@@ -385,6 +461,8 @@ jobs:
               if (!found) {
                 if (lower ~ /^[[:space:]]*error(\[[^]]+\])?:/) found = 1
                 else if (lower ~ /:[0-9]+:[0-9]+: error:/) found = 1
+                else if (lower ~ /\([0-9]+,[0-9]+\): error /) found = 1
+                else if (lower ~ /yn[0-9][0-9][0-9][0-9]:/) found = 1
                 else if (lower ~ /^[[:space:]]*npm (err!|error)/) found = 1
                 else if (lower ~ /^[[:space:]]*failure:/) found = 1
                 else if (lower ~ /^[[:space:]]*fatal:/) found = 1
@@ -406,7 +484,7 @@ jobs:
 
           error_summary="$(
             grep -i -m1 -E \
-              '^[[:space:]]*error(\[[^]]+\])?:|:[0-9]+:[0-9]+: error:|^[[:space:]]*npm (ERR!|error)|^[[:space:]]*FAILURE:|^[[:space:]]*fatal:|^[[:space:]]*Caused by:|^[[:space:]]*Exception' \
+              '^[[:space:]]*error(\[[^]]+\])?:|:[0-9]+:[0-9]+: error:|\([0-9]+,[0-9]+\): error |YN[0-9]{4}:|^[[:space:]]*npm (ERR!|error)|^[[:space:]]*FAILURE:|^[[:space:]]*fatal:|^[[:space:]]*Caused by:|^[[:space:]]*Exception' \
               "${clean_log}" || true
           )"
           if [[ -z "${error_summary}" ]]; then
@@ -416,6 +494,7 @@ jobs:
           printf '%s\n' "${error_summary}" > "${ERROR_SUMMARY_FILE}"
 
           case "${failed_stage}" in
+            *"C#"*) failure_area="C# binding" ;;
             *Kotlin*) failure_area="Kotlin binding" ;;
             *Python*) failure_area="Python binding" ;;
             *Ruby*) failure_area="Ruby binding" ;;
@@ -440,7 +519,7 @@ jobs:
           printf '%s\n' "${failure_area}" > "${FAILURE_AREA_FILE}"
 
           error_location="$(
-            grep -m1 -E '^[[:space:]]*-->[[:space:]]+|[^[:space:]]+:[0-9]+:[0-9]+:[[:space:]]+error:' \
+            grep -m1 -E '^[[:space:]]*-->[[:space:]]+|[^[:space:]]+:[0-9]+:[0-9]+:[[:space:]]+error:|[^[:space:]]+\([0-9]+,[0-9]+\):[[:space:]]+error ' \
               "${clean_log}" || true
           )"
           error_location="$(printf '%s' "${error_location}" | sed -E 's/^[[:space:]]*-->[[:space:]]*//')"
