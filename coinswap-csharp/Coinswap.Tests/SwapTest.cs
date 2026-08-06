@@ -66,7 +66,17 @@ public class SwapTest
             : null;
 
         var backendConfig = backend == Backend.Electrum
-            ? new BackendConfig(Kind: "electrum", Url: ElectrumUrl)
+            ? new BackendConfig(
+                Kind: "electrum",
+                Url: ElectrumUrl,
+                Username: null,
+                Password: null,
+                WalletName: null,
+                ZmqAddr: null,
+                Socks5: null,
+                Timeout: null,
+                PollIntervalSecs: null,
+                MaxRetries: null)
             : null;
 
         // Positional args mirror the Rust `Taker::init` signature order:

@@ -58,7 +58,18 @@ class SwapTest {
             RpcConfig("localhost:18442", "user", "password", "kotlin_$name")
         } else null
         val backendConfig = if (backend == Backend.ELECTRUM) {
-            BackendConfig(kind = "electrum", url = "tcp://localhost:50001")
+            BackendConfig(
+                kind = "electrum",
+                url = "tcp://localhost:50001",
+                username = null,
+                password = null,
+                walletName = null,
+                zmqAddr = null,
+                socks5 = null,
+                timeout = null,
+                pollIntervalSecs = null,
+                maxRetries = null,
+            )
         } else null
 
         val taker = Taker.init(

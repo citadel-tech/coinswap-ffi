@@ -55,7 +55,18 @@ def run_swap(name, data_dir, backend, protocol, addr_type):
         if backend == "rpc" else None
     )
     backend_config = (
-        BackendConfig(kind="electrum", url="tcp://localhost:50001")
+        BackendConfig(
+            kind="electrum",
+            url="tcp://localhost:50001",
+            username=None,
+            password=None,
+            wallet_name=None,
+            zmq_addr=None,
+            socks5=None,
+            timeout=None,
+            poll_interval_secs=None,
+            max_retries=None,
+        )
         if backend == "electrum" else None
     )
 
