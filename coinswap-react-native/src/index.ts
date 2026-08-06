@@ -3,6 +3,7 @@ import coinswapBindings, {
   Taker,
   setupLogging as generatedSetupLogging,
   type Address,
+  type BackendConfig,
   type Balances,
   type RpcConfig,
   type SwapParams,
@@ -10,7 +11,7 @@ import coinswapBindings, {
   type TakerLike,
 } from './generated/coinswap'
 
-export type { RpcConfig, Balances, SwapReport, Address, SwapParams }
+export type { RpcConfig, BackendConfig, Balances, SwapReport, Address, SwapParams }
 
 export const AddressType = {
   P2WPKH: 'P2WPKH',
@@ -26,6 +27,8 @@ export type TakerInitConfig = {
   torAuthPassword?: string | null
   zmqAddr: string
   password?: string | null
+  nostrRelays?: string[] | null
+  backendConfig?: BackendConfig | null
 }
 
 export class CoinswapTaker {
@@ -33,9 +36,10 @@ export class CoinswapTaker {
 
   static async setupLogging(
     dataDir: string | null | undefined,
-    _level: string,
+    level: string,
+    toStdout: boolean = false,
   ): Promise<void> {
-    generatedSetupLogging(dataDir ?? undefined)
+    generatedSetupLogging(dataDir ?? undefined, level, toStdout)
   }
 
   static async init(config: TakerInitConfig): Promise<CoinswapTaker> {
@@ -48,6 +52,8 @@ export class CoinswapTaker {
       config.torAuthPassword ?? undefined,
       config.zmqAddr,
       config.password ?? undefined,
+      config.nostrRelays ?? undefined,
+      config.backendConfig ?? undefined,
     )
     return new CoinswapTaker(taker)
   }

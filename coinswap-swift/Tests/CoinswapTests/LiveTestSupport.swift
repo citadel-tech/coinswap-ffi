@@ -10,17 +10,14 @@ struct LiveTestConfig {
     let walletPassword: String?
     let torControlPort: UInt16
     let torAuthPassword: String
-    let performSwap: Bool
-    let swapAmount: UInt64
     let bitcoinNetwork: String
     let dockerContainer: String
     let fundingWallet: String
     let bitcoinRpcPort: String
-    let fundAmount: String
 
     init(walletNameOverride: String? = nil) throws {
         let walletName = walletNameOverride ?? "swift_test_wallet"
-        
+
         self.rpcConfig = RpcConfig(url: "127.0.0.1:18442", username: "user", password: "password", walletName: walletName)
         self.zmqAddr = "tcp://127.0.0.1:28332"
         self.walletName = walletName
@@ -28,13 +25,10 @@ struct LiveTestConfig {
         self.walletPassword = nil
         self.torControlPort = 9051
         self.torAuthPassword = "coinswap"
-        self.performSwap = true
-        self.swapAmount = 500000
         self.bitcoinNetwork = "regtest"
         self.dockerContainer = "coinswap-bitcoind"
         self.fundingWallet = "test"
         self.bitcoinRpcPort = "18442"
-        self.fundAmount = "1.0"
     }
 }
 
@@ -45,27 +39,41 @@ func requireLiveTestsEnabled() throws {
     }
 }
 
-func fundAddress(_ address: String, config: LiveTestConfig) throws {
-    // Fund as 4 separate UTXOs of 0.25 BTC each (1.0 BTC total) so the taker has
-    // multiple spendable outputs for split-funded swaps.
-    for _ in 0..<4 {
-        let args: [String] = [
-            "exec",
-            "coinswap-bitcoind",
-            "bitcoin-cli",
-            "-regtest",
-            "-rpcport=18442",
-            "-rpcwallet=test",
-            "-rpcuser=user",
-            "-rpcpassword=password",
-            "sendtoaddress",
-            address,
-            "0.25"
-        ]
+/// Backend selection for a live swap run.
+enum Backend {
+    case rpc
+    case electrum
+}
 
-        try runProcess(command: "docker", args: args)
+/// Electrum backend config pointing at the Docker regtest electrs server.
+/// RPC backend is expressed via `RpcConfig` + `backendConfig: nil` instead.
+func electrumBackendConfig() -> BackendConfig {
+    BackendConfig(
+        kind: "electrum",
+        url: "tcp://localhost:50001",
+        username: nil,
+        password: nil,
+        walletName: nil,
+        zmqAddr: nil,
+        socks5: nil,
+        timeout: nil,
+        pollIntervalSecs: nil,
+        maxRetries: nil
+    )
+}
+
+/// Polls `syncAndSave` + `getBalances` until spendable reaches `target`.
+/// Needed because the Electrum backend lags electrs indexing; ~30 tries / 3s.
+func waitForSpendable(_ taker: Taker, target: Int64) throws -> Balances {
+    for _ in 0..<30 {
+        try taker.syncAndSave()
+        let balances = try taker.getBalances()
+        if balances.spendable >= target {
+            return balances
+        }
+        Thread.sleep(forTimeInterval: 3.0)
     }
-    Thread.sleep(forTimeInterval: 1.0)
+    return try taker.getBalances()
 }
 
 func runProcess(command: String, args: [String]) throws {
@@ -88,28 +96,6 @@ func runProcess(command: String, args: [String]) throws {
             NSLocalizedDescriptionKey: "Command failed: \(command) \(args.joined(separator: " "))\n\(output)"
         ])
     }
-}
-
-/// Asserts that an Int64 value is within ±tolerance of the expected value.
-func assertApprox(_ actual: Int64, _ expected: Int64, tolerance: Int64 = 2,
-                  file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertGreaterThanOrEqual(actual, expected - tolerance,
-        "Value \(actual) below expected range [\(expected - tolerance)...\(expected + tolerance)]",
-        file: file, line: line)
-    XCTAssertLessThanOrEqual(actual, expected + tolerance,
-        "Value \(actual) above expected range [\(expected - tolerance)...\(expected + tolerance)]",
-        file: file, line: line)
-}
-
-/// Asserts that a Double value is within ±tolerance of the expected value.
-func assertApprox(_ actual: Double, _ expected: Double, tolerance: Double = 2.0,
-                  file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertGreaterThanOrEqual(actual, expected - tolerance,
-        "Value \(actual) below expected range [\(expected - tolerance)...\(expected + tolerance)]",
-        file: file, line: line)
-    XCTAssertLessThanOrEqual(actual, expected + tolerance,
-        "Value \(actual) above expected range [\(expected - tolerance)...\(expected + tolerance)]",
-        file: file, line: line)
 }
 
 /// Cleans up a specific wallet in ~/.coinswap/taker/wallets before running tests.

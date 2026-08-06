@@ -3,7 +3,7 @@
 //! This module provides N-API bindings for the coinswap taker functionality.
 
 use crate::types::{
-  Address, AddressType, Amount, Balances, FeeRates, GetTransactionResultDetail,
+  Address, AddressType, Amount, BackendConfig, Balances, FeeRates, GetTransactionResultDetail,
   ListTransactionResult, ListUnspentResultEntry, MakerOfferCandidate, Offer, OfferBook, OutPoint,
   RPCConfig as RpcConfig, ScriptBuf, SignedAmountSats, SwapReport, Txid, UtxoSpendInfo,
   WalletTxInfo,
@@ -18,7 +18,10 @@ use coinswap::{
     },
     offers::{MakerAddress, OfferSyncClient},
   },
-  wallet::{ffi, AddressType as csAddressType, UTXOSpendInfo as csUtxoSpendInfo},
+  wallet::{
+    ffi, AddressType as csAddressType, BackendConfig as CoinswapBackendConfig,
+    CoreRpcConfig as CoinswapCoreRpcConfig, UTXOSpendInfo as csUtxoSpendInfo,
+  },
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -146,6 +149,7 @@ impl Task for PollMakerTask {
 }
 
 #[napi]
+#[allow(clippy::too_many_arguments)]
 impl Taker {
   #[napi(constructor)]
   pub fn init(
@@ -157,18 +161,28 @@ impl Taker {
     tor_auth_password: Option<String>,
     zmq_addr: String,
     password: Option<String>,
+    backend_config: Option<BackendConfig>,
   ) -> Result<Self> {
     let data_dir = data_dir.map(PathBuf::from);
-    let rpc_config = rpc_config.map(|cfg| cfg.into());
+    let backend = match backend_config {
+      Some(config) => CoinswapBackendConfig::try_from(config)?,
+      None => CoinswapBackendConfig::CoreRpc(
+        rpc_config
+          .map(|cfg| cfg.into_core_rpc_config(zmq_addr.clone()))
+          .unwrap_or_else(|| CoinswapCoreRpcConfig {
+            zmq_addr: zmq_addr.clone(),
+            ..CoinswapCoreRpcConfig::default()
+          }),
+      ),
+    };
 
     let init_config = TakerInitConfig {
       data_dir,
-      wallet_file_name,
-      rpc_config,
+      wallet_name: wallet_file_name.unwrap_or_else(|| "taker-wallet".to_string()),
+      backend,
       control_port,
       tor_auth_password,
       socks_port: 9050,
-      zmq_addr,
       password,
       connection_type: ConnectionType::Tor,
       nostr_relays: TakerInitConfig::default().nostr_relays,
@@ -569,7 +583,7 @@ impl Taker {
     ffi::restore_wallet_gui_app(
       data_dir,
       wallet_file_name,
-      rpc_config.into(),
+      CoinswapBackendConfig::CoreRpc(rpc_config.into()),
       backup_file.into(),
       password,
     );
@@ -583,7 +597,7 @@ impl Taker {
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire taker lock: {}", e)))?;
     taker
       .get_wallet()
-      .read()
+      .write()
       .map_err(|e| napi::Error::from_reason(format!("Failed to acquire wallet lock: {}", e)))?
       .lock_unspendable_utxos()
       .map_err(|e| napi::Error::from_reason(format!("Lock error: {:?}", e)))?;

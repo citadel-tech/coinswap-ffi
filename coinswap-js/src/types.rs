@@ -16,7 +16,9 @@ use coinswap::{
   },
   wallet::{
     ffi::{MakerFeeInfo as csMakerFeeInfo, TakerReport as csTakerReport},
-    Balances as CoinswapBalances, FidelityBond as csFidelityBond, RPCConfig as CoinswapRPCConfig,
+    BackendConfig as CoinswapBackendConfig, Balances as CoinswapBalances,
+    CoreRpcConfig as CoinswapCoreRpcConfig, ElectrumConfig as CoinswapElectrumConfig,
+    FidelityBond as csFidelityBond,
   },
 };
 use napi_derive::napi;
@@ -140,13 +142,94 @@ pub struct RPCConfig {
   pub wallet_name: String,
 }
 
-impl From<RPCConfig> for CoinswapRPCConfig {
+impl RPCConfig {
+  pub fn into_core_rpc_config(self, zmq_addr: String) -> CoinswapCoreRpcConfig {
+    CoinswapCoreRpcConfig {
+      url: self.url,
+      auth: Auth::UserPass(self.username, self.password),
+      wallet_name: self.wallet_name,
+      zmq_addr,
+    }
+  }
+}
+
+impl From<RPCConfig> for CoinswapCoreRpcConfig {
   fn from(config: RPCConfig) -> Self {
+    let default = Self::default();
     Self {
       url: config.url,
       auth: Auth::UserPass(config.username, config.password),
       wallet_name: config.wallet_name,
+      zmq_addr: default.zmq_addr,
     }
+  }
+}
+
+#[napi(object)]
+pub struct BackendConfig {
+  pub kind: String,
+  pub url: Option<String>,
+  pub username: Option<String>,
+  pub password: Option<String>,
+  pub wallet_name: Option<String>,
+  pub zmq_addr: Option<String>,
+  pub socks5: Option<String>,
+  pub timeout: Option<u8>,
+  pub poll_interval_secs: Option<i64>,
+  pub max_retries: Option<u8>,
+}
+
+impl TryFrom<BackendConfig> for CoinswapBackendConfig {
+  type Error = napi::Error;
+
+  fn try_from(config: BackendConfig) -> napi::Result<Self> {
+    match config.kind.to_lowercase().as_str() {
+      "rpc" => config.into_rpc_backend(),
+      "electrum" => config.into_electrum_backend(),
+      other => Err(napi::Error::from_reason(format!(
+        "Invalid backend kind: {} (expected rpc or electrum)",
+        other
+      ))),
+    }
+  }
+}
+
+impl BackendConfig {
+  fn into_rpc_backend(self) -> napi::Result<CoinswapBackendConfig> {
+    let mut config = CoinswapCoreRpcConfig::default();
+    apply_if_some(&mut config.url, self.url);
+    apply_if_some(&mut config.wallet_name, self.wallet_name);
+    apply_if_some(&mut config.zmq_addr, self.zmq_addr);
+    config.auth = match (self.username, self.password) {
+      (Some(username), Some(password)) => Auth::UserPass(username, password),
+      (None, None) => config.auth,
+      _ => {
+        return Err(napi::Error::from_reason(
+          "RPC backend requires username and password together",
+        ));
+      }
+    };
+    Ok(CoinswapBackendConfig::CoreRpc(config))
+  }
+
+  fn into_electrum_backend(self) -> napi::Result<CoinswapBackendConfig> {
+    let mut config = CoinswapElectrumConfig {
+      url: self
+        .url
+        .ok_or_else(|| napi::Error::from_reason("Electrum backend requires url"))?,
+      ..CoinswapElectrumConfig::default()
+    };
+    config.socks5 = self.socks5;
+    config.timeout = self.timeout;
+    config.poll_interval_secs = self.poll_interval_secs.map(|v| v as u64);
+    apply_if_some(&mut config.max_retries, self.max_retries);
+    Ok(CoinswapBackendConfig::Electrum(config))
+  }
+}
+
+fn apply_if_some<T>(target: &mut T, value: Option<T>) {
+  if let Some(value) = value {
+    *target = value;
   }
 }
 

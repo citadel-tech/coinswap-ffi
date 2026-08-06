@@ -115,13 +115,14 @@ jobs:
         working-directory: ./ffi-commons
         run: |
           chmod +x ffi-docker-setup
-          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:master; then
+          if docker pull coinswap/bitcoin-mutinynet:latest && docker pull coinswap/coinswap:electrum-sync; then
             echo "Using prebuilt Docker images"
           else
             echo "Prebuilt image pull failed; falling back to local image build"
             ./ffi-docker-setup setup
           fi
-          ./ffi-docker-setup start 4
+          # Fixed topology: bitcoind + electrs + tor + 2 RPC makers + 2 Electrum makers.
+          ./ffi-docker-setup start
 
       - name: Wait for stack readiness
         run: |
@@ -130,7 +131,7 @@ jobs:
           echo -e "\n=== Waiting for host ports ==="
           for i in {1..30}; do
             all_ok=true
-            for port in 18442 28332 9051; do
+            for port in 18442 28332 9051 50001; do
               nc -z 127.0.0.1 "$port" 2>/dev/null && echo "port $port ok" || { echo "port $port not reachable"; all_ok=false; }
             done
             if $all_ok; then
@@ -141,24 +142,31 @@ jobs:
             sleep 2
           done
 
-      - name: Wait for Tor egress
+      - name: Wait for Tor egress then makers
         run: |
-          # An open control port (9051) does NOT mean Tor has finished bootstrapping
-          # and can build circuits. The taker reaches the public nostr relays over
-          # Tor's SOCKS proxy (9050); if it connects before circuits are ready the
-          # relay connection fails with "TTL expired" and maker discovery times out.
-          # Probe actual Tor egress to a public relay before running the test.
-          echo "=== Waiting for Tor to reach a public nostr relay ==="
+          # An open control port doesn't mean Tor can build circuits; probe real egress to a public relay, then poll both makers until each has set up and announced (empty offerbook otherwise => NotEnoughMakersInOfferBook).
           for i in {1..60}; do
             for relay in nos.lol relay.damus.io; do
-              if curl -s --max-time 20 --socks5-hostname 127.0.0.1:9050 "https://$relay" -o /dev/null; then
-                echo "Tor egress OK via $relay (attempt $i)"; exit 0
+              curl -s --max-time 20 --socks5-hostname 127.0.0.1:9050 "https://$relay" -o /dev/null && { echo "Tor egress OK via $relay (attempt $i)"; tor_ok=1; break; }
+            done
+            [ -n "$tor_ok" ] && break
+            echo "waiting for Tor egress ($i/60)..."; sleep 5
+          done
+          [ -n "$tor_ok" ] || { echo "Timed out waiting for Tor egress"; exit 1; }
+          for i in {1..60}; do
+            ok=true
+            for m in makerd1 makerd2; do
+              setup=$(docker logs "coinswap-$m" 2>&1 | grep -c "Server setup complete" || true)
+              announced=$(docker logs "coinswap-$m" 2>&1 | grep -c "Nostr relay accepted" || true)
+              if [ "$setup" -ge 1 ] && [ "$announced" -ge 1 ]; then
+                echo "  $m ready (setup=$setup announced=$announced)"
+              else
+                echo "  $m not ready (setup=$setup announced=$announced)"; ok=false
               fi
             done
-            echo "Tor not ready yet (attempt $i/60)..."
-            sleep 5
+            $ok && { echo "both makers announced (attempt $i)"; break; }
+            echo "waiting for makers ($i/60)..."; sleep 10
           done
-          echo "Timed out waiting for Tor egress to public relays"; exit 1
 
       - name: Test
         working-directory: coinswap-csharp

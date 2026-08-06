@@ -5,10 +5,10 @@
 use crate::{
     AddressType,
     types::{
-        Address, Amount, Balances, GetTransactionResultDetail, ListTransactionResult,
-        ListUnspentResultEntry, MakerOfferCandidate, Offer, OfferBook, OutPoint, RPCConfig,
-        ScriptBuf, SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo, Txid, UtxoSpendInfo,
-        WalletTxInfo,
+        Address, Amount, BackendConfig, Balances, GetTransactionResultDetail,
+        ListTransactionResult, ListUnspentResultEntry, MakerOfferCandidate, Offer, OfferBook,
+        OutPoint, RPCConfig, ScriptBuf, SignedAmountSats, SwapReport, TakerError, TotalUtxoInfo,
+        Txid, UtxoSpendInfo, WalletTxInfo,
     },
 };
 use coinswap::{
@@ -17,7 +17,10 @@ use coinswap::{
     taker::api::{
         ConnectionType, SwapParams as CoinswapSwapParams, Taker as CoinswapTaker, TakerInitConfig,
     },
-    wallet::{RPCConfig as CoinswapRPCConfig, UTXOSpendInfo as csUtxoSpendInfo},
+    wallet::{
+        BackendConfig as CoinswapBackendConfig, CoreRpcConfig as CoinswapCoreRpcConfig,
+        UTXOSpendInfo as csUtxoSpendInfo,
+    },
 };
 use std::{
     path::PathBuf,
@@ -137,18 +140,28 @@ impl Taker {
         zmq_addr: String,
         password: Option<String>,
         nostr_relays: Option<Vec<String>>,
+        backend_config: Option<BackendConfig>,
     ) -> Result<Arc<Self>, TakerError> {
         let data_dir = data_dir.map(PathBuf::from);
-        let rpc_config = rpc_config.map(CoinswapRPCConfig::from);
+        let backend = match backend_config {
+            Some(config) => CoinswapBackendConfig::try_from(config)?,
+            None => CoinswapBackendConfig::CoreRpc(
+                rpc_config
+                    .map(|config| config.into_core_rpc_config(zmq_addr.clone()))
+                    .unwrap_or_else(|| CoinswapCoreRpcConfig {
+                        zmq_addr: zmq_addr.clone(),
+                        ..CoinswapCoreRpcConfig::default()
+                    }),
+            ),
+        };
 
         let init_config = TakerInitConfig {
             data_dir,
-            wallet_file_name,
-            rpc_config,
+            wallet_name: wallet_file_name.unwrap_or_else(|| "taker-wallet".to_string()),
+            backend,
             control_port,
             tor_auth_password,
             socks_port: 9050,
-            zmq_addr,
             password,
             connection_type: ConnectionType::Tor,
             // `None` keeps the compiled-in default relays; `Some` lets callers
@@ -475,9 +488,9 @@ impl Taker {
         })?;
         taker
             .get_wallet()
-            .read()
+            .write()
             .map_err(|_| TakerError::General {
-                msg: "Failed to acquire wallet read lock".to_string(),
+                msg: "Failed to acquire wallet write lock".to_string(),
             })?
             .lock_unspendable_utxos()
             .map_err(|e| TakerError::Wallet {

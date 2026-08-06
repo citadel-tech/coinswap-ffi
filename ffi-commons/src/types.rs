@@ -20,8 +20,9 @@ use coinswap::{
         },
     },
     wallet::{
-        AddressType as csAddressType, Balances as CoinswapBalances, FidelityBond as csFidelityBond,
-        RPCConfig as CoinswapRPCConfig,
+        AddressType as csAddressType, BackendConfig as CoinswapBackendConfig,
+        Balances as CoinswapBalances, CoreRpcConfig as CoinswapCoreRpcConfig,
+        ElectrumConfig as CoinswapElectrumConfig, FidelityBond as csFidelityBond,
         ffi::{
             MakerFeeInfo as csMakerFeeInfo, TakerReport as csTakerReport,
             restore_wallet_gui_app as cs_restore_wallet_gui_app,
@@ -43,13 +44,104 @@ pub struct RPCConfig {
     pub wallet_name: String,
 }
 
-impl From<RPCConfig> for CoinswapRPCConfig {
+impl RPCConfig {
+    pub fn into_core_rpc_config(self, zmq_addr: String) -> CoinswapCoreRpcConfig {
+        CoinswapCoreRpcConfig {
+            url: self.url,
+            auth: Auth::UserPass(self.username, self.password),
+            wallet_name: self.wallet_name,
+            zmq_addr,
+        }
+    }
+}
+
+impl From<RPCConfig> for CoinswapCoreRpcConfig {
     fn from(config: RPCConfig) -> Self {
+        let default = Self::default();
         Self {
             url: config.url,
             auth: Auth::UserPass(config.username, config.password),
             wallet_name: config.wallet_name,
+            zmq_addr: default.zmq_addr,
         }
+    }
+}
+
+/// Configuration for selecting a blockchain backend.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct BackendConfig {
+    /// Backend kind: "rpc" or "electrum".
+    pub kind: String,
+    /// Bitcoin Core RPC URL or Electrum server URL. Required for Electrum.
+    pub url: Option<String>,
+    /// Bitcoin Core RPC username. Ignored for Electrum.
+    pub username: Option<String>,
+    /// Bitcoin Core RPC password. Ignored for Electrum.
+    pub password: Option<String>,
+    /// Bitcoin Core wallet name. Ignored for Electrum.
+    pub wallet_name: Option<String>,
+    /// Bitcoin Core ZMQ endpoint. Ignored for Electrum.
+    pub zmq_addr: Option<String>,
+    /// Optional SOCKS5 proxy for Electrum.
+    pub socks5: Option<String>,
+    /// Optional Electrum socket timeout in seconds.
+    pub timeout: Option<u8>,
+    /// Optional Electrum notification poll interval in seconds.
+    pub poll_interval_secs: Option<u64>,
+    /// Electrum reconnect attempts.
+    pub max_retries: Option<u8>,
+}
+
+impl TryFrom<BackendConfig> for CoinswapBackendConfig {
+    type Error = TakerError;
+
+    fn try_from(config: BackendConfig) -> Result<Self, Self::Error> {
+        match config.kind.to_lowercase().as_str() {
+            "rpc" => config.into_rpc_backend(),
+            "electrum" => config.into_electrum_backend(),
+            other => Err(TakerError::General {
+                msg: format!("Invalid backend kind: {} (expected rpc or electrum)", other),
+            }),
+        }
+    }
+}
+
+impl BackendConfig {
+    fn into_rpc_backend(self) -> Result<CoinswapBackendConfig, TakerError> {
+        let mut config = CoinswapCoreRpcConfig::default();
+        apply_if_some(&mut config.url, self.url);
+        apply_if_some(&mut config.wallet_name, self.wallet_name);
+        apply_if_some(&mut config.zmq_addr, self.zmq_addr);
+        config.auth = match (self.username, self.password) {
+            (Some(username), Some(password)) => Auth::UserPass(username, password),
+            (None, None) => config.auth,
+            _ => {
+                return Err(TakerError::General {
+                    msg: "RPC backend requires username and password together".to_string(),
+                });
+            }
+        };
+        Ok(CoinswapBackendConfig::CoreRpc(config))
+    }
+
+    fn into_electrum_backend(self) -> Result<CoinswapBackendConfig, TakerError> {
+        let mut config = CoinswapElectrumConfig {
+            url: self.url.ok_or_else(|| TakerError::General {
+                msg: "Electrum backend requires url".to_string(),
+            })?,
+            ..CoinswapElectrumConfig::default()
+        };
+        config.socks5 = self.socks5;
+        config.timeout = self.timeout;
+        config.poll_interval_secs = self.poll_interval_secs;
+        apply_if_some(&mut config.max_retries, self.max_retries);
+        Ok(CoinswapBackendConfig::Electrum(config))
+    }
+}
+
+fn apply_if_some<T>(target: &mut T, value: Option<T>) {
+    if let Some(value) = value {
+        *target = value;
     }
 }
 
@@ -752,7 +844,7 @@ pub fn restore_wallet_gui_app(
     cs_restore_wallet_gui_app(
         data_dir,
         wallet_file_name,
-        rpc_config.into(),
+        CoinswapBackendConfig::CoreRpc(rpc_config.into()),
         backup_file_path.into(),
         password,
     );
@@ -785,8 +877,21 @@ pub fn create_default_rpc_config() -> RPCConfig {
 /// log levels and configures log4rs with the specified filter level for fine-grained control
 /// of log verbosity.
 #[uniffi::export]
-pub fn setup_logging(data_dir: Option<String>) -> Result<(), TakerError> {
+pub fn setup_logging(
+    data_dir: Option<String>,
+    level: String,
+    to_stdout: bool,
+) -> Result<(), TakerError> {
     let path = data_dir.map(PathBuf::from);
-    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, false, path);
+    let level = match level.to_lowercase().as_str() {
+        "trace" => log::LevelFilter::Trace,
+        "debug" => log::LevelFilter::Debug,
+        "info" => log::LevelFilter::Info,
+        "warn" => log::LevelFilter::Warn,
+        "error" => log::LevelFilter::Error,
+        "off" => log::LevelFilter::Off,
+        _ => log::LevelFilter::Info,
+    };
+    coinswap::utill::setup_taker_logger(level, to_stdout, path);
     Ok(())
 }
