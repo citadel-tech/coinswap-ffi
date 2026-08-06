@@ -37,8 +37,9 @@ export class CoinswapTaker {
   static async setupLogging(
     dataDir: string | null | undefined,
     level: string,
+    toStdout: boolean = false,
   ): Promise<void> {
-    generatedSetupLogging(dataDir ?? undefined, level)
+    generatedSetupLogging(dataDir ?? undefined, level, toStdout)
   }
 
   static async init(config: TakerInitConfig): Promise<CoinswapTaker> {

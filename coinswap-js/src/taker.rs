@@ -149,6 +149,7 @@ impl Task for PollMakerTask {
 }
 
 #[napi]
+#[allow(clippy::too_many_arguments)]
 impl Taker {
   #[napi(constructor)]
   pub fn init(

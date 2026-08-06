@@ -13,7 +13,7 @@ const SWAP_AMOUNT: u64 = 500_000;
 // with a plain `cargo test` (no --features integration-test).
 #[test]
 fn main() {
-    crate::types::setup_logging(None, "warn".to_string()).expect("setup logging");
+    coinswap::utill::setup_taker_logger(log::LevelFilter::Info, true, None);
 
     let swaps = [
         Swap {

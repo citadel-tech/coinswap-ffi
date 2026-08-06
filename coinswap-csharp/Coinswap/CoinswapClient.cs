@@ -35,11 +35,12 @@ public sealed class CoinswapClient : IDisposable
         ushort? controlPort = null,
         string? torAuthPassword = null,
         string? password = null,
-        IEnumerable<string>? nostrRelays = null)
+        IEnumerable<string>? nostrRelays = null,
+        BackendConfig? backendConfig = null)
     {
         var taker = Taker.Init(
             dataDir, walletFileName, rpcConfig, controlPort, torAuthPassword, zmqAddr, password,
-            nostrRelays?.ToArray());
+            nostrRelays?.ToArray(), backendConfig);
         return new CoinswapClient(taker);
     }
 

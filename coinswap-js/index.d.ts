@@ -62,6 +62,19 @@ export interface Amount {
   sats: number
 }
 
+export interface BackendConfig {
+  kind: string
+  url?: string
+  username?: string
+  password?: string
+  walletName?: string
+  zmqAddr?: string
+  socks5?: string
+  timeout?: number
+  pollIntervalSecs?: number
+  maxRetries?: number
+}
+
 export interface Balances {
   regular: number
   swap: number
@@ -193,19 +206,6 @@ export interface RpcConfig {
   username: string
   password: string
   walletName: string
-}
-
-export interface BackendConfig {
-  kind: 'rpc' | 'electrum'
-  url?: string
-  username?: string
-  password?: string
-  walletName?: string
-  zmqAddr?: string
-  socks5?: string
-  timeout?: number
-  pollIntervalSecs?: number
-  maxRetries?: number
 }
 
 export interface ScriptBuf {

@@ -877,7 +877,11 @@ pub fn create_default_rpc_config() -> RPCConfig {
 /// log levels and configures log4rs with the specified filter level for fine-grained control
 /// of log verbosity.
 #[uniffi::export]
-pub fn setup_logging(data_dir: Option<String>, level: String) -> Result<(), TakerError> {
+pub fn setup_logging(
+    data_dir: Option<String>,
+    level: String,
+    to_stdout: bool,
+) -> Result<(), TakerError> {
     let path = data_dir.map(PathBuf::from);
     let level = match level.to_lowercase().as_str() {
         "trace" => log::LevelFilter::Trace,
@@ -888,6 +892,6 @@ pub fn setup_logging(data_dir: Option<String>, level: String) -> Result<(), Take
         "off" => log::LevelFilter::Off,
         _ => log::LevelFilter::Info,
     };
-    coinswap::utill::setup_taker_logger(level, false, path);
+    coinswap::utill::setup_taker_logger(level, to_stdout, path);
     Ok(())
 }
