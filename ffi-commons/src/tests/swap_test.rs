@@ -14,7 +14,7 @@ const SWAP_AMOUNT: u64 = 500_000;
 #[test]
 fn main() {
     crate::types::setup_logging(None, "warn".to_string()).expect("setup logging");
-    
+
     let swaps = [
         Swap {
             name: "legacy_rpc",
